@@ -1,0 +1,144 @@
+[project]
+name = "transcription-service"
+version = "0.1.0"
+description = "Video/audio transcription service using WhisperX for Tennis Wire"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Tennis Wire Team" }]
+
+dependencies = [
+    # Web framework
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    # Task queue
+    "arq>=0.26",
+    # WhisperX and dependencies
+    "whisperx>=3.1",
+    "faster-whisper>=1.0",
+    # Media processing
+    "yt-dlp>=2024.12",           # YouTube downloads
+    "ffmpeg-python>=0.2",
+    # Storage
+    "boto3>=1.35",               # S3-compatible
+    # HTTP client
+    "httpx>=0.28",
+    # Configuration
+    "pydantic-settings>=2.6",
+    # Logging
+    "structlog>=24.4",
+    # Utils
+    "tenacity>=9.0",             # Retries
+    "python-multipart>=0.0.22",
+    "torch>=2.0,<2.6",
+    "torchaudio>=2.0,<2.6",
+]
+
+[dependency-groups]
+dev = [
+    # Testing
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "pytest-xdist>=3.5",
+    "respx>=0.22",               # HTTP mocking
+    # Linting & formatting
+    "ruff>=0.8",
+    "mypy>=1.13",
+    # Security
+    "bandit>=1.8",
+    "pip-audit>=2.7",
+    # Type stubs
+    "boto3-stubs[s3]>=1.35",
+    "types-requests>=2.32",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/transcription"]
+
+# ============== RUFF ==============
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",        # pycodestyle errors
+    "W",        # pycodestyle warnings
+    "F",        # pyflakes
+    "I",        # isort
+    "UP",       # pyupgrade
+    "B",        # bugbear
+    "SIM",      # simplify
+    "RUF",      # ruff-specific
+    "ASYNC",    # async linting
+    "S",        # bandit (security) via ruff
+    "PTH",      # use pathlib
+    "LOG",      # logging
+    "G",        # logging format
+]
+ignore = [
+    "S101",     # allow assert in tests
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S105", "S106"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ============== MYPY ==============
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+disallow_untyped_defs = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = [
+    "whisperx.*",
+    "faster_whisper.*",
+    "yt_dlp.*",
+    "ffmpeg.*",
+    "arq.*",
+]
+ignore_missing_imports = true
+
+# ============== PYTEST ==============
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+]
+
+# ============== COVERAGE ==============
+[tool.coverage.run]
+source = ["src"]
+branch = true
+parallel = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
+# ============== BANDIT ==============
+[tool.bandit]
+exclude_dirs = ["tests"]

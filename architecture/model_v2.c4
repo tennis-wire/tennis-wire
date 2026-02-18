@@ -1,0 +1,405 @@
+specification {
+  element actor {
+    style {
+      shape person
+      color amber
+    }
+  }
+  element system {
+    style {
+      shape rectangle
+      color slate
+    }
+  }
+  element container {
+    style {
+      shape rectangle
+      color blue
+    }
+  }
+  element service {
+    style {
+      shape rectangle
+      color indigo
+    }
+  }
+  element database {
+    style {
+      shape storage
+      color green
+    }
+  }
+  element external {
+    style {
+      shape rectangle
+      color gray
+    }
+  }
+  element webapp {
+    style {
+      shape browser
+      color sky
+    }
+  }
+  element mobile {
+    style {
+      shape mobile
+      color sky
+    }
+  }
+  element queue {
+    style {
+      shape queue
+      color amber
+    }
+  }
+}
+
+model {
+  // ===== ACTORS =====
+  actor reader 'Читатель' {
+    description 'Читает новости, смотрит результаты и сетки турниров'
+  }
+
+  actor registeredUser 'Пользователь' {
+    description 'Зарегистрированный пользователь: комментарии, фэнтези, личный кабинет'
+  }
+
+  actor author 'Автор' {
+    description 'Создаёт и публикует контент через редакторский интерфейс'
+  }
+
+  actor admin 'Админ' {
+    description 'Управление системой, пользователями, контентом'
+  }
+
+  // ===== EXTERNAL SYSTEMS =====
+  external tennisDataSources 'Источники данных' {
+    description 'ATP, WTA, ITF, ESPN, соцсети'
+
+    external atpWta 'ATP/WTA/ITF' {
+      description 'Официальные источники: результаты, рейтинги, сетки'
+    }
+
+    external sportsMedia 'Спортивные медиа' {
+      description 'ESPN, Tennis.com, Eurosport и др.'
+    }
+
+    external socialMedia 'Соцсети' {
+      description 'Twitter/X, Instagram'
+    }
+
+    external telegramChannels 'Telegram-каналы' {
+      description 'Теннисные каналы и чаты'
+    }
+  }
+
+  external externalApis 'Внешние API' {
+    description 'Сторонние сервисы'
+
+    external deepl 'DeepL API' {
+      description 'Переводы контента'
+    }
+
+    external aiApi 'AI API' {
+      description 'OpenAI/Claude для помощи в редактуре'
+    }
+  }
+
+  // ===== MAIN SYSTEM =====
+  system tennisService 'Tennis News Service' {
+    description 'Теннисный новостной сервис'
+
+    // ----- PARSING SUBSYSTEM -----
+    container parsingSubsystem 'Парсинг' {
+      description 'Сбор данных из внешних источников'
+      technology 'Python'
+
+      service parserOrchestrator 'Parser Orchestrator' {
+        description 'Управление парсерами, расписание, мониторинг'
+        technology 'Python'
+      }
+
+      service atpParser 'ATP/WTA Parser' {
+        description 'Парсер официальных источников'
+        technology 'Python, Scrapy'
+      }
+
+      service mediaParser 'Media Parser' {
+        description 'Парсер спортивных медиа'
+        technology 'Python, BeautifulSoup'
+      }
+
+      service socialParser 'Social Parser' {
+        description 'Парсер соцсетей'
+        technology 'Python, API clients'
+      }
+    }
+
+    // ----- AGGREGATOR -----
+    container aggregator 'Aggregator Service' {
+      description 'Агрегация и первичная обработка сырых данных'
+      technology 'Java, Spring Boot'
+
+      service aggregatorApi 'Aggregator API' {
+        description 'API для Curator UI и внутренних сервисов'
+      }
+
+      service deduplicator 'Deduplicator' {
+        description 'Дедупликация и нормализация данных'
+      }
+
+      database aggregatorDb 'Aggregator DB' {
+        description 'Сырые данные, статусы обработки'
+        technology 'PostgreSQL / MongoDB'
+      }
+    }
+
+    // ----- EDITORIAL (Curator + Editor) -----
+    container editorial 'Editorial' {
+      description 'Редакторский интерфейс: курирование и создание контента'
+      technology 'React, TypeScript, Tiptap, Vite'
+
+      webapp curatorApp 'Curator UI' {
+        description 'Интерфейс отбора спарсенных материалов'
+      }
+
+      webapp editorApp 'Editor UI' {
+        description 'Редактор контента'
+      }
+    }
+
+    // ----- EDITORIAL BFF -----
+    container editorialBff 'Editorial BFF' {
+      description 'Backend for Frontend: проксирование AI/DeepL, бизнес-логика редактора'
+      technology 'Java, Spring Boot'
+
+      service editorialBffApi 'Editorial BFF API' {
+        description 'API для AI-чата, перевода, транскрипции'
+      }
+    }
+
+    // ----- CONTENT SERVICE -----
+    container contentService 'Content Service' {
+      description 'Управление контентом: черновики, публикация'
+      technology 'Java, Spring Boot'
+
+      service contentApi 'Content API' {
+        description 'CRUD для статей, новостей, черновиков'
+      }
+
+      database contentDb 'Content DB' {
+        description 'Статьи, новости, черновики, матчи, турниры'
+        technology 'PostgreSQL'
+      }
+    }
+
+    // ----- SEARCH SERVICE -----
+    container searchService 'Search Service' {
+      description 'Полнотекстовый поиск по контенту'
+      technology 'Elasticsearch'
+    }
+
+    // ----- USER SERVICE -----
+    container userService 'User Service' {
+      description 'Пользователи и авторизация'
+      technology 'Java, Spring Boot'
+
+      service authService 'Auth Service' {
+        description 'Регистрация, логин, JWT'
+      }
+
+      service userApi 'User API' {
+        description 'Профили, настройки'
+      }
+
+      database userDb 'User DB' {
+        description 'Пользователи, роли, сессии'
+        technology 'PostgreSQL'
+      }
+    }
+
+    // ----- COMMENTS SERVICE -----
+    container commentsService 'Comments Service' {
+      description 'Комментарии к контенту'
+      technology 'Java, Spring Boot'
+
+      service commentsApi 'Comments API' {
+        description 'CRUD для комментариев'
+      }
+
+      database commentsDb 'Comments DB' {
+        description 'Комментарии, реакции'
+        technology 'PostgreSQL'
+      }
+    }
+
+    // ----- API GATEWAY -----
+    container apiGateway 'API Gateway' {
+      description 'Единая точка входа для публичных клиентов (Web, Mobile)'
+      technology 'Spring Cloud Gateway'
+    }
+
+    // ----- CLIENT APPS -----
+    container webApp 'Web Application' {
+      description 'Основной сайт для читателей'
+      technology 'React / Next.js'
+
+      webapp publicSite 'Public Site' {
+        description 'Новости, результаты, статьи'
+      }
+
+      webapp userCabinet 'User Cabinet' {
+        description 'Личный кабинет, настройки'
+      }
+    }
+
+    container mobileApp 'Mobile Application' {
+      description 'Мобильное приложение'
+      technology 'React Native'
+
+      mobile iosApp 'iOS App'
+      mobile androidApp 'Android App'
+    }
+
+  }
+
+  // ===== RELATIONSHIPS =====
+
+  // Actors -> System
+  reader -> tennisService.webApp 'Читает контент'
+  registeredUser -> tennisService.webApp 'Использует сервис'
+  registeredUser -> tennisService.mobileApp 'Использует сервис'
+  author -> tennisService.editorial 'Создаёт контент'
+  admin -> tennisService.webApp 'Управляет системой'
+
+  // External sources -> Parsers
+  tennisDataSources.atpWta -> tennisService.parsingSubsystem.atpParser 'Данные'
+  tennisDataSources.sportsMedia -> tennisService.parsingSubsystem.mediaParser 'Данные'
+  tennisDataSources.socialMedia -> tennisService.parsingSubsystem.socialParser 'Данные'
+  tennisDataSources.telegramChannels -> tennisService.parsingSubsystem.socialParser 'Данные'
+
+  // Parsers -> Aggregator
+  tennisService.parsingSubsystem.parserOrchestrator -> tennisService.parsingSubsystem.atpParser 'Управляет'
+  tennisService.parsingSubsystem.parserOrchestrator -> tennisService.parsingSubsystem.mediaParser 'Управляет'
+  tennisService.parsingSubsystem.parserOrchestrator -> tennisService.parsingSubsystem.socialParser 'Управляет'
+  
+  tennisService.parsingSubsystem.atpParser -> tennisService.aggregator.aggregatorApi 'Сырые данные'
+  tennisService.parsingSubsystem.mediaParser -> tennisService.aggregator.aggregatorApi 'Сырые данные'
+  tennisService.parsingSubsystem.socialParser -> tennisService.aggregator.aggregatorApi 'Сырые данные'
+
+  // Aggregator internal
+  tennisService.aggregator.aggregatorApi -> tennisService.aggregator.deduplicator 'Обработка'
+  tennisService.aggregator.deduplicator -> tennisService.aggregator.aggregatorDb 'Сохранение'
+  tennisService.aggregator.aggregatorApi -> tennisService.aggregator.aggregatorDb 'CRUD'
+
+  // Editorial -> Aggregator (Curator читает сырые данные)
+  tennisService.editorial.curatorApp -> tennisService.aggregator.aggregatorApi 'Список материалов'
+  tennisService.editorial.curatorApp -> tennisService.editorial.editorApp 'В работу'
+
+  // Editorial -> Services (напрямую, без API Gateway)
+  tennisService.editorial.editorApp -> tennisService.aggregator.aggregatorApi 'Получает сырой контент'
+  tennisService.editorial.editorApp -> tennisService.editorialBff.editorialBffApi 'AI/Translate запросы'
+  tennisService.editorial.editorApp -> tennisService.contentService.contentApi 'Черновики и публикация'
+
+  // Editorial BFF -> External APIs
+  tennisService.editorialBff.editorialBffApi -> externalApis.deepl 'Переводы'
+  tennisService.editorialBff.editorialBffApi -> externalApis.aiApi 'AI-обработка'
+
+  // Content Service internal
+  tennisService.contentService.contentApi -> tennisService.contentService.contentDb 'CRUD'
+  tennisService.contentService.contentApi -> tennisService.searchService 'Индексация'
+
+  // Search Service
+  tennisService.apiGateway -> tennisService.searchService 'Поиск'
+
+  // User Service internal
+  tennisService.userService.authService -> tennisService.userService.userDb 'Auth data'
+  tennisService.userService.userApi -> tennisService.userService.userDb 'User data'
+
+  // Comments Service internal
+  tennisService.commentsService.commentsApi -> tennisService.commentsService.commentsDb 'CRUD'
+
+  // API Gateway -> Services
+  tennisService.apiGateway -> tennisService.contentService.contentApi 'API'
+  tennisService.apiGateway -> tennisService.userService.authService 'Auth'
+  tennisService.apiGateway -> tennisService.userService.userApi 'Users'
+  tennisService.apiGateway -> tennisService.commentsService.commentsApi 'Comments'
+
+  // Client Apps -> API Gateway
+  tennisService.webApp.publicSite -> tennisService.apiGateway 'API calls'
+  tennisService.webApp.userCabinet -> tennisService.apiGateway 'API calls'
+  tennisService.mobileApp.iosApp -> tennisService.apiGateway 'API calls'
+  tennisService.mobileApp.androidApp -> tennisService.apiGateway 'API calls'
+}
+
+views {
+  view index of tennisService {
+    title 'Tennis News Service - System Context'
+    description 'Общий вид системы'
+
+    include *
+    include reader
+    include registeredUser
+    include author
+    include admin
+    include tennisDataSources
+    include externalApis
+  }
+
+  view containers of tennisService {
+    title 'Tennis News Service - Containers'
+    description 'Контейнеры системы'
+
+    include tennisService.*
+  }
+
+  view parsingFlow {
+    title 'Parsing Flow'
+    description 'Поток данных от источников до агрегатора'
+
+    include tennisDataSources
+    include tennisDataSources.*
+    include tennisService.parsingSubsystem
+    include tennisService.parsingSubsystem.*
+    include tennisService.aggregator
+    include tennisService.aggregator.*
+  }
+
+  view editorialFlow {
+    title 'Editorial Flow'
+    description 'Поток создания контента: Curator → Editor → Publication'
+
+    include author
+    include tennisService.aggregator
+    include tennisService.aggregator.*
+    include tennisService.editorial
+    include tennisService.editorial.*
+    include tennisService.editorialBff
+    include tennisService.editorialBff.*
+    include tennisService.contentService
+    include tennisService.contentService.*
+    include externalApis
+    include externalApis.*
+  }
+
+  view readerFlow {
+    title 'Reader Flow'
+    description 'Поток для читателей'
+
+    include reader
+    include registeredUser
+    include tennisService.webApp
+    include tennisService.webApp.*
+    include tennisService.mobileApp
+    include tennisService.mobileApp.*
+    include tennisService.apiGateway
+    include tennisService.contentService
+    include tennisService.contentService.*
+    include tennisService.searchService
+    include tennisService.userService
+    include tennisService.userService.*
+    include tennisService.commentsService
+    include tennisService.commentsService.*
+  }
+}
