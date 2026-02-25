@@ -1,17 +1,21 @@
-import Editor from './features/editor/components/Editor.tsx'
-import { ThemeProvider, createTheme, CssBaseline } from '@mui/material'
+import { useMemo } from 'react'
+import { ThemeProvider as MuiThemeProvider, CssBaseline } from '@mui/material'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+
+import Editor from './features/editor/components/Editor.tsx'
 import CuratorPage from './features/curator/CuratorPage.tsx'
+import { ThemeProvider, useAppTheme, createAppTheme } from './theme'
 
-const theme = createTheme({
-    palette: {
-        mode: 'light', // for future
-    },
-})
+function AppRoutes() {
+    const { colors, fontPair, isDark } = useAppTheme()
 
-function App() {
+    const muiTheme = useMemo(
+        () => createAppTheme(colors, fontPair, isDark),
+        [colors, fontPair, isDark]
+    )
+
     return (
-        <ThemeProvider theme={theme}>
+        <MuiThemeProvider theme={muiTheme}>
             <CssBaseline />
             <BrowserRouter>
                 <Routes>
@@ -21,6 +25,14 @@ function App() {
                     <Route path="/editor/:aggregatorId" element={<Editor />} />
                 </Routes>
             </BrowserRouter>
+        </MuiThemeProvider>
+    )
+}
+
+function App() {
+    return (
+        <ThemeProvider>
+            <AppRoutes />
         </ThemeProvider>
     )
 }

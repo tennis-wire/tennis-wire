@@ -32,16 +32,18 @@ import {
     Mic,
 } from '@mui/icons-material'
 import type { Editor } from '@tiptap/react'
+import { useAppTheme } from '../../../theme'
 
 interface Props {
     editor: Editor | null
-    onTranslateClick?: () => void // Открыть диалог перевода
-    onTranscribeClick?: () => void // Открыть диалог транскрипции
+    onTranslateClick?: () => void
+    onTranscribeClick?: () => void
 }
 
 export const Toolbar: React.FC<Props> = ({ editor, onTranslateClick, onTranscribeClick }) => {
     const [aiAnchor, setAiAnchor] = useState<null | HTMLElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const { colors } = useAppTheme()
 
     if (!editor) return null
 
@@ -116,7 +118,6 @@ export const Toolbar: React.FC<Props> = ({ editor, onTranslateClick, onTranscrib
             .run()
     }
 
-    // telegram post embed
     const handleTelegramInsert = () => {
         const url = window.prompt('Вставьте ссылку на пост Telegram:', 'https://t.me/channel/123')
         if (!url) return
@@ -247,18 +248,20 @@ export const Toolbar: React.FC<Props> = ({ editor, onTranslateClick, onTranscrib
         alert('Для удаления ссылки поместите курсор внутрь неё или выделите текст ссылки')
     }
 
+    const dividerSx = { mx: 0.5, borderColor: colors.border }
+
     return (
         <Box
             sx={{
                 display: 'flex',
                 alignItems: 'center',
                 flexWrap: 'wrap',
-                gap: 1,
-                p: 2,
-                background: '#f5f5f5',
-                border: '1px solid #ddd',
-                borderRadius: 1,
-                mb: 2,
+                gap: 0.5,
+                p: 1.5,
+                background: colors.bgAlt,
+                border: `1px solid ${colors.border}`,
+                borderRadius: '10px',
+                mb: 1.5,
             }}
         >
             <input
@@ -290,18 +293,24 @@ export const Toolbar: React.FC<Props> = ({ editor, onTranslateClick, onTranscrib
                 </IconButton>
             </Tooltip>
 
-            <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+            <Divider orientation="vertical" flexItem sx={dividerSx} />
 
             {/* AI buttons */}
             <Tooltip title="AI инструменты">
                 <Button
                     size="small"
                     variant="contained"
-                    startIcon={<SmartToy />}
+                    startIcon={<SmartToy sx={{ fontSize: '16px !important' }} />}
                     onClick={handleAiClick}
                     sx={{
-                        bgcolor: 'primary.main',
-                        '&:hover': { bgcolor: 'primary.dark' },
+                        bgcolor: colors.accent,
+                        color: '#fff',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        px: 1.5,
+                        py: 0.5,
+                        borderRadius: '8px',
+                        '&:hover': { bgcolor: colors.accent, filter: 'brightness(0.9)' },
                     }}
                 >
                     AI
@@ -310,16 +319,16 @@ export const Toolbar: React.FC<Props> = ({ editor, onTranslateClick, onTranscrib
 
             <Menu anchorEl={aiAnchor} open={Boolean(aiAnchor)} onClose={handleAiClose}>
                 <MenuItem onClick={handleTranslateClick}>
-                    <Translate fontSize="small" sx={{ mr: 1 }} />
+                    <Translate fontSize="small" sx={{ mr: 1, color: colors.primary }} />
                     Перевести (DeepL)
                 </MenuItem>
                 <MenuItem onClick={handleTranscribeClick}>
-                    <Mic fontSize="small" sx={{ mr: 1 }} />
+                    <Mic fontSize="small" sx={{ mr: 1, color: colors.primary }} />
                     Транскрипция видео
                 </MenuItem>
             </Menu>
 
-            <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+            <Divider orientation="vertical" flexItem sx={dividerSx} />
 
             {/* formatting */}
             <ToggleButtonGroup size="small">
@@ -352,7 +361,7 @@ export const Toolbar: React.FC<Props> = ({ editor, onTranslateClick, onTranscrib
                 </Tooltip>
             </ToggleButtonGroup>
 
-            <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+            <Divider orientation="vertical" flexItem sx={dividerSx} />
 
             {/* titles */}
             <ToggleButtonGroup size="small">
@@ -360,6 +369,7 @@ export const Toolbar: React.FC<Props> = ({ editor, onTranslateClick, onTranscrib
                     value="h2"
                     selected={editor.isActive('heading', { level: 2 })}
                     onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                    sx={{ fontFamily: 'var(--tw-font-display)', fontWeight: 700 }}
                 >
                     H2
                 </ToggleButton>
@@ -367,12 +377,13 @@ export const Toolbar: React.FC<Props> = ({ editor, onTranslateClick, onTranscrib
                     value="h3"
                     selected={editor.isActive('heading', { level: 3 })}
                     onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+                    sx={{ fontFamily: 'var(--tw-font-display)', fontWeight: 700 }}
                 >
                     H3
                 </ToggleButton>
             </ToggleButtonGroup>
 
-            <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+            <Divider orientation="vertical" flexItem sx={dividerSx} />
 
             {/* lists and quotes */}
             <Tooltip title="Маркированный список">
@@ -402,7 +413,7 @@ export const Toolbar: React.FC<Props> = ({ editor, onTranslateClick, onTranscrib
                 </IconButton>
             </Tooltip>
 
-            <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+            <Divider orientation="vertical" flexItem sx={dividerSx} />
 
             {/* uploading images */}
             <Tooltip title="Загрузить изображение с компьютера">
@@ -425,7 +436,7 @@ export const Toolbar: React.FC<Props> = ({ editor, onTranslateClick, onTranscrib
 
             <Tooltip title="Вставить YouTube видео">
                 <IconButton size="small" onClick={handleYoutubeInsert}>
-                    <YouTube fontSize="small" color="error" />
+                    <YouTube fontSize="small" sx={{ color: colors.live }} />
                 </IconButton>
             </Tooltip>
 
@@ -437,7 +448,7 @@ export const Toolbar: React.FC<Props> = ({ editor, onTranslateClick, onTranscrib
 
             <Tooltip title="Вставить видео по ссылке (.mp4)">
                 <IconButton size="small" onClick={handleVideoInsert}>
-                    <OndemandVideo fontSize="small" color="action" />
+                    <OndemandVideo fontSize="small" />
                 </IconButton>
             </Tooltip>
 

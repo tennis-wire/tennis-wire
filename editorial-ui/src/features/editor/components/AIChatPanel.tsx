@@ -11,6 +11,7 @@ import {
 } from '@mui/material'
 import { Send, Close, ContentCopy, Check, Refresh, Psychology } from '@mui/icons-material'
 import type { Editor } from '@tiptap/react'
+import { useAppTheme } from '../../../theme'
 
 import { sendChatMessage } from '../api/aiChatApi'
 
@@ -34,6 +35,7 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
     const [copiedId, setCopiedId] = useState<string | null>(null)
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const abortRef = useRef<AbortController | null>(null)
+    const { colors } = useAppTheme()
 
     const getContext = useCallback((): { text: string; isSelection: boolean } => {
         if (!editor) return { text: '', isSelection: false }
@@ -70,13 +72,11 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
         setInput('')
         setIsLoading(true)
 
-        // collecting history
         const apiMessages = [
             ...messages.map((m) => ({ role: m.role, content: m.content })),
             { role: 'user' as const, content: prompt },
         ]
 
-        // create an empty assistant message
         setMessages((prev) => [
             ...prev,
             { id: assistantMessageId, role: 'assistant', content: '', timestamp: new Date() },
@@ -159,7 +159,7 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
 
     return (
         <Paper
-            elevation={3}
+            elevation={0}
             sx={{
                 width: 380,
                 height: '100vh',
@@ -167,8 +167,8 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
                 top: 0,
                 display: 'flex',
                 flexDirection: 'column',
-                borderLeft: '1px solid #e0e0e0',
-                backgroundColor: '#fafafa',
+                borderLeft: `1px solid ${colors.border}`,
+                backgroundColor: colors.bg,
                 flexShrink: 0,
             }}
         >
@@ -176,16 +176,23 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
             <Box
                 sx={{
                     p: 2,
-                    borderBottom: '1px solid #e0e0e0',
-                    backgroundColor: '#fff',
+                    borderBottom: `1px solid ${colors.border}`,
+                    backgroundColor: colors.surface,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                 }}
             >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Psychology color="primary" />
-                    <Typography variant="h6" sx={{ fontSize: '1rem' }}>
+                    <Psychology sx={{ color: colors.accent }} />
+                    <Typography
+                        sx={{
+                            fontFamily: 'var(--tw-font-display)',
+                            fontSize: '1rem',
+                            fontWeight: 700,
+                            color: colors.text,
+                        }}
+                    >
                         AI-помощник
                     </Typography>
                 </Box>
@@ -205,9 +212,14 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
 
             {/* context */}
             <Box
-                sx={{ px: 2, py: 1, backgroundColor: '#f5f5f5', borderBottom: '1px solid #e0e0e0' }}
+                sx={{
+                    px: 2,
+                    py: 1,
+                    backgroundColor: colors.bgAlt,
+                    borderBottom: `1px solid ${colors.border}`,
+                }}
             >
-                <Typography variant="caption" color="text.secondary">
+                <Typography sx={{ fontSize: '0.75rem', color: colors.textMuted }}>
                     📎 Контекст: {context.isSelection ? 'выделенный текст' : 'весь текст'}
                     {context.text && ` (${context.text.split(/\s+/).length} слов)`}
                 </Typography>
@@ -225,9 +237,9 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
                 }}
             >
                 {messages.length === 0 && (
-                    <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
-                        <Psychology sx={{ fontSize: 48, opacity: 0.3, mb: 1 }} />
-                        <Typography variant="body2">
+                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                        <Psychology sx={{ fontSize: 48, color: colors.border, mb: 1 }} />
+                        <Typography sx={{ fontSize: '0.85rem', color: colors.textMuted }}>
                             Выделите текст и задайте вопрос,
                             <br />
                             или используйте быстрые команды
@@ -247,15 +259,23 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
                             elevation={0}
                             sx={{
                                 p: 1.5,
-                                backgroundColor: message.role === 'user' ? '#e3f2fd' : '#fff',
-                                border: '1px solid',
-                                borderColor: message.role === 'user' ? '#bbdefb' : '#e0e0e0',
-                                borderRadius: 2,
+                                backgroundColor:
+                                    message.role === 'user'
+                                        ? `${colors.primary}12`
+                                        : colors.surface,
+                                border: `1px solid`,
+                                borderColor:
+                                    message.role === 'user' ? `${colors.primary}30` : colors.border,
+                                borderRadius: '12px',
                             }}
                         >
                             <Typography
-                                variant="body2"
-                                sx={{ whiteSpace: 'pre-wrap', fontSize: '0.875rem' }}
+                                sx={{
+                                    whiteSpace: 'pre-wrap',
+                                    fontSize: '0.875rem',
+                                    color: colors.text,
+                                    lineHeight: 1.6,
+                                }}
                             >
                                 {message.content}
                             </Typography>
@@ -266,7 +286,12 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
                                 <Button
                                     size="small"
                                     variant="text"
-                                    sx={{ fontSize: '0.7rem', minWidth: 0, px: 1 }}
+                                    sx={{
+                                        fontSize: '0.7rem',
+                                        minWidth: 0,
+                                        px: 1,
+                                        color: colors.primary,
+                                    }}
                                     onClick={() => handleInsert(message.content, 'replace')}
                                 >
                                     Заменить
@@ -274,7 +299,12 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
                                 <Button
                                     size="small"
                                     variant="text"
-                                    sx={{ fontSize: '0.7rem', minWidth: 0, px: 1 }}
+                                    sx={{
+                                        fontSize: '0.7rem',
+                                        minWidth: 0,
+                                        px: 1,
+                                        color: colors.primary,
+                                    }}
                                     onClick={() => handleInsert(message.content, 'below')}
                                 >
                                     Вставить
@@ -284,7 +314,7 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
                                     onClick={() => handleCopy(message.content, message.id)}
                                 >
                                     {copiedId === message.id ? (
-                                        <Check fontSize="small" color="success" />
+                                        <Check fontSize="small" sx={{ color: colors.primary }} />
                                     ) : (
                                         <ContentCopy sx={{ fontSize: 14 }} />
                                     )}
@@ -296,11 +326,16 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
 
                 {isLoading && (
                     <Box
-                        sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            cursor: 'pointer',
+                        }}
                         onClick={handleStop}
                     >
-                        <CircularProgress size={16} />
-                        <Typography variant="body2" color="text.secondary">
+                        <CircularProgress size={16} sx={{ color: colors.accent }} />
+                        <Typography sx={{ fontSize: '0.85rem', color: colors.textMuted }}>
                             AI думает... (клик чтобы остановить)
                         </Typography>
                     </Box>
@@ -310,7 +345,13 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
             </Box>
 
             {/* input field */}
-            <Box sx={{ p: 2, borderTop: '1px solid #e0e0e0', backgroundColor: '#fff' }}>
+            <Box
+                sx={{
+                    p: 2,
+                    borderTop: `1px solid ${colors.border}`,
+                    backgroundColor: colors.surface,
+                }}
+            >
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     <TextField
                         fullWidth
@@ -329,19 +370,33 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
                         disabled={isLoading}
                     />
                     <IconButton
-                        color="primary"
                         onClick={() => handleSend()}
                         disabled={!input.trim() || isLoading}
+                        sx={{
+                            backgroundColor: colors.primary,
+                            color: '#fff',
+                            borderRadius: '10px',
+                            '&:hover': {
+                                backgroundColor: colors.primaryDark,
+                            },
+                            '&.Mui-disabled': {
+                                backgroundColor: colors.border,
+                                color: colors.textMuted,
+                            },
+                        }}
                     >
-                        <Send />
+                        <Send fontSize="small" />
                     </IconButton>
                 </Box>
                 <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ mt: 0.5, display: 'block' }}
+                    sx={{
+                        mt: 0.5,
+                        display: 'block',
+                        fontSize: '0.7rem',
+                        color: colors.textMuted,
+                    }}
                 >
-                    Enter для отправки • Shift+Enter для новой строки
+                    Enter для отправки · Shift+Enter для новой строки
                 </Typography>
             </Box>
         </Paper>

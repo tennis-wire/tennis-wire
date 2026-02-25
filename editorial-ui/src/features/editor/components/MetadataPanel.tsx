@@ -15,16 +15,18 @@ import {
 } from '@mui/material'
 import { Upload, Delete } from '@mui/icons-material'
 import type { ContentMetadata, ContentType } from '../types/content.ts'
+import { useAppTheme } from '../../../theme'
 
 interface Props {
     metadata: ContentMetadata
     onChange: (metadata: ContentMetadata) => void
-    readingTime?: number // time for read
+    readingTime?: number
 }
 
 export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, readingTime }) => {
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [tagInput, setTagInput] = React.useState('')
+    const { colors } = useAppTheme()
 
     const isArticle = metadata.type === 'article'
 
@@ -124,24 +126,50 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, readingTime
             elevation={0}
             sx={{
                 p: 3,
-                mb: 3,
-                border: '1px solid #e0e0e0',
-                borderRadius: 2,
-                backgroundColor: '#fff',
+                mb: 2.5,
+                border: `1px solid ${colors.border}`,
+                borderRadius: '14px',
+                backgroundColor: colors.surface,
+                boxShadow: colors.cardShadow,
             }}
         >
-            <Typography
-                variant="h6"
-                gutterBottom
-                sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    mb: 2.5,
+                }}
             >
-                {isArticle ? '📝 Статья' : '📰 Новость'}
+                <Typography
+                    sx={{
+                        fontFamily: 'var(--tw-font-display)',
+                        fontSize: '1.25rem',
+                        fontWeight: 700,
+                        color: colors.text,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                    }}
+                >
+                    {isArticle ? '📝 Статья' : '📰 Новость'}
+                </Typography>
                 {isArticle && readingTime && (
-                    <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
+                    <Typography
+                        sx={{
+                            fontSize: '0.8rem',
+                            color: colors.textMuted,
+                            backgroundColor: colors.tag,
+                            px: 1.5,
+                            py: 0.4,
+                            borderRadius: '6px',
+                            fontWeight: 500,
+                        }}
+                    >
                         ~{readingTime} мин чтения
                     </Typography>
                 )}
-            </Typography>
+            </Box>
 
             <FormControl fullWidth size="small" sx={{ mb: 2 }}>
                 <InputLabel>Тип материала</InputLabel>
@@ -161,7 +189,14 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, readingTime
                 onChange={handleChange('title')}
                 fullWidth
                 required
-                sx={{ mb: 2 }}
+                sx={{
+                    mb: 2,
+                    '& .MuiInputBase-input': {
+                        fontFamily: 'var(--tw-font-display)',
+                        fontSize: '1.1rem',
+                        fontWeight: 600,
+                    },
+                }}
             />
 
             {isArticle && (
@@ -185,7 +220,10 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, readingTime
 
             {isArticle && (
                 <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    <Typography
+                        variant="body2"
+                        sx={{ mb: 1, color: colors.textSecondary, fontSize: '0.85rem' }}
+                    >
                         Обложка статьи *
                     </Typography>
                     <input
@@ -204,7 +242,7 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, readingTime
                                 style={{
                                     maxWidth: '100%',
                                     maxHeight: 200,
-                                    borderRadius: 8,
+                                    borderRadius: 10,
                                     objectFit: 'cover',
                                 }}
                             />
@@ -227,7 +265,15 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, readingTime
                             variant="outlined"
                             startIcon={<Upload />}
                             onClick={handleCoverUpload}
-                            sx={{ borderStyle: 'dashed' }}
+                            sx={{
+                                borderStyle: 'dashed',
+                                borderColor: colors.border,
+                                color: colors.textSecondary,
+                                '&:hover': {
+                                    borderColor: colors.primary,
+                                    backgroundColor: `${colors.primary}08`,
+                                },
+                            }}
                         >
                             Загрузить обложку
                         </Button>
@@ -263,6 +309,16 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, readingTime
                                 label={tag}
                                 size="small"
                                 onDelete={() => handleRemoveTag(tag)}
+                                sx={{
+                                    backgroundColor: colors.tag,
+                                    color: colors.primary,
+                                    fontWeight: 600,
+                                    fontSize: '0.75rem',
+                                    '& .MuiChip-deleteIcon': {
+                                        color: colors.textMuted,
+                                        '&:hover': { color: colors.live },
+                                    },
+                                }}
                             />
                         ))}
                     </Stack>
@@ -272,10 +328,12 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, readingTime
             <Box
                 sx={{
                     pt: 2,
-                    borderTop: '1px solid #eee',
+                    borderTop: `1px solid ${colors.border}`,
                 }}
             >
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                <Typography
+                    sx={{ mb: 1, color: colors.textMuted, fontSize: '0.8rem', fontWeight: 500 }}
+                >
                     Дополнительно (опционально)
                 </Typography>
 

@@ -1,6 +1,7 @@
 import React from 'react'
 import { Box, Typography, Button } from '@mui/material'
 import type { ContentType } from '../types/content'
+import { useAppTheme } from '../../../theme'
 
 interface Props {
     contentType: ContentType
@@ -22,39 +23,90 @@ export const EditorStatusBar: React.FC<Props> = ({
     onClear,
     onSave,
     onPublish,
-}) => (
-    <Box
-        sx={{
-            p: 2,
-            borderTop: 1,
-            borderColor: 'divider',
-            bgcolor: 'grey.50',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 1,
-        }}
-    >
-        <Typography variant="body2" color="text.secondary">
-            {contentType === 'article' ? '📝' : '📰'} Слов: {wordCount}
-            {contentType === 'article' && ` • ~${readingTime} мин чтения`}
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            {hasOriginal && (
-                <Button size="small" variant="outlined" color="inherit" onClick={onReset}>
-                    Сбросить к оригиналу
+}) => {
+    const { colors } = useAppTheme()
+
+    return (
+        <Box
+            sx={{
+                p: 2,
+                borderTop: `1px solid ${colors.border}`,
+                bgcolor: colors.bgAlt,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 1,
+                borderRadius: '0 0 14px 14px',
+            }}
+        >
+            <Typography sx={{ fontSize: '0.85rem', color: colors.textMuted }}>
+                {contentType === 'article' ? '📝' : '📰'} Слов: {wordCount}
+                {contentType === 'article' && ` · ~${readingTime} мин чтения`}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {hasOriginal && (
+                    <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={onReset}
+                        sx={{
+                            borderColor: colors.border,
+                            color: colors.textSecondary,
+                            '&:hover': {
+                                borderColor: colors.textMuted,
+                                backgroundColor: `${colors.text}08`,
+                            },
+                        }}
+                    >
+                        Сбросить к оригиналу
+                    </Button>
+                )}
+                <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={onClear}
+                    sx={{
+                        borderColor: colors.border,
+                        color: colors.textSecondary,
+                        '&:hover': {
+                            borderColor: colors.textMuted,
+                            backgroundColor: `${colors.text}08`,
+                        },
+                    }}
+                >
+                    Очистить
                 </Button>
-            )}
-            <Button size="small" variant="outlined" color="inherit" onClick={onClear}>
-                Очистить
-            </Button>
-            <Button size="small" variant="outlined" onClick={onSave}>
-                Сохранить черновик
-            </Button>
-            <Button size="small" variant="contained" onClick={onPublish}>
-                Опубликовать
-            </Button>
+                <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={onSave}
+                    sx={{
+                        borderColor: colors.primary,
+                        color: colors.primary,
+                        '&:hover': {
+                            backgroundColor: `${colors.primary}0A`,
+                            borderColor: colors.primaryDark,
+                        },
+                    }}
+                >
+                    Сохранить черновик
+                </Button>
+                <Button
+                    size="small"
+                    variant="contained"
+                    onClick={onPublish}
+                    sx={{
+                        backgroundColor: colors.primary,
+                        color: '#fff',
+                        '&:hover': {
+                            backgroundColor: colors.primaryDark,
+                        },
+                    }}
+                >
+                    Опубликовать
+                </Button>
+            </Box>
         </Box>
-    </Box>
-)
+    )
+}
