@@ -1,6 +1,6 @@
 import { createTheme } from '@mui/material'
-import type { PaletteColors } from './palettes.ts'
-import type { FontPair } from './fonts.ts'
+import type { PaletteColors } from './palettes'
+import type { FontPair } from './fonts'
 
 export function createAppTheme(colors: PaletteColors, fontPair: FontPair, isDark: boolean) {
     return createTheme({
@@ -167,7 +167,9 @@ export function createAppTheme(colors: PaletteColors, fontPair: FontPair, isDark
                     tooltip: {
                         fontFamily: fontPair.body,
                         fontSize: '0.75rem',
-                        backgroundColor: colors.text,
+                        backgroundColor: isDark ? colors.surface : colors.text,
+                        color: isDark ? colors.text : colors.bg,
+                        border: isDark ? `1px solid ${colors.border}` : 'none',
                         borderRadius: 6,
                     },
                 },
