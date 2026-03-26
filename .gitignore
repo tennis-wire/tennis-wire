@@ -8,9 +8,15 @@ build/
 .idea/
 *.iml
 
-# ─── Node / Vite ──────────────────────────────────────────────────────────────
-editorial-ui/node_modules/
-editorial-ui/dist/
+# ─── Node / Vite / Next ──────────────────────────────────────────────────────────────
+apps/editorial-ui/node_modules/
+apps/editorial-ui/dist/
+apps/public-web/node_modules/
+apps/public-web/dist/
+apps/public-web/.next/
+apps/mobile/node_modules
+apps/mobile/.expo
+apps/mobile/.npmrc
 
 # ─── Python ───────────────────────────────────────────────────────────────────
 __pycache__/

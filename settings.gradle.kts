@@ -6,3 +6,4 @@ rootProject.name = "tennis-wire"
 
 include("editorial-bff")
 include("api-gateway")
+include("content-service")
