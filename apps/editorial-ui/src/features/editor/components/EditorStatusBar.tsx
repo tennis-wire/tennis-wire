@@ -1,5 +1,5 @@
 import React from 'react'
-import { Box, Typography, Button } from '@mui/material'
+import { Box, Typography, Button, CircularProgress } from '@mui/material'
 import type { ContentType } from '../types/content'
 import { useAppTheme } from '../../../theme'
 
@@ -12,6 +12,8 @@ interface Props {
     onClear: () => void
     onSave: () => void
     onPublish: () => void
+    isSaving?: boolean
+    isPublishing?: boolean
 }
 
 export const EditorStatusBar: React.FC<Props> = ({
@@ -23,8 +25,11 @@ export const EditorStatusBar: React.FC<Props> = ({
     onClear,
     onSave,
     onPublish,
+    isSaving = false,
+    isPublishing = false,
 }) => {
     const { colors } = useAppTheme()
+    const isLoading = isSaving || isPublishing
 
     return (
         <Box
@@ -50,6 +55,7 @@ export const EditorStatusBar: React.FC<Props> = ({
                         size="small"
                         variant="outlined"
                         onClick={onReset}
+                        disabled={isLoading}
                         sx={{
                             borderColor: colors.border,
                             color: colors.textSecondary,
@@ -66,6 +72,7 @@ export const EditorStatusBar: React.FC<Props> = ({
                     size="small"
                     variant="outlined"
                     onClick={onClear}
+                    disabled={isLoading}
                     sx={{
                         borderColor: colors.border,
                         color: colors.textSecondary,
@@ -81,6 +88,10 @@ export const EditorStatusBar: React.FC<Props> = ({
                     size="small"
                     variant="outlined"
                     onClick={onSave}
+                    disabled={isLoading}
+                    startIcon={
+                        isSaving ? <CircularProgress size={16} color="inherit" /> : undefined
+                    }
                     sx={{
                         borderColor: colors.primary,
                         color: colors.primary,
@@ -90,12 +101,16 @@ export const EditorStatusBar: React.FC<Props> = ({
                         },
                     }}
                 >
-                    Сохранить черновик
+                    {isSaving ? 'Сохранение...' : 'Сохранить черновик'}
                 </Button>
                 <Button
                     size="small"
                     variant="contained"
                     onClick={onPublish}
+                    disabled={isLoading}
+                    startIcon={
+                        isPublishing ? <CircularProgress size={16} color="inherit" /> : undefined
+                    }
                     sx={{
                         backgroundColor: colors.primary,
                         color: '#fff',
@@ -104,7 +119,7 @@ export const EditorStatusBar: React.FC<Props> = ({
                         },
                     }}
                 >
-                    Опубликовать
+                    {isPublishing ? 'Публикация...' : 'Опубликовать'}
                 </Button>
             </Box>
         </Box>

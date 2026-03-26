@@ -24,6 +24,7 @@ export default function Editor() {
     const [isAIPanelOpen, setIsAIPanelOpen] = useState(false)
     const [translateDialogOpen, setTranslateDialogOpen] = useState(false)
     const [transcribeDialogOpen, setTranscribeDialogOpen] = useState(false)
+    const [articleId, setArticleId] = useState<string | null>(null)
 
     const { colors } = useAppTheme()
     const { snackbar, showSnackbar, hideSnackbar } = useSnackbar()
@@ -36,16 +37,26 @@ export default function Editor() {
         showSnackbar
     )
 
-    const { handleSave, handlePublish, handleReset, handleClear, insertBelow, getSelectedText } =
-        useEditorActions({
-            editor,
-            metadata,
-            setMetadata,
-            originalContent,
-            setOriginalContent,
-            clearPersisted,
-            showSnackbar,
-        })
+    const {
+        handleSave,
+        handlePublish,
+        handleReset,
+        handleClear,
+        insertBelow,
+        getSelectedText,
+        isSaving,
+        isPublishing,
+    } = useEditorActions({
+        editor,
+        metadata,
+        setMetadata,
+        originalContent,
+        setOriginalContent,
+        clearPersisted,
+        showSnackbar,
+        articleId,
+        setArticleId,
+    })
 
     if (!editor) {
         return (
@@ -260,6 +271,8 @@ export default function Editor() {
                             onClear={handleClear}
                             onSave={handleSave}
                             onPublish={handlePublish}
+                            isSaving={isSaving}
+                            isPublishing={isPublishing}
                         />
                     </Paper>
                 </Box>
