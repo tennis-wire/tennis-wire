@@ -3,7 +3,6 @@ package com.tenniswire.api_gateway.config;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
@@ -37,7 +36,8 @@ public class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource() {
         var config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
-            "http://localhost:5173" // Vite dev server
+            "http://localhost:5173", // Editorial UI (Vite dev server)
+            "http://localhost:3000"  // Public Web (Next.js dev server)
             // TODO: add production domain
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PATCH", "DELETE", "OPTIONS"));
