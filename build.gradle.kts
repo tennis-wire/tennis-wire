@@ -32,6 +32,7 @@ subprojects {
         "annotationProcessor"("org.projectlombok:lombok")
         "testCompileOnly"("org.projectlombok:lombok")
         "testAnnotationProcessor"("org.projectlombok:lombok")
+        "compileOnly"("com.github.spotbugs:spotbugs-annotations:4.9.3")
     }
 
     // SpotBugs settings
