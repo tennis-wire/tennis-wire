@@ -34,32 +34,58 @@ spring:
               predicates:
                 - Path=/api/transcribe/**
 
-            # ===== Public services (TODO) =====
+            # ===== Content Service =====
 
-            # - id: content-service
-            #   uri: http://localhost:8081
-            #   predicates:
-            #     - Path=/api/content/**
+            - id: content-editorial
+              uri: http://localhost:8091
+              predicates:
+                - Path=/api/editorial/**
+
+            - id: content-public
+              uri: http://localhost:8091
+              predicates:
+                - Path=/api/public/**
+
+            # ===== Other services (TODO) =====
 
             # - id: user-service
-            #   uri: http://localhost:8082
+            #   uri: http://localhost:8092
             #   predicates:
             #     - Path=/api/users/**, /api/auth/**
 
             # - id: comments-service
-            #   uri: http://localhost:8083
+            #   uri: http://localhost:8093
             #   predicates:
             #     - Path=/api/comments/**
 
             # - id: search-service
-            #   uri: http://localhost:8084
+            #   uri: http://localhost:8094
             #   predicates:
             #     - Path=/api/search/**
 
             # - id: aggregator-service
-            #   uri: http://localhost:8085
+            #   uri: http://localhost:8095
             #   predicates:
             #     - Path=/api/aggregator/**
+
+      # CORS configuration
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins:
+              - "http://localhost:5173"    # Vite dev server
+              # - "https://tenniswire.com" # production (TODO)
+            allowed-methods:
+              - GET
+              - POST
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowed-headers:
+              - Content-Type
+              - Authorization
+            allow-credentials: true
+            max-age: 3600
 
 # Actuator — health check and info
 management:
