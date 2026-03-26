@@ -1,11 +1,15 @@
 package com.tenniswire.api_gateway.config;
 
+import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsConfigurationSource;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebFluxSecurity
@@ -23,8 +27,26 @@ public class SecurityConfig {
                 // For now — permit all
                 .anyExchange()
                 .permitAll())
-            .cors(Customizer.withDefaults()) // delegate to Gateway globalcors config
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
             .build();
+    }
+
+    // CORS config applied at Security filter level — ensures preflight gets headers
+    @Bean
+    CorsConfigurationSource corsConfigurationSource() {
+        var config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of(
+            "http://localhost:5173" // Vite dev server
+            // TODO: add production domain
+        ));
+        config.setAllowedMethods(List.of("GET", "POST", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Content-Type", "Authorization"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+
+        var source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 }

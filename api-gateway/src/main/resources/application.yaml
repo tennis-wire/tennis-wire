@@ -68,25 +68,6 @@ spring:
             #   predicates:
             #     - Path=/api/aggregator/**
 
-      # CORS configuration
-      globalcors:
-        cors-configurations:
-          '[/**]':
-            allowed-origins:
-              - "http://localhost:5173"    # Vite dev server
-              # - "https://tenniswire.com" # production (TODO)
-            allowed-methods:
-              - GET
-              - POST
-              - PATCH
-              - DELETE
-              - OPTIONS
-            allowed-headers:
-              - Content-Type
-              - Authorization
-            allow-credentials: true
-            max-age: 3600
-
 # Actuator — health check and info
 management:
   endpoints:
