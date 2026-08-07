@@ -25,7 +25,7 @@ server:
 
 logging:
   level:
-    com.tenniswire.content: DEBUG
+    com.tenniswire.content_service: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.orm.jdbc.bind: TRACE
 

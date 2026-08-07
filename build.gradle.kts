@@ -3,7 +3,6 @@ plugins {
     id("org.springframework.boot") version "4.0.3" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
     id("com.github.spotbugs") version "6.4.8" apply false
-    pmd
 }
 
 allprojects {
@@ -44,10 +43,10 @@ subprojects {
     }
 
     // pmd settings
-    pmd {
+    configure<PmdExtension> {
         isConsoleOutput = true
         ruleSetFiles = files(rootProject.file("pmd.xml"))
-        ruleSets = listOf() // Отключаем встроенные, используем только наш файл
+        ruleSets = listOf()
     }
 
     tasks.withType<Test> {
