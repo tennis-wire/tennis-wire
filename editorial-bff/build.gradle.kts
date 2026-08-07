@@ -1,6 +1,6 @@
 plugins {
-    id("org.springframework.boot")
-    id("io.spring.dependency-management")
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
 }
 
 description = "Backend for Editorial UI: AI chat, translation"
@@ -12,8 +12,8 @@ configurations {
 }
 
 dependencies {
-    implementation("com.anthropic:anthropic-java:2.11.1")
-    implementation("com.deepl.api:deepl-java:1.14.0")
+    implementation(libs.anthropic.java)
+    implementation(libs.deepl.java)
 
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-web")
