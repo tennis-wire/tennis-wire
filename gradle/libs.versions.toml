@@ -3,7 +3,7 @@ spring-boot = "4.0.3"
 spring-dependency-management = "1.1.7"
 spring-cloud = "2025.1.0"
 spotbugs-plugin = "6.4.8"
-spotbugs = "4.9.3"
+spotbugs = "4.9.8"
 spotless = "8.1.0"
 
 [libraries]
@@ -12,6 +12,7 @@ deepl-java = { module = "com.deepl.api:deepl-java", version = "1.14.0" }
 springdoc-openapi-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version = "2.8.6" }
 spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", version.ref = "spotbugs" }
 spring-cloud-bom = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "spring-cloud" }
+findsecbugs = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version = "1.14.0" }
 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
