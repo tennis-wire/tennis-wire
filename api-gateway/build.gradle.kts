@@ -19,6 +19,10 @@ dependencies {
 
 dependencyManagement {
     imports {
-        mavenBom(libs.spring.cloud.bom.get().toString())
+        mavenBom(
+            libs.spring.cloud.bom
+                .get()
+                .toString(),
+        )
     }
 }

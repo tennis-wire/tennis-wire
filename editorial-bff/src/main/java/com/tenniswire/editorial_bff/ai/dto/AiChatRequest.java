@@ -10,6 +10,4 @@ import java.util.List;
  * @param messages conversation history (at least one user message)
  * @param context  optional article text from the editor for Claude to work with
  */
-public record AiChatRequest(
-    @NotEmpty @Valid List<ChatMessage> messages,
-    String context) {}
+public record AiChatRequest(@NotEmpty @Valid List<ChatMessage> messages, String context) {}

@@ -6,6 +6,7 @@ import com.tenniswire.content_service.dto.editorial.UpdateTagRequest;
 import com.tenniswire.content_service.entity.TagType;
 import com.tenniswire.content_service.service.TagService;
 import jakarta.validation.Valid;
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -21,7 +22,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/editorial/tags")
@@ -41,9 +41,9 @@ public class EditorialTagController {
 
     @GetMapping
     public Page<TagResponse> list(
-        @RequestParam(required = false) String type,
-        @RequestParam(required = false) String search,
-        @PageableDefault(size = 50, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String search,
+            @PageableDefault(size = 50, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
         var tagType = type != null ? TagType.fromValue(type) : null;
         return tagService.findAllEditorial(tagType, search, pageable);
     }

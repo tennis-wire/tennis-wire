@@ -20,4 +20,3 @@ public enum ArticleType {
         throw new IllegalArgumentException("Unknown article type: " + value);
     }
 }
-

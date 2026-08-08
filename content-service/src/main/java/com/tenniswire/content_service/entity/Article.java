@@ -11,13 +11,13 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "articles")
@@ -92,17 +92,17 @@ public class Article {
 
     @ManyToMany
     @JoinTable(
-        name = "article_tags",
-        joinColumns = @JoinColumn(name = "article_id"),
-        inverseJoinColumns = @JoinColumn(name = "tag_id"))
+            name = "article_tags",
+            joinColumns = @JoinColumn(name = "article_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id"))
     @OrderBy("name")
     private Set<Tag> tags = new HashSet<>();
 
     @ManyToMany
     @JoinTable(
-        name = "related_articles",
-        joinColumns = @JoinColumn(name = "article_id"),
-        inverseJoinColumns = @JoinColumn(name = "related_article_id"))
+            name = "related_articles",
+            joinColumns = @JoinColumn(name = "article_id"),
+            inverseJoinColumns = @JoinColumn(name = "related_article_id"))
     private Set<Article> relatedArticles = new HashSet<>();
 
     // -- Lifecycle --

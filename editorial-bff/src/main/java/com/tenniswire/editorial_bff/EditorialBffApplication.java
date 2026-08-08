@@ -6,8 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class EditorialBffApplication {
 
-	 static void main(String[] args) {
-		SpringApplication.run(EditorialBffApplication.class, args);
-	}
-
+    static void main(String[] args) {
+        SpringApplication.run(EditorialBffApplication.class, args);
+    }
 }

@@ -1,5 +1,10 @@
 package com.tenniswire.content_service.service;
 
+import static com.tenniswire.content_service.repository.ArticleSpecification.hasStatus;
+import static com.tenniswire.content_service.repository.ArticleSpecification.hasTag;
+import static com.tenniswire.content_service.repository.ArticleSpecification.hasType;
+import static com.tenniswire.content_service.repository.ArticleSpecification.titleContains;
+
 import com.tenniswire.content_service.dto.ArticleResponse;
 import com.tenniswire.content_service.dto.ArticleSummaryResponse;
 import com.tenniswire.content_service.dto.editorial.CreateArticleRequest;
@@ -13,19 +18,15 @@ import com.tenniswire.content_service.exception.PublishValidationException;
 import com.tenniswire.content_service.exception.ResourceNotFoundException;
 import com.tenniswire.content_service.repository.ArticleRepository;
 import com.tenniswire.content_service.repository.TagRepository;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.UUID;
-import static com.tenniswire.content_service.repository.ArticleSpecification.hasStatus;
-import static com.tenniswire.content_service.repository.ArticleSpecification.hasTag;
-import static com.tenniswire.content_service.repository.ArticleSpecification.hasType;
-import static com.tenniswire.content_service.repository.ArticleSpecification.titleContains;
 
 @Service
 @Transactional
@@ -36,7 +37,7 @@ public class ArticleService {
     private final SlugGenerator slugGenerator;
 
     public ArticleService(
-        ArticleRepository articleRepository, TagRepository tagRepository, SlugGenerator slugGenerator) {
+            ArticleRepository articleRepository, TagRepository tagRepository, SlugGenerator slugGenerator) {
         this.articleRepository = articleRepository;
         this.tagRepository = tagRepository;
         this.slugGenerator = slugGenerator;
@@ -82,10 +83,8 @@ public class ArticleService {
 
     @Transactional(readOnly = true)
     public Page<ArticleSummaryResponse> findAllEditorial(
-        ArticleType type, ArticleStatus status, String search, Pageable pageable) {
-        var spec = Specification.where(hasType(type))
-            .and(hasStatus(status))
-            .and(titleContains(search));
+            ArticleType type, ArticleStatus status, String search, Pageable pageable) {
+        var spec = Specification.where(hasType(type)).and(hasStatus(status)).and(titleContains(search));
 
         return articleRepository.findAll(spec, pageable).map(ArticleSummaryResponse::from);
     }
@@ -128,9 +127,8 @@ public class ArticleService {
             article.slug(request.slug());
         }
         if (request.tagIds() != null) {
-            article.tags(request.tagIds().isEmpty()
-                ? Collections.emptySet()
-                : tagRepository.findByIdIn(request.tagIds()));
+            article.tags(
+                    request.tagIds().isEmpty() ? Collections.emptySet() : tagRepository.findByIdIn(request.tagIds()));
         }
 
         var saved = articleRepository.save(article);
@@ -175,8 +173,7 @@ public class ArticleService {
 
     @Transactional(readOnly = true)
     public Page<ArticleSummaryResponse> findPublished(ArticleType type, Pageable pageable) {
-        var spec = Specification.where(hasStatus(ArticleStatus.PUBLISHED))
-            .and(hasType(type));
+        var spec = Specification.where(hasStatus(ArticleStatus.PUBLISHED)).and(hasType(type));
 
         return articleRepository.findAll(spec, pageable).map(ArticleSummaryResponse::from);
     }
@@ -184,8 +181,8 @@ public class ArticleService {
     @Transactional(readOnly = true)
     public Page<ArticleSummaryResponse> findPublishedByTag(String tagSlug, ArticleType type, Pageable pageable) {
         var spec = Specification.where(hasStatus(ArticleStatus.PUBLISHED))
-            .and(hasTag(tagSlug))
-            .and(hasType(type));
+                .and(hasTag(tagSlug))
+                .and(hasType(type));
 
         return articleRepository.findAll(spec, pageable).map(ArticleSummaryResponse::from);
     }
@@ -193,8 +190,8 @@ public class ArticleService {
     @Transactional(readOnly = true)
     public ArticleResponse findPublishedBySlug(String slug) {
         var article = articleRepository
-            .findBySlugAndStatus(slug, ArticleStatus.PUBLISHED)
-            .orElseThrow(() -> new ResourceNotFoundException("Article", slug));
+                .findBySlugAndStatus(slug, ArticleStatus.PUBLISHED)
+                .orElseThrow(() -> new ResourceNotFoundException("Article", slug));
         return ArticleResponse.from(article);
     }
 
@@ -219,10 +216,12 @@ public class ArticleService {
 
         if (article.type() == ArticleType.ARTICLE) {
             if (article.subtitle() == null || article.subtitle().isBlank()) {
-                violations.add(new PublishValidationException.Violation("subtitle", "Subtitle is required for articles"));
+                violations.add(
+                        new PublishValidationException.Violation("subtitle", "Subtitle is required for articles"));
             }
             if (article.coverImageUrl() == null || article.coverImageUrl().isBlank()) {
-                violations.add(new PublishValidationException.Violation("coverImageUrl", "Cover image is required for articles"));
+                violations.add(new PublishValidationException.Violation(
+                        "coverImageUrl", "Cover image is required for articles"));
             }
         }
 

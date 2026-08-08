@@ -2,10 +2,10 @@ package com.tenniswire.content_service.repository;
 
 import com.tenniswire.content_service.entity.Article;
 import com.tenniswire.content_service.entity.ArticleStatus;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 public interface ArticleRepository extends JpaRepository<Article, UUID>, JpaSpecificationExecutor<Article> {
 
@@ -13,4 +13,3 @@ public interface ArticleRepository extends JpaRepository<Article, UUID>, JpaSpec
 
     boolean existsBySlug(String slug);
 }
-

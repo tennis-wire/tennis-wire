@@ -23,8 +23,7 @@ public class TranslationController {
     }
 
     @PostMapping
-    public ResponseEntity<TranslateResponse> translate(
-        @Valid @RequestBody TranslateRequest request) throws Exception {
+    public ResponseEntity<TranslateResponse> translate(@Valid @RequestBody TranslateRequest request) throws Exception {
         TranslateResponse response = translationService.translate(request);
         return ResponseEntity.ok(response);
     }

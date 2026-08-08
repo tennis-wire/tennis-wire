@@ -19,8 +19,8 @@ public final class ArticleSpecification {
 
     public static Specification<Article> titleContains(String search) {
         return (root, query, cb) -> search == null || search.isBlank()
-            ? null
-            : cb.like(cb.lower(root.get("title")), "%" + search.toLowerCase() + "%");
+                ? null
+                : cb.like(cb.lower(root.get("title")), "%" + search.toLowerCase() + "%");
     }
 
     public static Specification<Article> hasTag(String tagSlug) {
