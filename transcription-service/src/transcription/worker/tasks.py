@@ -9,16 +9,16 @@ from typing import Any, ClassVar
 
 import structlog
 from arq.connections import ArqRedis, RedisSettings
+from arq.worker import func
 
 from transcription.config import get_settings
+from transcription.constants import TRANSCRIBE_TASK_NAME
 from transcription.models import JobStatus
 from transcription.storage.jobs import JobStorage
 from transcription.storage.s3 import S3Storage
 from transcription.worker.transcriber import MediaDownloader, Transcriber
 
 logger = structlog.get_logger()
-
-TRANSCRIBE_TASK_NAME = "transcribe"
 
 
 def _make_temp_path(suffix: str) -> Path:
@@ -165,7 +165,7 @@ async def shutdown(ctx: dict[str, Any]) -> None:
 class WorkerSettings:
     """ARQ worker settings."""
 
-    functions: ClassVar = [transcribe]
+    functions: ClassVar = [func(transcribe, name=TRANSCRIBE_TASK_NAME)]
     on_startup = startup
     on_shutdown = shutdown
 

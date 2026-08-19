@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Any
 
 import structlog
-import whisperx
 
 from transcription.config import Settings
 from transcription.models import TranscriptionResult, TranscriptionSegment
@@ -62,6 +61,7 @@ class MockTranscriber:
                 ),
             ],
             language=language or "en",
+            duration=8.0,
             text=(
                 "This is a mock transcription. WhisperX is not loaded in mock mode. "
                 f"Audio file: {audio_path.name}"
@@ -232,6 +232,8 @@ class Transcriber:
 
     def _load_align_model(self, language: str) -> None:
         """Load alignment model for word-level timestamps."""
+        import whisperx
+
         if self._align_model is not None:
             return
 
@@ -245,6 +247,8 @@ class Transcriber:
 
     def _load_diarize_pipeline(self) -> None:
         """Load speaker diarization pipeline."""
+        import whisperx
+
         if self._diarize_pipeline is not None:
             return
 
@@ -277,6 +281,7 @@ class Transcriber:
         Returns:
             TranscriptionResult with segments and full text
         """
+        import whisperx
 
         loop = asyncio.get_event_loop()
         self.load_model()

@@ -14,12 +14,21 @@ from transcription.api.schemas import (
     TranscribeUrlRequest,
 )
 from transcription.config import Settings, get_settings
+from transcription.constants import TRANSCRIBE_TASK_NAME
 from transcription.models import JobStatus, TranscriptionJob
 from transcription.storage.jobs import JobStorage
 from transcription.storage.s3 import S3Storage
-from transcription.worker.tasks import TRANSCRIBE_TASK_NAME
 
 router = APIRouter()
+
+
+def _gpu_available() -> bool:
+    """Report GPU availability without requiring torch on the API process."""
+    try:
+        import torch
+    except ImportError:
+        return False
+    return bool(torch.cuda.is_available())
 
 
 # ============== Dependencies ==============
@@ -55,8 +64,6 @@ async def health_check(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> HealthResponse:
     """Health check endpoint."""
-    import torch
-
     from transcription import __version__
 
     # Check Redis
@@ -71,7 +78,7 @@ async def health_check(
         status="ok",
         version=__version__,
         redis_connected=redis_connected,
-        gpu_available=torch.cuda.is_available(),
+        gpu_available=_gpu_available(),
     )
 
 

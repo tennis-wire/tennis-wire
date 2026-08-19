@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 
 from tests.conftest import FakeJobStorage
+from transcription.constants import TRANSCRIBE_TASK_NAME
 from transcription.models import JobStatus, TranscriptionJob
-from transcription.worker.tasks import TRANSCRIBE_TASK_NAME
 
 
 class TestHealthEndpoint:
@@ -14,17 +14,14 @@ class TestHealthEndpoint:
 
     def test_health_check(self, client: TestClient) -> None:
         """Test health check returns ok."""
-        with (
-            patch("transcription.api.routes.get_arq_redis", new=AsyncMock()),
-            patch("torch.cuda.is_available", return_value=False),
-        ):
+        with patch("transcription.api.routes.get_arq_redis", new=AsyncMock()):
             response = client.get("/api/health")
 
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "ok"
         assert "version" in data
-        assert data["gpu_available"] is False
+        assert isinstance(data["gpu_available"], bool)
 
 
 class TestTranscribeUrlEndpoint:
