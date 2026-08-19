@@ -111,7 +111,7 @@ class Transcriber:
         """
         import whisperx
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         self.load_model()
 
         # Progress: 0-30% - transcription
@@ -241,7 +241,7 @@ class MediaDownloader:
 
         logger.info("Downloading media", url=url)
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         def do_download() -> str:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:

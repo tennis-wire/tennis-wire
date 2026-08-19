@@ -3,7 +3,7 @@
 import asyncio
 import os
 import tempfile
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -63,7 +63,7 @@ async def transcribe(ctx: dict[str, Any], job_id: str) -> dict[str, Any]:
 
     # Update status
     job.status = JobStatus.DOWNLOADING
-    job.started_at = datetime.utcnow()
+    job.started_at = datetime.now(UTC)
     await job_storage.save(job)
 
     downloader = MediaDownloader()
@@ -114,7 +114,7 @@ async def transcribe(ctx: dict[str, Any], job_id: str) -> dict[str, Any]:
         job.status_message = "Transcription complete"
         job.result = result
         job.result_file = result_key
-        job.completed_at = datetime.utcnow()
+        job.completed_at = datetime.now(UTC)
         await job_storage.save(job)
 
         logger.info(
@@ -131,7 +131,7 @@ async def transcribe(ctx: dict[str, Any], job_id: str) -> dict[str, Any]:
 
         job.status = JobStatus.FAILED
         job.error = str(e)
-        job.completed_at = datetime.utcnow()
+        job.completed_at = datetime.now(UTC)
         await job_storage.save(job)
 
         return {"status": "failed", "error": str(e)}
