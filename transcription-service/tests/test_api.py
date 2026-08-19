@@ -2,10 +2,11 @@
 
 from unittest.mock import AsyncMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
+from tests.conftest import FakeJobStorage
 from transcription.models import JobStatus, TranscriptionJob
+from transcription.worker.tasks import TRANSCRIBE_TASK_NAME
 
 
 class TestHealthEndpoint:
@@ -13,45 +14,49 @@ class TestHealthEndpoint:
 
     def test_health_check(self, client: TestClient) -> None:
         """Test health check returns ok."""
-        with patch("transcription.api.routes.get_arq_redis") as mock_redis:
-            mock_redis.return_value = AsyncMock()
-            mock_redis.return_value.ping = AsyncMock()
-
-            with patch("torch.cuda.is_available", return_value=False):
-                response = client.get("/api/health")
+        with (
+            patch("transcription.api.routes.get_arq_redis", new=AsyncMock()),
+            patch("torch.cuda.is_available", return_value=False),
+        ):
+            response = client.get("/api/health")
 
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "ok"
         assert "version" in data
+        assert data["gpu_available"] is False
 
 
 class TestTranscribeUrlEndpoint:
     """Tests for URL transcription endpoint."""
 
-    def test_transcribe_url_creates_job(self, client: TestClient) -> None:
-        """Test that POST /transcribe/url creates a job."""
-        with (
-            patch("transcription.api.routes.get_job_storage") as mock_storage,
-            patch("transcription.api.routes.get_arq_redis") as mock_arq,
-        ):
-            mock_storage.return_value = AsyncMock()
-            mock_arq.return_value = AsyncMock()
-            mock_arq.return_value.enqueue_job = AsyncMock()
-
-            response = client.post(
-                "/api/transcribe/url",
-                json={
-                    "url": "https://youtube.com/watch?v=test123",
-                    "language": "en",
-                    "enable_diarization": False,
-                },
-            )
+    def test_transcribe_url_creates_job(
+        self,
+        client: TestClient,
+        job_storage: FakeJobStorage,
+        mock_arq: AsyncMock,
+    ) -> None:
+        """Test that POST /transcribe/url creates and enqueues a job."""
+        response = client.post(
+            "/api/transcribe/url",
+            json={
+                "url": "https://youtube.com/watch?v=test123",
+                "language": "en",
+                "enable_diarization": False,
+            },
+        )
 
         assert response.status_code == 202
         data = response.json()
-        assert "job_id" in data
         assert data["status"] == "pending"
+
+        job_id = data["job_id"]
+        saved = job_storage.jobs.get(job_id)
+        assert saved is not None
+        assert saved.source_url == "https://youtube.com/watch?v=test123"
+        assert saved.language == "en"
+
+        mock_arq.enqueue_job.assert_awaited_once_with(TRANSCRIBE_TASK_NAME, job_id)
 
     def test_transcribe_url_invalid_url(self, client: TestClient) -> None:
         """Test that invalid URL returns 422."""
@@ -66,14 +71,16 @@ class TestTranscribeUrlEndpoint:
 class TestJobStatusEndpoint:
     """Tests for job status endpoint."""
 
-    def test_get_job_status_found(self, client: TestClient, mock_job: TranscriptionJob) -> None:
+    async def test_get_job_status_found(
+        self,
+        client: TestClient,
+        job_storage: FakeJobStorage,
+        mock_job: TranscriptionJob,
+    ) -> None:
         """Test getting status of existing job."""
-        with patch("transcription.api.routes.get_job_storage") as mock_storage:
-            storage = AsyncMock()
-            storage.get = AsyncMock(return_value=mock_job)
-            mock_storage.return_value = storage
+        await job_storage.save(mock_job)
 
-            response = client.get(f"/api/transcribe/{mock_job.id}")
+        response = client.get(f"/api/transcribe/{mock_job.id}")
 
         assert response.status_code == 200
         data = response.json()
@@ -82,12 +89,7 @@ class TestJobStatusEndpoint:
 
     def test_get_job_status_not_found(self, client: TestClient) -> None:
         """Test getting status of non-existent job."""
-        with patch("transcription.api.routes.get_job_storage") as mock_storage:
-            storage = AsyncMock()
-            storage.get = AsyncMock(return_value=None)
-            mock_storage.return_value = storage
-
-            response = client.get("/api/transcribe/non-existent-id")
+        response = client.get("/api/transcribe/non-existent-id")
 
         assert response.status_code == 404
 
@@ -95,34 +97,91 @@ class TestJobStatusEndpoint:
 class TestJobResultEndpoint:
     """Tests for job result endpoint."""
 
-    def test_get_result_not_completed(
-        self, client: TestClient, mock_job: TranscriptionJob
+    async def test_get_result_not_completed(
+        self,
+        client: TestClient,
+        job_storage: FakeJobStorage,
+        mock_job: TranscriptionJob,
     ) -> None:
-        """Test getting result of incomplete job."""
-        with patch("transcription.api.routes.get_job_storage") as mock_storage:
-            storage = AsyncMock()
-            storage.get = AsyncMock(return_value=mock_job)
-            mock_storage.return_value = storage
+        """Test getting result of incomplete job returns 409."""
+        await job_storage.save(mock_job)
 
-            response = client.get(f"/api/transcribe/{mock_job.id}/result")
+        response = client.get(f"/api/transcribe/{mock_job.id}/result")
 
-        assert response.status_code == 409  # Conflict
+        assert response.status_code == 409
 
-    def test_get_result_failed_job(
-        self, client: TestClient, mock_job: TranscriptionJob
+    async def test_get_result_failed_job(
+        self,
+        client: TestClient,
+        job_storage: FakeJobStorage,
+        mock_job: TranscriptionJob,
     ) -> None:
         """Test getting result of failed job."""
         mock_job.status = JobStatus.FAILED
         mock_job.error = "Test error"
+        await job_storage.save(mock_job)
 
-        with patch("transcription.api.routes.get_job_storage") as mock_storage:
-            storage = AsyncMock()
-            storage.get = AsyncMock(return_value=mock_job)
-            mock_storage.return_value = storage
-
-            response = client.get(f"/api/transcribe/{mock_job.id}/result")
+        response = client.get(f"/api/transcribe/{mock_job.id}/result")
 
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "failed"
         assert data["error"] == "Test error"
+
+    async def test_get_result_completed(
+        self,
+        client: TestClient,
+        job_storage: FakeJobStorage,
+        mock_job: TranscriptionJob,
+    ) -> None:
+        """Test getting result of completed job returns presigned URL."""
+        mock_job.status = JobStatus.COMPLETED
+        mock_job.result_file = "results/test-job-123/transcript.json"
+        await job_storage.save(mock_job)
+
+        response = client.get(f"/api/transcribe/{mock_job.id}/result")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "completed"
+        assert data["result_url"] == "https://s3.example.com/file"
+
+
+class TestCancelEndpoint:
+    """Tests for job cancellation endpoint."""
+
+    async def test_cancel_pending_job(
+        self,
+        client: TestClient,
+        job_storage: FakeJobStorage,
+        mock_job: TranscriptionJob,
+    ) -> None:
+        """Test cancelling a pending job."""
+        await job_storage.save(mock_job)
+
+        response = client.delete(f"/api/transcribe/{mock_job.id}")
+
+        assert response.status_code == 204
+        cancelled = job_storage.jobs[mock_job.id]
+        assert cancelled.status == JobStatus.FAILED
+        assert cancelled.error == "Cancelled by user"
+
+    async def test_cancel_completed_job_conflict(
+        self,
+        client: TestClient,
+        job_storage: FakeJobStorage,
+        mock_job: TranscriptionJob,
+    ) -> None:
+        """Test cancelling a completed job returns 409."""
+        mock_job.status = JobStatus.COMPLETED
+        await job_storage.save(mock_job)
+
+        response = client.delete(f"/api/transcribe/{mock_job.id}")
+
+        assert response.status_code == 409
+
+    def test_cancel_not_found(self, client: TestClient) -> None:
+        """Test cancelling a non-existent job returns 404."""
+        response = client.delete("/api/transcribe/non-existent-id")
+
+        assert response.status_code == 404
