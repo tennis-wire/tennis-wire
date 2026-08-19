@@ -129,7 +129,6 @@ Key settings:
 | `WHISPER_MODEL` | WhisperX model | `large-v3` |
 | `WHISPER_DEVICE` | `cuda` or `cpu` | `cuda` |
 | `HF_TOKEN` | HuggingFace token for diarization | - |
-| `MAX_DURATION_MINUTES` | Max video length | `180` |
 
 ## License
 

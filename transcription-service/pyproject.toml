@@ -15,7 +15,6 @@ dependencies = [
     "arq>=0.26",
     # WhisperX and dependencies
     "whisperx>=3.1",
-    "faster-whisper>=1.0",
     # Media processing
     "yt-dlp>=2024.12",           # YouTube downloads
     "ffmpeg-python>=0.2",
@@ -104,7 +103,6 @@ plugins = ["pydantic.mypy"]
 [[tool.mypy.overrides]]
 module = [
     "whisperx.*",
-    "faster_whisper.*",
     "yt_dlp.*",
     "ffmpeg.*",
     "arq.*",

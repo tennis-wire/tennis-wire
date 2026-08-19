@@ -43,7 +43,6 @@ class Settings(BaseSettings):
 
     # Limits
     max_file_size_mb: int = 500
-    max_duration_minutes: int = 180
 
     @property
     def is_development(self) -> bool:
