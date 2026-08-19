@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     # Server
-    host: str = "0.0.0.0"
+    host: str = "0.0.0.0"  # noqa: S104 — server bind address, intentional
     port: int = 8001
 
     # Redis

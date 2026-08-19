@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field, HttpUrl
 
 from transcription.models import JobStatus, TranscriptionResult
 
-
 # ============== Requests ==============
 
 

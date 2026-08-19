@@ -4,9 +4,9 @@ import asyncio
 import tempfile
 from pathlib import Path
 from typing import Any
-import whisperx
 
 import structlog
+import whisperx
 
 from transcription.config import Settings
 from transcription.models import TranscriptionResult, TranscriptionSegment
@@ -62,8 +62,10 @@ class MockTranscriber:
                 ),
             ],
             language=language or "en",
-            duration=8.0,
-            text="This is a mock transcription. WhisperX is not loaded in mock mode. Audio file: " + audio_path.name,
+            text=(
+                "This is a mock transcription. WhisperX is not loaded in mock mode. "
+                f"Audio file: {audio_path.name}"
+            ),
         )
 
 
@@ -84,6 +86,7 @@ class FasterWhisperTranscriber:
         """Get compute device."""
         if self.settings.whisper_device == "cuda":
             import torch
+
             if torch.cuda.is_available():
                 return "cuda"
         return "cpu"
@@ -154,23 +157,22 @@ class FasterWhisperTranscriber:
         result_segments = []
         for seg in segments_list:
             words = None
-            if hasattr(seg, 'words') and seg.words:
-                words = [
-                    {"word": w.word, "start": w.start, "end": w.end}
-                    for w in seg.words
-                ]
+            if hasattr(seg, "words") and seg.words:
+                words = [{"word": w.word, "start": w.start, "end": w.end} for w in seg.words]
 
-            result_segments.append(TranscriptionSegment(
-                start=seg.start,
-                end=seg.end,
-                text=seg.text.strip(),
-                speaker=None,
-                words=words,
-            ))
+            result_segments.append(
+                TranscriptionSegment(
+                    start=seg.start,
+                    end=seg.end,
+                    text=seg.text.strip(),
+                    speaker=None,
+                    words=words,
+                )
+            )
 
         full_text = " ".join(seg.text for seg in result_segments)
         duration = result_segments[-1].end if result_segments else 0.0
-        detected_language = info.language if hasattr(info, 'language') else (language or "en")
+        detected_language = info.language if hasattr(info, "language") else (language or "en")
 
         if on_progress:
             await on_progress(100, "Complete")
@@ -196,6 +198,7 @@ class Transcriber:
     def device(self) -> str:
         """Get compute device."""
         import torch
+
         if self.settings.whisper_device == "cuda" and torch.cuda.is_available():
             return "cuda"
         return "cpu"
@@ -285,9 +288,7 @@ class Transcriber:
         logger.info("Starting transcription", path=str(audio_path))
 
         # Load audio (blocking -> run in executor)
-        audio = await loop.run_in_executor(
-            None, lambda: whisperx.load_audio(str(audio_path))
-        )
+        audio = await loop.run_in_executor(None, lambda: whisperx.load_audio(str(audio_path)))
 
         if on_progress:
             await on_progress(10, "Transcribing...")
@@ -414,7 +415,8 @@ class MediaDownloader:
                 info = ydl.extract_info(url, download=True)
                 # Get the actual output file
                 if info:
-                    return ydl.prepare_filename(info).replace(".webm", ".wav").replace(".m4a", ".wav")
+                    filename = ydl.prepare_filename(info)
+                    return filename.replace(".webm", ".wav").replace(".m4a", ".wav")
             raise ValueError("Failed to extract info from URL")
 
         if on_progress:

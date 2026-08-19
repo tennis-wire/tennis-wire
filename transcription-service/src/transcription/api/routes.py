@@ -11,7 +11,6 @@ from transcription.api.schemas import (
     JobCreatedResponse,
     JobResultResponse,
     JobStatusResponse,
-    TranscribeFileRequest,
     TranscribeUrlRequest,
 )
 from transcription.config import Settings, get_settings

@@ -1,7 +1,5 @@
 """Tests for models and transcriber logic."""
 
-import pytest
-
 from transcription.models import (
     JobStatus,
     TranscriptionJob,

@@ -1,8 +1,8 @@
 """Transcription service FastAPI application."""
 
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 import structlog
 from arq.connections import ArqRedis, create_pool
@@ -14,6 +14,12 @@ from transcription.api.routes import router
 from transcription.config import get_settings
 
 # Configure structlog
+_renderer = (
+    structlog.dev.ConsoleRenderer()
+    if get_settings().is_development
+    else structlog.processors.JSONRenderer()
+)
+
 structlog.configure(
     processors=[
         structlog.contextvars.merge_contextvars,
@@ -21,7 +27,7 @@ structlog.configure(
         structlog.processors.StackInfoRenderer(),
         structlog.dev.set_exc_info,
         structlog.processors.TimeStamper(fmt="iso"),
-        structlog.dev.ConsoleRenderer() if get_settings().is_development else structlog.processors.JSONRenderer(),
+        _renderer,
     ],
     wrapper_class=structlog.make_filtering_bound_logger(
         logging.getLevelName(get_settings().log_level)
@@ -43,6 +49,7 @@ async def get_redis_pool() -> ArqRedis:
     if _redis_pool is None:
         settings = get_settings()
         from arq.connections import RedisSettings
+
         _redis_pool = await create_pool(RedisSettings.from_dsn(str(settings.redis_url)))
     return _redis_pool
 
