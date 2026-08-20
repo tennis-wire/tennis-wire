@@ -104,6 +104,10 @@ model {
     external aiApi 'AI API' {
       description 'OpenAI/Claude для помощи в редактуре'
     }
+
+    external youtube 'YouTube' {
+      description 'Источник видео для транскрипции'
+    }
   }
 
   // ===== MAIN SYSTEM =====
@@ -176,6 +180,32 @@ model {
 
       service editorialBffApi 'Editorial BFF API' {
         description 'API для AI-чата, перевода, транскрипции'
+      }
+    }
+
+    // ----- TRANSCRIPTION SERVICE -----
+    container transcriptionService 'Transcription Service' {
+      description 'Асинхронная транскрипция видео/аудио: YouTube-ссылки и загруженные файлы'
+      technology 'Python, FastAPI, WhisperX'
+
+      service transcriptionApi 'Transcription API' {
+        description 'Приём задач, статусы, выдача результатов'
+        technology 'Python, FastAPI'
+      }
+
+      service transcriptionWorker 'Transcription Worker' {
+        description 'Скачивание аудио, распознавание, word-level выравнивание, диаризация'
+        technology 'Python, arq, WhisperX, yt-dlp'
+      }
+
+      queue transcriptionQueue 'Job Queue' {
+        description 'Очередь задач и статусы джобов'
+        technology 'Redis, arq'
+      }
+
+      database transcriptionStorage 'Media Storage' {
+        description 'Загруженные файлы и JSON-результаты'
+        technology 'S3 / MinIO'
       }
     }
 
@@ -302,6 +332,16 @@ model {
   tennisService.editorial.editorApp -> tennisService.editorialBff.editorialBffApi 'AI/Translate запросы'
   tennisService.editorial.editorApp -> tennisService.contentService.contentApi 'Черновики и публикация'
 
+  // Editorial BFF -> Transcription
+  tennisService.editorialBff.editorialBffApi -> tennisService.transcriptionService.transcriptionApi 'Задачи транскрипции'
+
+  // Transcription internal
+  tennisService.transcriptionService.transcriptionApi -> tennisService.transcriptionService.transcriptionQueue 'Ставит задачи, читает статусы'
+  tennisService.transcriptionService.transcriptionWorker -> tennisService.transcriptionService.transcriptionQueue 'Забирает задачи, пишет статусы'
+  tennisService.transcriptionService.transcriptionApi -> tennisService.transcriptionService.transcriptionStorage 'Загрузки, presigned-ссылки'
+  tennisService.transcriptionService.transcriptionWorker -> tennisService.transcriptionService.transcriptionStorage 'Аудио и результаты'
+  tennisService.transcriptionService.transcriptionWorker -> externalApis.youtube 'Скачивает аудио'
+
   // Editorial BFF -> External APIs
   tennisService.editorialBff.editorialBffApi -> externalApis.deepl 'Переводы'
   tennisService.editorialBff.editorialBffApi -> externalApis.aiApi 'AI-обработка'
@@ -379,8 +419,20 @@ views {
     include tennisService.editorialBff.*
     include tennisService.contentService
     include tennisService.contentService.*
+    include tennisService.transcriptionService
     include externalApis
     include externalApis.*
+  }
+
+  view transcriptionFlow {
+    title 'Transcription Flow'
+    description 'Асинхронная транскрипция: API → очередь → worker → хранилище'
+
+    include tennisService.editorialBff
+    include tennisService.editorialBff.*
+    include tennisService.transcriptionService
+    include tennisService.transcriptionService.*
+    include externalApis.youtube
   }
 
   view readerFlow {
