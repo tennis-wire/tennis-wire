@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     port: int = 8001
 
     # Redis
-    redis_url: RedisDsn = Field(default="redis://localhost:6379/0")
+    redis_url: RedisDsn = Field(default=RedisDsn("redis://localhost:6379/0"))
 
     # S3 Storage
     s3_endpoint_url: str | None = None

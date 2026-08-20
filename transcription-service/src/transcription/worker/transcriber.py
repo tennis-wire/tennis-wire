@@ -3,7 +3,7 @@
 import asyncio
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import structlog
 
@@ -127,11 +127,14 @@ class Transcriber:
             await on_progress(10, "Transcribing...")
 
         # Transcribe (blocking -> run in executor)
+        model = self._model
+        if model is None:
+            raise RuntimeError("Model not loaded — call load_model() first")
+
         def do_transcribe() -> dict[str, Any]:
-            return self._model.transcribe(
-                audio,
-                batch_size=16,
-                language=language,
+            return cast(
+                "dict[str, Any]",
+                model.transcribe(audio, batch_size=16, language=language),
             )
 
         result = await loop.run_in_executor(None, do_transcribe)
@@ -147,13 +150,16 @@ class Transcriber:
             self._load_align_model(detected_language)
 
             def do_align() -> dict[str, Any]:
-                return whisperx.align(
-                    result["segments"],
-                    self._align_model,
-                    self._align_metadata,
-                    audio,
-                    self.device,
-                    return_char_alignments=False,
+                return cast(
+                    "dict[str, Any]",
+                    whisperx.align(
+                        result["segments"],
+                        self._align_model,
+                        self._align_metadata,
+                        audio,
+                        self.device,
+                        return_char_alignments=False,
+                    ),
                 )
 
             result = await loop.run_in_executor(None, do_align)
@@ -171,9 +177,16 @@ class Transcriber:
             try:
                 self._load_diarize_pipeline()
 
+                pipeline = self._diarize_pipeline
+                if pipeline is None:
+                    raise RuntimeError("Diarization pipeline not loaded")
+
                 def do_diarize() -> dict[str, Any]:
-                    diarize_segments = self._diarize_pipeline(audio)
-                    return whisperx.assign_word_speakers(diarize_segments, result)
+                    diarize_segments = pipeline(audio)
+                    return cast(
+                        "dict[str, Any]",
+                        whisperx.assign_word_speakers(diarize_segments, result),
+                    )
 
                 result = await loop.run_in_executor(None, do_diarize)
                 logger.info("Diarization complete")
@@ -248,7 +261,7 @@ class MediaDownloader:
                 info = ydl.extract_info(url, download=True)
                 # Get the actual output file
                 if info:
-                    filename = ydl.prepare_filename(info)
+                    filename = str(ydl.prepare_filename(info))
                     return filename.replace(".webm", ".wav").replace(".m4a", ".wav")
             raise ValueError("Failed to extract info from URL")
 
