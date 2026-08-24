@@ -17,13 +17,6 @@ class TranscribeUrlRequest(BaseModel):
     enable_diarization: bool = Field(False, description="Enable speaker diarization")
 
 
-class TranscribeFileRequest(BaseModel):
-    """Metadata for file upload transcription."""
-
-    language: str | None = Field(None, description="Language code (auto-detect if not provided)")
-    enable_diarization: bool = Field(False, description="Enable speaker diarization")
-
-
 # ============== Responses ==============
 
 
