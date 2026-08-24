@@ -12,27 +12,27 @@ public class OpenApiConfig {
     @Bean
     public OpenAPI openApi() {
         return new OpenAPI()
-            .info(new Info()
-                .title("Tennis Wire — Content Service API")
-                .description("Articles, tags, and publishing for Tennis Wire")
-                .version("1.0.0"));
+                .info(new Info()
+                        .title("Tennis Wire — Content Service API")
+                        .description("Articles, tags, and publishing for Tennis Wire")
+                        .version("1.0.0"));
     }
 
     @Bean
     public GroupedOpenApi editorialApi() {
         return GroupedOpenApi.builder()
-            .group("editorial")
-            .displayName("Editorial API")
-            .pathsToMatch("/api/editorial/**")
-            .build();
+                .group("editorial")
+                .displayName("Editorial API")
+                .pathsToMatch("/api/editorial/**")
+                .build();
     }
 
     @Bean
     public GroupedOpenApi publicApi() {
         return GroupedOpenApi.builder()
-            .group("public")
-            .displayName("Public API")
-            .pathsToMatch("/api/public/**")
-            .build();
+                .group("public")
+                .displayName("Public API")
+                .pathsToMatch("/api/public/**")
+                .build();
     }
 }

@@ -22,11 +22,11 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     # Server
-    host: str = "0.0.0.0"
+    host: str = "0.0.0.0"  # noqa: S104 — server bind address, intentional
     port: int = 8001
 
     # Redis
-    redis_url: RedisDsn = Field(default="redis://localhost:6379/0")
+    redis_url: RedisDsn = Field(default=RedisDsn("redis://localhost:6379/0"))
 
     # S3 Storage
     s3_endpoint_url: str | None = None
@@ -43,7 +43,6 @@ class Settings(BaseSettings):
 
     # Limits
     max_file_size_mb: int = 500
-    max_duration_minutes: int = 180
 
     @property
     def is_development(self) -> bool:

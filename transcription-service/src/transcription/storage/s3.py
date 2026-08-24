@@ -37,7 +37,7 @@ class S3Storage:
         if content_type:
             extra_args["ContentType"] = content_type
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         await loop.run_in_executor(
             None,
             lambda: self._client.upload_fileobj(file, self.bucket, key, ExtraArgs=extra_args),
@@ -46,7 +46,7 @@ class S3Storage:
 
     async def upload_from_path(self, path: Path, key: str) -> str:
         """Upload file from local path to S3."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         await loop.run_in_executor(
             None,
             lambda: self._client.upload_file(str(path), self.bucket, key),
@@ -57,7 +57,7 @@ class S3Storage:
         """Download file from S3 to local path."""
         destination.parent.mkdir(parents=True, exist_ok=True)
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         await loop.run_in_executor(
             None,
             lambda: self._client.download_file(self.bucket, key, str(destination)),
@@ -66,7 +66,7 @@ class S3Storage:
 
     async def get_presigned_url(self, key: str, expires_in: int = 3600) -> str:
         """Generate pre-signed URL for downloading."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         url: str = await loop.run_in_executor(
             None,
             lambda: self._client.generate_presigned_url(
@@ -79,7 +79,7 @@ class S3Storage:
 
     async def delete_file(self, key: str) -> None:
         """Delete file from S3."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         await loop.run_in_executor(
             None,
             lambda: self._client.delete_object(Bucket=self.bucket, Key=key),
@@ -87,7 +87,7 @@ class S3Storage:
 
     async def file_exists(self, key: str) -> bool:
         """Check if file exists in S3."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             await loop.run_in_executor(
                 None,

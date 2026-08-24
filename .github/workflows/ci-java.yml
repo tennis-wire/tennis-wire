@@ -1,0 +1,45 @@
+name: CI Java
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "*.gradle.kts"
+      - "**/*.gradle.kts"
+      - "gradle.properties"
+      - "gradle/**"
+      - "gradlew*"
+      - "editorial-bff/**"
+      - "api-gateway/**"
+      - "content-service/**"
+      - ".github/workflows/ci-java.yml"
+  pull_request:
+    paths:
+      - "*.gradle.kts"
+      - "**/*.gradle.kts"
+      - "gradle.properties"
+      - "gradle/**"
+      - "gradlew*"
+      - "editorial-bff/**"
+      - "api-gateway/**"
+      - "content-service/**"
+      - ".github/workflows/ci-java.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  java:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - run: ./gradlew build

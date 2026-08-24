@@ -1,5 +1,8 @@
 package com.tenniswire.content_service.service;
 
+import static com.tenniswire.content_service.repository.TagSpecification.hasType;
+import static com.tenniswire.content_service.repository.TagSpecification.nameContains;
+
 import com.tenniswire.content_service.dto.TagResponse;
 import com.tenniswire.content_service.dto.editorial.CreateTagRequest;
 import com.tenniswire.content_service.dto.editorial.UpdateTagRequest;
@@ -9,15 +12,13 @@ import com.tenniswire.content_service.entity.TagType;
 import com.tenniswire.content_service.exception.ConflictException;
 import com.tenniswire.content_service.exception.ResourceNotFoundException;
 import com.tenniswire.content_service.repository.TagRepository;
+import java.util.List;
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
-import java.util.UUID;
-import static com.tenniswire.content_service.repository.TagSpecification.hasType;
-import static com.tenniswire.content_service.repository.TagSpecification.nameContains;
 
 @Service
 @Transactional
@@ -59,8 +60,7 @@ public class TagService {
 
     @Transactional(readOnly = true)
     public Page<TagResponse> findAllEditorial(TagType type, String search, Pageable pageable) {
-        var spec = Specification.where(hasType(type))
-            .and(nameContains(search));
+        var spec = Specification.where(hasType(type)).and(nameContains(search));
 
         return tagRepository.findAll(spec, pageable).map(TagResponse::from);
     }
@@ -116,17 +116,15 @@ public class TagService {
 
     @Transactional(readOnly = true)
     public TagResponse findBySlug(String slug) {
-        var tag = tagRepository
-            .findBySlug(slug)
-            .orElseThrow(() -> new ResourceNotFoundException("Tag", slug));
+        var tag = tagRepository.findBySlug(slug).orElseThrow(() -> new ResourceNotFoundException("Tag", slug));
         return TagResponse.from(tag);
     }
 
     @Transactional(readOnly = true)
     public List<SectionResponse> findActiveSections() {
         return tagRepository.findByTypeAndIsActiveTrueOrderBySortOrder(TagType.SECTION).stream()
-            .map(SectionResponse::from)
-            .toList();
+                .map(SectionResponse::from)
+                .toList();
     }
 
     // -- Private --

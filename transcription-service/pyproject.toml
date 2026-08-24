@@ -7,18 +7,14 @@ requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Tennis Wire Team" }]
 
+# Core dependencies: everything the API process needs (no GPU stack)
 dependencies = [
     # Web framework
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
+    "python-multipart>=0.0.22",  # required by FastAPI for UploadFile
     # Task queue
     "arq>=0.26",
-    # WhisperX and dependencies
-    "whisperx>=3.1",
-    "faster-whisper>=1.0",
-    # Media processing
-    "yt-dlp>=2024.12",           # YouTube downloads
-    "ffmpeg-python>=0.2",
     # Storage
     "boto3>=1.35",               # S3-compatible
     # HTTP client
@@ -27,14 +23,17 @@ dependencies = [
     "pydantic-settings>=2.6",
     # Logging
     "structlog>=24.4",
-    # Utils
-    "tenacity>=9.0",             # Retries
-    "python-multipart>=0.0.22",
-    "torch>=2.0,<2.6",
-    "torchaudio>=2.0,<2.6",
 ]
 
 [dependency-groups]
+# Worker-only: GPU/ML stack + media download. Not needed by the API process or tests.
+# Requires the ffmpeg system binary at runtime (yt-dlp audio extraction).
+worker = [
+    "whisperx>=3.1",
+    "torch>=2.0,<2.6",
+    "torchaudio>=2.0,<2.6",
+    "yt-dlp>=2024.12",           # YouTube downloads
+]
 dev = [
     # Testing
     "pytest>=8.3",
@@ -50,8 +49,10 @@ dev = [
     "pip-audit>=2.7",
     # Type stubs
     "boto3-stubs[s3]>=1.35",
-    "types-requests>=2.32",
 ]
+
+[tool.uv]
+default-groups = ["dev", "worker"]
 
 [build-system]
 requires = ["hatchling"]
@@ -104,10 +105,10 @@ plugins = ["pydantic.mypy"]
 [[tool.mypy.overrides]]
 module = [
     "whisperx.*",
-    "faster_whisper.*",
     "yt_dlp.*",
     "ffmpeg.*",
     "arq.*",
+    "torch.*",
 ]
 ignore_missing_imports = true
 

@@ -10,6 +10,4 @@ import jakarta.validation.constraints.NotBlank;
  * @param targetLang target language code (required), e.g. "RU", "EN-US", "DE"
  */
 public record TranslateRequest(
-    @NotBlank String text,
-    String sourceLang,
-    @NotBlank String targetLang) {}
+        @NotBlank String text, String sourceLang, @NotBlank String targetLang) {}

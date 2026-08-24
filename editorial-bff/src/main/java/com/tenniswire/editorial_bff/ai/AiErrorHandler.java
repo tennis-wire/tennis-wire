@@ -3,13 +3,13 @@ package com.tenniswire.editorial_bff.ai;
 import com.anthropic.errors.AnthropicServiceException;
 import com.anthropic.errors.RateLimitException;
 import com.anthropic.errors.UnauthorizedException;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import java.util.Map;
 
 @RestControllerAdvice(basePackageClasses = AiChatController.class)
 public class AiErrorHandler {
@@ -35,7 +35,6 @@ public class AiErrorHandler {
     }
 
     private ResponseEntity<Map<String, String>> error(HttpStatus status, String message) {
-        return ResponseEntity.status(status)
-            .body(Map.of("error", status.getReasonPhrase(), "message", message));
+        return ResponseEntity.status(status).body(Map.of("error", status.getReasonPhrase(), "message", message));
     }
 }

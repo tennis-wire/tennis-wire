@@ -1,11 +1,9 @@
 plugins {
-    id("org.springframework.boot")
-    id("io.spring.dependency-management")
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
 }
 
 description = "API Gateway for Tennis Wire"
-
-extra["springCloudVersion"] = "2025.1.0"
 
 dependencies {
     implementation("org.springframework.cloud:spring-cloud-starter-gateway-server-webflux")
@@ -21,6 +19,10 @@ dependencies {
 
 dependencyManagement {
     imports {
-        mavenBom("org.springframework.cloud:spring-cloud-dependencies:${property("springCloudVersion")}")
+        mavenBom(
+            libs.spring.cloud.bom
+                .get()
+                .toString(),
+        )
     }
 }

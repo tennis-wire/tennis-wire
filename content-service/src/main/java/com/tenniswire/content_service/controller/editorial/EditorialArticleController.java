@@ -44,10 +44,10 @@ public class EditorialArticleController {
 
     @GetMapping
     public Page<ArticleSummaryResponse> list(
-        @RequestParam(required = false) String type,
-        @RequestParam(required = false) String status,
-        @RequestParam(required = false) String search,
-        @PageableDefault(size = 20, sort = "updatedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String search,
+            @PageableDefault(size = 20, sort = "updatedAt", direction = Sort.Direction.DESC) Pageable pageable) {
         var articleType = type != null ? ArticleType.fromValue(type) : null;
         var articleStatus = status != null ? ArticleStatus.fromValue(status) : null;
         return articleService.findAllEditorial(articleType, articleStatus, search, pageable);

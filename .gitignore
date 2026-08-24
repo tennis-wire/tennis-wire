@@ -1,39 +1,40 @@
-# ─── Gradle ───────────────────────────────────────────────────────────────────
+# ─── Gradle / Java ───────────────────────────────────────────────────────────
 .gradle/
 build/
 !gradle/wrapper/gradle-wrapper.jar
-*.iml
+hs_err_pid*
+replay_pid*
 
-# ─── IntelliJ IDEA ────────────────────────────────────────────────────────────
+# ─── IntelliJ IDEA ───────────────────────────────────────────────────────────
 .idea/
 *.iml
 
-# ─── Node / Vite / Next ──────────────────────────────────────────────────────────────
-apps/editorial-ui/node_modules/
-apps/editorial-ui/dist/
-apps/public-web/node_modules/
-apps/public-web/dist/
-apps/public-web/.next/
-apps/mobile/node_modules
-apps/mobile/.expo
+# ─── Node / Vite / Next / Expo ───────────────────────────────────────────────
+node_modules/
+dist/
+.next/
+.expo/
+coverage/
+*.tsbuildinfo
+apps/mobile/ios/
+apps/mobile/android/
 apps/mobile/.npmrc
 
-# ─── Python ───────────────────────────────────────────────────────────────────
+# ─── Python ──────────────────────────────────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
 .venv/
-dist/
 *.egg-info/
 
-# ─── OS ───────────────────────────────────────────────────────────────────────
+# ─── OS ──────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 
-# ─── Env / secrets ────────────────────────────────────────────────────────────
+# ─── Env / secrets ───────────────────────────────────────────────────────────
 .env
 .env.*
 !.env.example
 
-# ─── Architecture Docs ────────────────────────────────────────────────────────────
+# ─── Architecture Docs ───────────────────────────────────────────────────────
 .likec4/

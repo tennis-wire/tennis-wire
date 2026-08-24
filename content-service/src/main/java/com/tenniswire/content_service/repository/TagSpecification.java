@@ -14,7 +14,7 @@ public final class TagSpecification {
 
     public static Specification<Tag> nameContains(String search) {
         return (root, query, cb) -> search == null || search.isBlank()
-            ? null
-            : cb.like(cb.lower(root.get("name")), "%" + search.toLowerCase() + "%");
+                ? null
+                : cb.like(cb.lower(root.get("name")), "%" + search.toLowerCase() + "%");
     }
 }

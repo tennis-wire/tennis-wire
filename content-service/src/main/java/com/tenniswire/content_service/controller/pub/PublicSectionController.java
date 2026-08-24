@@ -5,6 +5,7 @@ import com.tenniswire.content_service.dto.pub.SectionResponse;
 import com.tenniswire.content_service.entity.ArticleType;
 import com.tenniswire.content_service.service.ArticleService;
 import com.tenniswire.content_service.service.TagService;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -14,7 +15,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/public/sections")
@@ -35,9 +35,9 @@ public class PublicSectionController {
 
     @GetMapping("/{slug}/articles")
     public Page<ArticleSummaryResponse> articles(
-        @PathVariable String slug,
-        @RequestParam(required = false) String type,
-        @PageableDefault(size = 20, sort = "publishedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+            @PathVariable String slug,
+            @RequestParam(required = false) String type,
+            @PageableDefault(size = 20, sort = "publishedAt", direction = Sort.Direction.DESC) Pageable pageable) {
         var articleType = type != null ? ArticleType.fromValue(type) : null;
         return articleService.findPublishedByTag(slug, articleType, pageable);
     }

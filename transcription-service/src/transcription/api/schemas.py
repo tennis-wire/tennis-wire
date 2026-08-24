@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field, HttpUrl
 
 from transcription.models import JobStatus, TranscriptionResult
 
-
 # ============== Requests ==============
 
 
@@ -14,13 +13,6 @@ class TranscribeUrlRequest(BaseModel):
     """Request to transcribe from URL (YouTube, etc.)."""
 
     url: HttpUrl = Field(..., description="URL to video (YouTube, direct link)")
-    language: str | None = Field(None, description="Language code (auto-detect if not provided)")
-    enable_diarization: bool = Field(False, description="Enable speaker diarization")
-
-
-class TranscribeFileRequest(BaseModel):
-    """Metadata for file upload transcription."""
-
     language: str | None = Field(None, description="Language code (auto-detect if not provided)")
     enable_diarization: bool = Field(False, description="Enable speaker diarization")
 

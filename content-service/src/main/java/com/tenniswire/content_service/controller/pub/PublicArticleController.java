@@ -26,9 +26,9 @@ public class PublicArticleController {
 
     @GetMapping
     public Page<ArticleSummaryResponse> list(
-        @RequestParam(required = false) String type,
-        @RequestParam(required = false) String tag,
-        @PageableDefault(size = 20, sort = "publishedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String tag,
+            @PageableDefault(size = 20, sort = "publishedAt", direction = Sort.Direction.DESC) Pageable pageable) {
         var articleType = type != null ? ArticleType.fromValue(type) : null;
 
         if (tag != null) {

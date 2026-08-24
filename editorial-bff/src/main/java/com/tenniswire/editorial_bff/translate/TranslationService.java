@@ -25,20 +25,17 @@ public class TranslationService {
      * <p>HTML tags are preserved during translation — essential because the editor
      * works with rich text (Tiptap produces HTML).
      */
-    public TranslateResponse translate(TranslateRequest request)
-        throws DeepLException, InterruptedException {
+    public TranslateResponse translate(TranslateRequest request) throws DeepLException, InterruptedException {
 
         TextTranslationOptions options = new TextTranslationOptions();
         options.setTagHandling("html");
 
         TextResult result = deepLClient.translateText(
-            request.text(),
-            request.sourceLang(), // null = auto-detect
-            request.targetLang(),
-            options);
+                request.text(),
+                request.sourceLang(), // null = auto-detect
+                request.targetLang(),
+                options);
 
-        return new TranslateResponse(
-            result.getText(),
-            result.getDetectedSourceLanguage());
+        return new TranslateResponse(result.getText(), result.getDetectedSourceLanguage());
     }
 }

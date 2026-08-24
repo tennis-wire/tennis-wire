@@ -1,7 +1,7 @@
 package com.tenniswire.content_service.exception;
 
-import lombok.Getter;
 import java.util.List;
+import lombok.Getter;
 
 @Getter
 public class PublishValidationException extends RuntimeException {

@@ -1,0 +1,49 @@
+name: CI Python
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "transcription-service/**"
+      - ".github/workflows/ci-python.yml"
+  pull_request:
+    paths:
+      - "transcription-service/**"
+      - ".github/workflows/ci-python.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  transcription-service:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: transcription-service
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: transcription-service/uv.lock
+
+      - name: Install Python
+        run: uv python install
+
+      # dev group only: linters + tests run without the GPU/ML worker stack
+      - name: Install dependencies
+        run: uv sync --frozen --no-default-groups --group dev
+
+      - name: Lint
+        run: uv run --no-sync ruff check .
+
+      - name: Format check
+        run: uv run --no-sync ruff format --check .
+
+      - name: Type check
+        run: uv run --no-sync mypy src
+
+      - name: Tests
+        run: uv run --no-sync pytest

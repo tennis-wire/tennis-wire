@@ -2,6 +2,7 @@ package com.tenniswire.editorial_bff.translate;
 
 import com.deepl.api.DeepLClient;
 import com.deepl.api.DeepLException;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -9,7 +10,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import java.util.Map;
 
 @RestControllerAdvice(basePackageClasses = TranslationController.class)
 @ConditionalOnBean(DeepLClient.class)
@@ -37,19 +37,16 @@ public class TranslationErrorHandler {
             message = "Сервис перевода временно недоступен. Попробуйте позже.";
         }
 
-        return ResponseEntity
-            .status(status)
-            .body(Map.of("error", status.getReasonPhrase(), "message", message));
+        return ResponseEntity.status(status).body(Map.of("error", status.getReasonPhrase(), "message", message));
     }
 
     @ExceptionHandler(InterruptedException.class)
     public ResponseEntity<Map<String, String>> handleInterrupted(InterruptedException ex) {
         log.warn("Translation interrupted: {}", ex.getMessage());
         Thread.currentThread().interrupt();
-        return ResponseEntity
-            .status(HttpStatus.SERVICE_UNAVAILABLE)
-            .body(Map.of(
-                "error", "Service Unavailable",
-                "message", "Перевод был прерван. Попробуйте ещё раз."));
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of(
+                        "error", "Service Unavailable",
+                        "message", "Перевод был прерван. Попробуйте ещё раз."));
     }
 }

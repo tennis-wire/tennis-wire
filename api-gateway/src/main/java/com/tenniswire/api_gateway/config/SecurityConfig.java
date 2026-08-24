@@ -17,18 +17,18 @@ public class SecurityConfig {
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http.authorizeExchange(exchanges -> exchanges
-                // Actuator health — open
-                .pathMatchers("/actuator/health", "/actuator/info")
-                .permitAll()
-                // TODO: editorial routes — require authentication
-                // .pathMatchers("/api/editorial/**", "/api/ai/**", "/api/translate/**", "/api/transcribe/**")
-                // .authenticated()
-                // For now — permit all
-                .anyExchange()
-                .permitAll())
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(ServerHttpSecurity.CsrfSpec::disable)
-            .build();
+                        // Actuator health — open
+                        .pathMatchers("/actuator/health", "/actuator/info")
+                        .permitAll()
+                        // TODO: editorial routes — require authentication
+                        // .pathMatchers("/api/editorial/**", "/api/ai/**", "/api/translate/**", "/api/transcribe/**")
+                        // .authenticated()
+                        // For now — permit all
+                        .anyExchange()
+                        .permitAll())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .build();
     }
 
     // CORS config applied at Security filter level — ensures preflight gets headers
@@ -36,10 +36,10 @@ public class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource() {
         var config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
-            "http://localhost:5173", // Editorial UI (Vite dev server)
-            "http://localhost:3000"  // Public Web (Next.js dev server)
-            // TODO: add production domain
-        ));
+                "http://localhost:5173", // Editorial UI (Vite dev server)
+                "http://localhost:3000" // Public Web (Next.js dev server)
+                // TODO: add production domain
+                ));
         config.setAllowedMethods(List.of("GET", "POST", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Content-Type", "Authorization"));
         config.setAllowCredentials(true);
