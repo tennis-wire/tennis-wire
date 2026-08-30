@@ -31,7 +31,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 cd transcription-service
 uv sync
 
-# Start infrastructure
+# Start infrastructure (from the repository root)
 docker compose up -d
 
 # Copy environment
