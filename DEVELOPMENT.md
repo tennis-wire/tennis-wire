@@ -82,7 +82,7 @@ not appear in `docker compose ps` (use `ps -a`).
 The MinIO community edition is archived upstream: the image is pinned to the
 last release published to Docker Hub and will not receive updates. This is
 acceptable for a local-only emulator; production object storage is a separate
-decision tracked in `BACKLOG.md`. The community console is a read-only object
+decision. The community console is a read-only object
 browser — bucket administration is done with `mc`.
 
 ## Services
