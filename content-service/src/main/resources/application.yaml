@@ -3,9 +3,11 @@ spring:
     name: content-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/tennis_content?stringtype=unspecified
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    # stringtype=unspecified is required: the schema uses native PostgreSQL enum
+    # types (article_type, article_status, tag_type, media_type). Do not drop it.
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:tennis_content}?stringtype=unspecified
+    username: ${DB_USERNAME:content}
+    password: ${DB_PASSWORD:content}
     driver-class-name: org.postgresql.Driver
 
   jpa:

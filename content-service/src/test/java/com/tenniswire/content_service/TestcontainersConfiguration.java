@@ -8,9 +8,12 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @TestConfiguration(proxyBeanMethods = false)
 class TestcontainersConfiguration {
 
+    // Keep in sync with the postgres image in the root docker-compose.yml.
+    private static final String POSTGRES_IMAGE = "postgres:18-alpine";
+
     @Bean
     @ServiceConnection
     PostgreSQLContainer postgresContainer() {
-        return new PostgreSQLContainer("postgres:17-alpine");
+        return new PostgreSQLContainer(POSTGRES_IMAGE);
     }
 }
