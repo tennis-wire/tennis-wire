@@ -7,11 +7,6 @@
         "icon": "./assets/icon.png",
         "scheme": "tenniswire",
         "userInterfaceStyle": "automatic",
-        "splash": {
-            "image": "./assets/splash-icon.png",
-            "resizeMode": "contain",
-            "backgroundColor": "#1B6B3A"
-        },
         "ios": {
             "supportsTablet": true,
             "bundleIdentifier": "com.tenniswire.app"
@@ -24,7 +19,19 @@
             },
             "package": "com.tenniswire.app"
         },
-        "plugins": ["expo-router", "expo-font"],
+        "plugins": [
+            "expo-router",
+            "expo-font",
+            [
+                "expo-splash-screen",
+                {
+                    "image": "./assets/splash-icon.png",
+                    "resizeMode": "contain",
+                    "backgroundColor": "#1B6B3A"
+                }
+            ],
+            "expo-status-bar"
+        ],
         "experiments": {
             "typedRoutes": true
         }
