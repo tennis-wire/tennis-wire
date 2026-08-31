@@ -1,6 +1,34 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
+  "extends": ["config:recommended"],
+  "enabledManagers": [
+    "gradle",
+    "gradle-wrapper",
+    "pep621",
+    "docker-compose",
+    "github-actions"
+  ],
+  "timezone": "Europe/Vienna",
+  "schedule": ["before 8am on saturday"],
+  "prConcurrentLimit": 5,
+  "labels": ["deps"],
+  "rangeStrategy": "update-lockfile",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 8am on saturday"]
+  },
+  "packageRules": [
+    {
+      "description": "MinIO CE is archived; the pinned digest is final by design",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["minio/minio", "minio/mc"],
+      "enabled": false
+    },
+    {
+      "description": "torch is capped at <2.6 for whisperx compatibility; do not propose range bumps",
+      "matchPackageNames": ["torch", "torchaudio"],
+      "matchUpdateTypes": ["major", "minor"],
+      "enabled": false
+    }
   ]
 }
