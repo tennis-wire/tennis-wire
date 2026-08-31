@@ -4006,7 +4006,7 @@ wheels = [
 
 [[package]]
 name = "whisperx"
-version = "3.4.3"
+version = "3.4.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ctranslate2" },
@@ -4020,9 +4020,9 @@ dependencies = [
     { name = "torchaudio" },
     { name = "transformers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7d/19/f206c806d6eb19888193fb6d1a1a74d9c009eaf48740d135d4aa80fe2087/whisperx-3.4.3.tar.gz", hash = "sha256:e2e93654f8fe50cc077c14e8363140e4de4f13b678f64b1b440a68acd6634cc6", size = 16486663, upload-time = "2025-10-01T06:38:15.114Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7a/5b/3bb179c1116a326f4cf7ffbdd77c3f8b97073a078f95b812aa9203dda9df/whisperx-3.4.5.tar.gz", hash = "sha256:49f811377f5747e90c5330436005c2f28f37573e9a1ab68081edd203257223e6", size = 16487209, upload-time = "2026-03-25T08:40:21.322Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/31/43/fe452ed1c0616cb03e5bf560a9fbb6caafcff06d742c83e6ef8a6a4b2d43/whisperx-3.4.3-py3-none-any.whl", hash = "sha256:47b7819f6eb288109f068938b1a2e777c7e9755add9f689602a66f57700c2966", size = 16483451, upload-time = "2025-10-01T06:38:12.49Z" },
+    { url = "https://files.pythonhosted.org/packages/c1/82/2e9f389ff0444835c8fae1ebd3b4562f8b9e2a4de26e4a40c15d0ea6db82/whisperx-3.4.5-py3-none-any.whl", hash = "sha256:f67abdf116d770f755841d69a4b4d83ebc0ad157433eb5b95e1a80cbc16acb03", size = 16482856, upload-time = "2026-03-25T08:40:18.952Z" },
 ]
 
 [[package]]
