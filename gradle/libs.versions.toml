@@ -8,7 +8,7 @@ spotless = "8.10.1"
 
 [libraries]
 anthropic-java = { module = "com.anthropic:anthropic-java", version = "2.59.0" }
-deepl-java = { module = "com.deepl.api:deepl-java", version = "1.14.0" }
+deepl-java = { module = "com.deepl.api:deepl-java", version = "1.17.0" }
 springdoc-openapi-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version = "2.8.6" }
 spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", version.ref = "spotbugs" }
 spring-cloud-bom = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "spring-cloud" }
