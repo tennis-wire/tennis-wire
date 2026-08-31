@@ -125,10 +125,10 @@ addopts = [
 filterwarnings = [
     "error",
     "ignore::DeprecationWarning",
-    # starlette's StarletteDeprecationWarning can't be referenced by import path:
-    # the class doesn't exist in older starlette, and pytest resolves categories
-    # at startup. Match by message instead (version-independent).
-    "ignore:Using 'httpx' with 'starlette.testclient' is deprecated",
+    # starlette's StarletteDeprecationWarning: can't reference the class by path
+    # (doesn't exist in older starlette), and the message uses backticks —
+    # dots in the regex cover any quoting style.
+    "ignore:Using .httpx. with .starlette.testclient. is deprecated",
 ]
 
 # ============== COVERAGE ==============
