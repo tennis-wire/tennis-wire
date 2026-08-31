@@ -46,7 +46,10 @@ export const TranslateDialog: React.FC<Props> = ({
     const [detectedLang, setDetectedLang] = useState('')
     const [error, setError] = useState('')
     const [copied, setCopied] = useState(false)
-    const [customText, setCustomText] = useState('')
+    // Seeded from the editor selection; remounted fresh on every open via key in Editor.tsx
+    const [customText, setCustomText] = useState(() =>
+        selectedText.trim().length > 0 ? selectedText : ''
+    )
 
     const hasSelection = selectedText.trim().length > 0
 
@@ -98,31 +101,13 @@ export const TranslateDialog: React.FC<Props> = ({
         onClose()
     }
 
-    const handleClose = () => {
-        setResult('')
-        setError('')
-        setDetectedLang('')
-        setCopied(false)
-        setCustomText('')
-        onClose()
-    }
-
-    React.useEffect(() => {
-        if (open) {
-            if (hasSelection) setCustomText(selectedText)
-            setResult('')
-            setError('')
-            setDetectedLang('')
-        }
-    }, [open, hasSelection, selectedText])
-
     return (
-        <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
             <DialogTitle
                 sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
             >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>🌐 Перевод</Box>
-                <IconButton size="small" onClick={handleClose}>
+                <IconButton size="small" onClick={onClose}>
                     <Close fontSize="small" />
                 </IconButton>
             </DialogTitle>
@@ -287,7 +272,7 @@ export const TranslateDialog: React.FC<Props> = ({
             </DialogContent>
 
             <DialogActions sx={{ px: 3, pb: 2 }}>
-                <Button onClick={handleClose} color="inherit">
+                <Button onClick={onClose} color="inherit">
                     Закрыть
                 </Button>
                 <Button

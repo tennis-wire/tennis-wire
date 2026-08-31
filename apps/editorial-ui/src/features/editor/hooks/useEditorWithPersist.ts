@@ -11,8 +11,20 @@ import { defaultNewsMetadata } from '../types/content'
 const CONTENT_KEY = 'editor-content'
 const METADATA_KEY = 'editor-metadata'
 
+function loadMetadata(): ContentMetadata {
+    const saved = localStorage.getItem(METADATA_KEY)
+    if (saved) {
+        try {
+            return JSON.parse(saved)
+        } catch (e) {
+            console.error('Ошибка загрузки метаданных:', e)
+        }
+    }
+    return { ...defaultNewsMetadata }
+}
+
 export function useEditorWithPersist() {
-    const [metadata, setMetadata] = useState<ContentMetadata>({ ...defaultNewsMetadata })
+    const [metadata, setMetadata] = useState<ContentMetadata>(loadMetadata)
     const [originalContent, setOriginalContent] = useState<string | undefined>(undefined)
 
     const editor = useEditor({
@@ -33,22 +45,14 @@ export function useEditorWithPersist() {
         },
     })
 
-    // download из localStorage
+    // восстановление контента из localStorage
     useEffect(() => {
         if (!editor) return
         const savedContent = localStorage.getItem(CONTENT_KEY)
         if (savedContent) editor.commands.setContent(savedContent)
-
-        const savedMeta = localStorage.getItem(METADATA_KEY)
-        if (savedMeta) {
-            try {
-                setMetadata(JSON.parse(savedMeta))
-            } catch (e) {
-                console.error('Ошибка загрузки метаданных:', e)
-            }
-        }
     }, [editor])
 
+    // дебаунс-сохранение метаданных
     useEffect(() => {
         const timer = setTimeout(() => {
             localStorage.setItem(METADATA_KEY, JSON.stringify(metadata))
