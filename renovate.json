@@ -25,8 +25,8 @@
       "enabled": false
     },
     {
-      "description": "torch is capped at <2.6 for whisperx compatibility; do not propose range bumps",
-      "matchPackageNames": ["torch", "torchaudio"],
+      "description": "whisperx>=3.8 requires torch>=2.6; blocked until the torch cap is lifted (GPU worker rebuild)",
+      "matchPackageNames": ["torch", "torchaudio", "whisperx"],
       "matchUpdateTypes": ["major", "minor"],
       "enabled": false
     }
