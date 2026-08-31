@@ -39,27 +39,49 @@ export default function TournamentDetailScreen() {
                 </Card>
 
                 {/* Draw placeholder */}
-                <Text variant="h2" style={{ marginTop: 24, marginBottom: 12 }}>Сетка (draw)</Text>
-                <View style={{
-                    height: 180, backgroundColor: colors.bgAlt, borderRadius: 12,
-                    justifyContent: 'center', alignItems: 'center',
-                }}>
+                <Text variant="h2" style={{ marginTop: 24, marginBottom: 12 }}>
+                    Сетка (draw)
+                </Text>
+                <View
+                    style={{
+                        height: 180,
+                        backgroundColor: colors.bgAlt,
+                        borderRadius: 12,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                    }}
+                >
                     <Text variant="body">Интерактивная сетка — TBD</Text>
                 </View>
 
                 {/* Seeds */}
-                <Text variant="h2" style={{ marginTop: 24, marginBottom: 12 }}>Сеяные</Text>
+                <Text variant="h2" style={{ marginTop: 24, marginBottom: 12 }}>
+                    Сеяные
+                </Text>
                 <Card style={{ padding: 16 }}>
                     {SEEDS.map((p) => (
-                        <View key={p.seed} style={{ flexDirection: 'row', paddingVertical: 8, alignItems: 'center' }}>
-                            <Text variant="label" style={{ width: 28 }}>{p.seed}</Text>
-                            <Text variant="body" style={{ flex: 1 }}>{p.name}</Text>
+                        <View
+                            key={p.seed}
+                            style={{
+                                flexDirection: 'row',
+                                paddingVertical: 8,
+                                alignItems: 'center',
+                            }}
+                        >
+                            <Text variant="label" style={{ width: 28 }}>
+                                {p.seed}
+                            </Text>
+                            <Text variant="body" style={{ flex: 1 }}>
+                                {p.name}
+                            </Text>
                             <Text variant="caption">{p.country}</Text>
                         </View>
                     ))}
                 </Card>
 
-                <Text variant="caption" style={{ marginTop: 24, textAlign: 'center' }}>id: {id}</Text>
+                <Text variant="caption" style={{ marginTop: 24, textAlign: 'center' }}>
+                    id: {id}
+                </Text>
             </ScrollView>
         </Screen>
     )

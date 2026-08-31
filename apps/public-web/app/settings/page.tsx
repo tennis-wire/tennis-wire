@@ -4,7 +4,7 @@ import { useTheme, PALETTES, FONT_PAIRS } from '@/theme'
 import type { PaletteKey, FontPairKey } from '@/theme'
 
 export default function SettingsPage() {
-    const { palette, fontPair, isDark, setPalette, setFontPair, toggleDark, colors } = useTheme()
+    const { palette, fontPair, isDark, setPalette, setFontPair, toggleDark } = useTheme()
 
     return (
         <div style={{ maxWidth: 640 }}>

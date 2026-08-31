@@ -1,7 +1,4 @@
 node_modules
-dist
-build
-coverage
+.expo
+expo-env.d.ts
 package-lock.json
-
-*.log

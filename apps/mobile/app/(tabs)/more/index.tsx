@@ -12,9 +12,24 @@ interface MenuItem {
 }
 
 const MENU: MenuItem[] = [
-    { label: 'Материалы', icon: 'document-text', route: '/more/materials', description: 'Аналитика, обзоры, интервью' },
-    { label: 'Треш-зона', icon: 'flame', route: '/sections/trash', description: 'Скандалы, мемы, кринж' },
-    { label: 'Настройки', icon: 'settings-outline', route: '/more/settings', description: 'Тема, палитра, шрифт' },
+    {
+        label: 'Материалы',
+        icon: 'document-text',
+        route: '/more/materials',
+        description: 'Аналитика, обзоры, интервью',
+    },
+    {
+        label: 'Треш-зона',
+        icon: 'flame',
+        route: '/sections/trash',
+        description: 'Скандалы, мемы, кринж',
+    },
+    {
+        label: 'Настройки',
+        icon: 'settings-outline',
+        route: '/more/settings',
+        description: 'Тема, палитра, шрифт',
+    },
 ]
 
 export default function MoreScreen() {
@@ -35,17 +50,25 @@ export default function MoreScreen() {
                                 opacity: pressed ? 0.6 : 1,
                             })}
                         >
-                            <View style={{
-                                width: 40, height: 40, borderRadius: 10,
-                                backgroundColor: colors.bgAlt,
-                                justifyContent: 'center', alignItems: 'center', marginRight: 14,
-                            }}>
+                            <View
+                                style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: 10,
+                                    backgroundColor: colors.bgAlt,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    marginRight: 14,
+                                }}
+                            >
                                 <Ionicons name={item.icon} size={20} color={colors.primary} />
                             </View>
                             <View style={{ flex: 1 }}>
                                 <Text variant="h3">{item.label}</Text>
                                 {item.description && (
-                                    <Text variant="caption" style={{ marginTop: 2 }}>{item.description}</Text>
+                                    <Text variant="caption" style={{ marginTop: 2 }}>
+                                        {item.description}
+                                    </Text>
                                 )}
                             </View>
                             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />

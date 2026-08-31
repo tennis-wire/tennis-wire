@@ -11,10 +11,30 @@ const SECTION_NAMES: Record<string, string> = {
 }
 
 const ITEMS = [
-    { id: '1', type: 'news' as const, title: 'Кирьос устроил скандал на пресс-конференции', time: '3 ч назад' },
-    { id: '2', type: 'materials' as const, title: 'Топ-10 самых абсурдных штрафов в истории тенниса', time: '1 день' },
-    { id: '3', type: 'news' as const, title: 'Болл-бой стал звездой TikTok после матча в Майами', time: '2 дня' },
-    { id: '4', type: 'materials' as const, title: 'Теннисный Twitter: лучшие мемы марта', time: '3 дня' },
+    {
+        id: '1',
+        type: 'news' as const,
+        title: 'Кирьос устроил скандал на пресс-конференции',
+        time: '3 ч назад',
+    },
+    {
+        id: '2',
+        type: 'materials' as const,
+        title: 'Топ-10 самых абсурдных штрафов в истории тенниса',
+        time: '1 день',
+    },
+    {
+        id: '3',
+        type: 'news' as const,
+        title: 'Болл-бой стал звездой TikTok после матча в Майами',
+        time: '2 дня',
+    },
+    {
+        id: '4',
+        type: 'materials' as const,
+        title: 'Теннисный Twitter: лучшие мемы марта',
+        time: '3 дня',
+    },
 ]
 
 export default function SectionScreen() {
@@ -30,13 +50,17 @@ export default function SectionScreen() {
             <Stack.Screen options={{ title: name }} />
 
             {/* Filter tabs */}
-            <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}>
+            <View
+                style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}
+            >
                 {(['all', 'news', 'materials'] as Filter[]).map((f) => (
                     <Pressable
                         key={f}
                         onPress={() => setFilter(f)}
                         style={{
-                            paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8,
+                            paddingHorizontal: 14,
+                            paddingVertical: 6,
+                            borderRadius: 8,
                             backgroundColor: filter === f ? colors.primary : colors.bgAlt,
                         }}
                     >
@@ -59,8 +83,12 @@ export default function SectionScreen() {
                         <Text variant="caption" style={{ marginBottom: 4 }}>
                             {item.type === 'news' ? 'Новость' : 'Материал'}
                         </Text>
-                        <Text variant="h3" numberOfLines={2}>{item.title}</Text>
-                        <Text variant="caption" style={{ marginTop: 4 }}>{item.time}</Text>
+                        <Text variant="h3" numberOfLines={2}>
+                            {item.title}
+                        </Text>
+                        <Text variant="caption" style={{ marginTop: 4 }}>
+                            {item.time}
+                        </Text>
                     </Pressable>
                 )}
             />

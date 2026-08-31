@@ -11,29 +11,43 @@ export default function MaterialDetailScreen() {
         <Screen>
             <ScrollView>
                 {/* Cover */}
-                <View style={{ height: 220, backgroundColor: colors.bgAlt, justifyContent: 'center', alignItems: 'center' }}>
+                <View
+                    style={{
+                        height: 220,
+                        backgroundColor: colors.bgAlt,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                    }}
+                >
                     <Text variant="caption">Обложка материала</Text>
                 </View>
 
                 <View style={{ padding: 16 }}>
                     <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
                         <Tag label="Аналитика" />
-                        <Text variant="caption" style={{ alignSelf: 'center' }}>· 5 мин чтения</Text>
+                        <Text variant="caption" style={{ alignSelf: 'center' }}>
+                            · 5 мин чтения
+                        </Text>
                     </View>
 
-                    <Text variant="display">Сезон Синнера: как итальянец стал доминирующей силой</Text>
+                    <Text variant="display">
+                        Сезон Синнера: как итальянец стал доминирующей силой
+                    </Text>
 
                     <Text variant="bodySmall" style={{ marginTop: 8 }}>
                         Подробный разбор того, как Янник Синнер прошёл путь от перспективного юниора
                         до бесспорного лидера мирового тенниса.
                     </Text>
 
-                    <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 20 }} />
+                    <View
+                        style={{ height: 1, backgroundColor: colors.border, marginVertical: 20 }}
+                    />
 
                     <Text variant="body" style={{ marginBottom: 12 }}>
                         Когда в начале 2024 года Янник Синнер впервые возглавил рейтинг ATP, многие
-                        считали это временным явлением. Два года спустя итальянец доказал, что пришёл
-                        надолго — и, возможно, навсегда изменил расстановку сил в мужском теннисе.
+                        считали это временным явлением. Два года спустя итальянец доказал, что
+                        пришёл надолго — и, возможно, навсегда изменил расстановку сил в мужском
+                        теннисе.
                     </Text>
                     <Text variant="body" style={{ marginBottom: 12 }}>
                         Его стиль игры — агрессивный бейслайн с невероятной стабильностью — стал
@@ -41,8 +55,8 @@ export default function MaterialDetailScreen() {
                         доминирующего удара, а за счёт отсутствия слабых мест.
                     </Text>
                     <Text variant="body">
-                        В этом материале мы разберём ключевые факторы его доминирования: от тактических
-                        изменений до физической подготовки и ментальной устойчивости.
+                        В этом материале мы разберём ключевые факторы его доминирования: от
+                        тактических изменений до физической подготовки и ментальной устойчивости.
                     </Text>
 
                     <View style={{ flexDirection: 'row', gap: 8, marginTop: 24, flexWrap: 'wrap' }}>
@@ -51,7 +65,9 @@ export default function MaterialDetailScreen() {
                         <Tag label="Сезон 2026" />
                     </View>
 
-                    <Text variant="caption" style={{ marginTop: 20 }}>slug: {slug}</Text>
+                    <Text variant="caption" style={{ marginTop: 20 }}>
+                        slug: {slug}
+                    </Text>
                 </View>
             </ScrollView>
         </Screen>

@@ -42,9 +42,15 @@ function RootStack() {
                 }}
             >
                 <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="sections/[slug]" options={{ headerShown: true, title: 'Раздел' }} />
+                <Stack.Screen
+                    name="sections/[slug]"
+                    options={{ headerShown: true, title: 'Раздел' }}
+                />
                 <Stack.Screen name="tags/[slug]" options={{ headerShown: true, title: 'Тег' }} />
-                <Stack.Screen name="players/[slug]" options={{ headerShown: true, title: 'Игрок' }} />
+                <Stack.Screen
+                    name="players/[slug]"
+                    options={{ headerShown: true, title: 'Игрок' }}
+                />
             </Stack>
         </>
     )

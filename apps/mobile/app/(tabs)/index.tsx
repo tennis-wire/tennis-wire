@@ -20,16 +20,44 @@ const HERO = {
 }
 
 const NEWS = [
-    { slug: 'rublev-injury', title: 'Рублёв снялся с турнира в Мадриде из-за травмы запястья', time: '4 ч назад' },
-    { slug: 'wta-rankings', title: 'Швёнтек вернула первую строчку рейтинга WTA', time: '5 ч назад' },
-    { slug: 'medvedev-coach', title: 'Медведев объявил о смене тренера перед грунтовым сезоном', time: '6 ч назад' },
-    { slug: 'roland-garros-seeds', title: 'Roland Garros: стали известны первые сеяные', time: '8 ч назад' },
+    {
+        slug: 'rublev-injury',
+        title: 'Рублёв снялся с турнира в Мадриде из-за травмы запястья',
+        time: '4 ч назад',
+    },
+    {
+        slug: 'wta-rankings',
+        title: 'Швёнтек вернула первую строчку рейтинга WTA',
+        time: '5 ч назад',
+    },
+    {
+        slug: 'medvedev-coach',
+        title: 'Медведев объявил о смене тренера перед грунтовым сезоном',
+        time: '6 ч назад',
+    },
+    {
+        slug: 'roland-garros-seeds',
+        title: 'Roland Garros: стали известны первые сеяные',
+        time: '8 ч назад',
+    },
 ]
 
 const MATERIALS = [
-    { slug: 'sinner-season', title: 'Сезон Синнера: как итальянец стал доминирующей силой', tag: 'Аналитика' },
-    { slug: 'next-gen-2026', title: 'Next Gen: кто из молодых готов ворваться в топ-10', tag: 'Обзор' },
-    { slug: 'clay-preview', title: 'Превью грунтового сезона: фавориты и тёмные лошадки', tag: 'Превью' },
+    {
+        slug: 'sinner-season',
+        title: 'Сезон Синнера: как итальянец стал доминирующей силой',
+        tag: 'Аналитика',
+    },
+    {
+        slug: 'next-gen-2026',
+        title: 'Next Gen: кто из молодых готов ворваться в топ-10',
+        tag: 'Обзор',
+    },
+    {
+        slug: 'clay-preview',
+        title: 'Превью грунтового сезона: фавориты и тёмные лошадки',
+        tag: 'Превью',
+    },
 ]
 
 // ─── Sections ────────────────────────────────────────────────
@@ -40,9 +68,18 @@ function LiveTicker() {
 
     return (
         <View style={{ backgroundColor: colors.surface, paddingVertical: 8 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 8 }}>
+            <View
+                style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: 16,
+                    marginBottom: 8,
+                }}
+            >
                 <LiveBadge />
-                <Text variant="label" style={{ marginLeft: 8 }}>Сейчас играют</Text>
+                <Text variant="label" style={{ marginLeft: 8 }}>
+                    Сейчас играют
+                </Text>
             </View>
             <FlatList
                 horizontal
@@ -61,10 +98,18 @@ function LiveTicker() {
                             minWidth: 160,
                         }}
                     >
-                        <Text variant="bodySmall" numberOfLines={1}>{item.p1}</Text>
-                        <Text variant="h3" style={{ marginVertical: 2 }}>{item.score}</Text>
-                        <Text variant="bodySmall" numberOfLines={1}>{item.p2}</Text>
-                        <Text variant="caption" style={{ marginTop: 4 }}>{item.set}</Text>
+                        <Text variant="bodySmall" numberOfLines={1}>
+                            {item.p1}
+                        </Text>
+                        <Text variant="h3" style={{ marginVertical: 2 }}>
+                            {item.score}
+                        </Text>
+                        <Text variant="bodySmall" numberOfLines={1}>
+                            {item.p2}
+                        </Text>
+                        <Text variant="caption" style={{ marginTop: 4 }}>
+                            {item.set}
+                        </Text>
                     </Pressable>
                 )}
             />
@@ -77,15 +122,31 @@ function HeroNews() {
     const router = useRouter()
 
     return (
-        <Card onPress={() => router.push(`/news/${HERO.slug}`)} style={{ margin: 16, marginBottom: 8 }}>
+        <Card
+            onPress={() => router.push(`/news/${HERO.slug}`)}
+            style={{ margin: 16, marginBottom: 8 }}
+        >
             {/* Cover placeholder */}
-            <View style={{ height: 180, backgroundColor: colors.bgAlt, justifyContent: 'center', alignItems: 'center' }}>
+            <View
+                style={{
+                    height: 180,
+                    backgroundColor: colors.bgAlt,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                }}
+            >
                 <Text variant="caption">Фото обложки</Text>
             </View>
             <View style={{ padding: 14 }}>
-                <Text variant="h2" numberOfLines={3}>{HERO.title}</Text>
-                <Text variant="body" style={{ marginTop: 6 }} numberOfLines={2}>{HERO.summary}</Text>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+                <Text variant="h2" numberOfLines={3}>
+                    {HERO.title}
+                </Text>
+                <Text variant="body" style={{ marginTop: 6 }} numberOfLines={2}>
+                    {HERO.summary}
+                </Text>
+                <View
+                    style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}
+                >
                     <Text variant="caption">{HERO.source}</Text>
                     <Text variant="caption">{HERO.time}</Text>
                 </View>
@@ -99,12 +160,21 @@ function NewsFeed() {
 
     return (
         <View style={{ paddingHorizontal: 16 }}>
-            <Text variant="h2" style={{ marginBottom: 12 }}>Последние новости</Text>
+            <Text variant="h2" style={{ marginBottom: 12 }}>
+                Последние новости
+            </Text>
             {NEWS.map((item, i) => (
                 <View key={item.slug}>
-                    <Pressable onPress={() => router.push(`/news/${item.slug}`)} style={{ paddingVertical: 12 }}>
-                        <Text variant="h3" numberOfLines={2}>{item.title}</Text>
-                        <Text variant="caption" style={{ marginTop: 4 }}>{item.time}</Text>
+                    <Pressable
+                        onPress={() => router.push(`/news/${item.slug}`)}
+                        style={{ paddingVertical: 12 }}
+                    >
+                        <Text variant="h3" numberOfLines={2}>
+                            {item.title}
+                        </Text>
+                        <Text variant="caption" style={{ marginTop: 4 }}>
+                            {item.time}
+                        </Text>
                     </Pressable>
                     {i < NEWS.length - 1 && <Divider />}
                 </View>
@@ -119,16 +189,32 @@ function MaterialsList() {
 
     return (
         <View style={{ paddingHorizontal: 16, marginTop: 24 }}>
-            <Text variant="h2" style={{ marginBottom: 12 }}>Материалы</Text>
+            <Text variant="h2" style={{ marginBottom: 12 }}>
+                Материалы
+            </Text>
             {MATERIALS.map((item) => (
-                <Card key={item.slug} onPress={() => router.push(`/more/material-detail?slug=${item.slug}` as any)} style={{ marginBottom: 10 }}>
+                <Card
+                    key={item.slug}
+                    onPress={() => router.push(`/more/material-detail?slug=${item.slug}` as any)}
+                    style={{ marginBottom: 10 }}
+                >
                     <View style={{ flexDirection: 'row' }}>
-                        <View style={{ width: 100, height: 80, backgroundColor: colors.bgAlt, justifyContent: 'center', alignItems: 'center' }}>
+                        <View
+                            style={{
+                                width: 100,
+                                height: 80,
+                                backgroundColor: colors.bgAlt,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                            }}
+                        >
                             <Text variant="caption">Обложка</Text>
                         </View>
                         <View style={{ flex: 1, padding: 10 }}>
                             <Tag label={item.tag} />
-                            <Text variant="h3" numberOfLines={2} style={{ marginTop: 6 }}>{item.title}</Text>
+                            <Text variant="h3" numberOfLines={2} style={{ marginTop: 6 }}>
+                                {item.title}
+                            </Text>
                         </View>
                     </View>
                 </Card>

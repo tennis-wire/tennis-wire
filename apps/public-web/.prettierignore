@@ -3,5 +3,7 @@ node_modules
 out
 build
 coverage
+package-lock.json
+next-env.d.ts
 
 *.log

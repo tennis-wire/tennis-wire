@@ -22,23 +22,68 @@ export function Text({ variant = 'body', color, style, ...props }: TTextProps) {
     const variantStyle = (() => {
         switch (variant) {
             case 'display':
-                return { fontFamily: fonts.display.regular, fontSize: 28, lineHeight: 34, color: colors.text }
+                return {
+                    fontFamily: fonts.display.regular,
+                    fontSize: 28,
+                    lineHeight: 34,
+                    color: colors.text,
+                }
             case 'h1':
-                return { fontFamily: fonts.display.regular, fontSize: 24, lineHeight: 30, color: colors.text }
+                return {
+                    fontFamily: fonts.display.regular,
+                    fontSize: 24,
+                    lineHeight: 30,
+                    color: colors.text,
+                }
             case 'h2':
-                return { fontFamily: fonts.body.bold, fontSize: 20, lineHeight: 26, color: colors.text }
+                return {
+                    fontFamily: fonts.body.bold,
+                    fontSize: 20,
+                    lineHeight: 26,
+                    color: colors.text,
+                }
             case 'h3':
-                return { fontFamily: fonts.body.semiBold, fontSize: 17, lineHeight: 22, color: colors.text }
+                return {
+                    fontFamily: fonts.body.semiBold,
+                    fontSize: 17,
+                    lineHeight: 22,
+                    color: colors.text,
+                }
             case 'body':
-                return { fontFamily: fonts.body.regular, fontSize: 15, lineHeight: 22, color: colors.text }
+                return {
+                    fontFamily: fonts.body.regular,
+                    fontSize: 15,
+                    lineHeight: 22,
+                    color: colors.text,
+                }
             case 'bodySmall':
-                return { fontFamily: fonts.body.regular, fontSize: 13, lineHeight: 18, color: colors.textSecondary }
+                return {
+                    fontFamily: fonts.body.regular,
+                    fontSize: 13,
+                    lineHeight: 18,
+                    color: colors.textSecondary,
+                }
             case 'caption':
-                return { fontFamily: fonts.body.regular, fontSize: 12, lineHeight: 16, color: colors.textMuted }
+                return {
+                    fontFamily: fonts.body.regular,
+                    fontSize: 12,
+                    lineHeight: 16,
+                    color: colors.textMuted,
+                }
             case 'label':
-                return { fontFamily: fonts.body.semiBold, fontSize: 13, lineHeight: 18, color: colors.textSecondary }
+                return {
+                    fontFamily: fonts.body.semiBold,
+                    fontSize: 13,
+                    lineHeight: 18,
+                    color: colors.textSecondary,
+                }
             default:
-                return { fontFamily: fonts.body.regular, fontSize: 15, lineHeight: 22, color: colors.text }
+                return {
+                    fontFamily: fonts.body.regular,
+                    fontSize: 15,
+                    lineHeight: 22,
+                    color: colors.text,
+                }
         }
     })()
 
@@ -92,8 +137,17 @@ export function Tag({ label, onPress }: TagProps) {
     const { colors, fonts } = useTheme()
 
     const tagView = (
-        <View style={{ backgroundColor: colors.tag, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
-            <RNText style={{ fontFamily: fonts.body.semiBold, fontSize: 12, color: colors.primary }}>
+        <View
+            style={{
+                backgroundColor: colors.tag,
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: 6,
+            }}
+        >
+            <RNText
+                style={{ fontFamily: fonts.body.semiBold, fontSize: 12, color: colors.primary }}
+            >
                 {label}
             </RNText>
         </View>
@@ -108,8 +162,22 @@ export function LiveBadge() {
     const { colors, fonts } = useTheme()
 
     return (
-        <View style={{ backgroundColor: colors.live, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 }}>
-            <RNText style={{ fontFamily: fonts.body.bold, fontSize: 11, color: '#FFFFFF', letterSpacing: 0.5 }}>
+        <View
+            style={{
+                backgroundColor: colors.live,
+                paddingHorizontal: 8,
+                paddingVertical: 3,
+                borderRadius: 4,
+            }}
+        >
+            <RNText
+                style={{
+                    fontFamily: fonts.body.bold,
+                    fontSize: 11,
+                    color: '#FFFFFF',
+                    letterSpacing: 0.5,
+                }}
+            >
                 LIVE
             </RNText>
         </View>
@@ -120,7 +188,11 @@ export function LiveBadge() {
 
 export function Divider({ style }: { style?: ViewProps['style'] }) {
     const { colors } = useTheme()
-    return <View style={[{ height: StyleSheet.hairlineWidth, backgroundColor: colors.border }, style]} />
+    return (
+        <View
+            style={[{ height: StyleSheet.hairlineWidth, backgroundColor: colors.border }, style]}
+        />
+    )
 }
 
 // ─── Screen ──────────────────────────────────────────────────

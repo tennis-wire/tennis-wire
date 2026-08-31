@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import Underline from '@tiptap/extension-underline'
-import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
 import Youtube from '@tiptap/extension-youtube'
@@ -19,9 +17,10 @@ export function useEditorWithPersist() {
 
     const editor = useEditor({
         extensions: [
-            StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
-            Underline,
-            Link.configure({ openOnClick: false }),
+            StarterKit.configure({
+                heading: { levels: [1, 2, 3] },
+                link: { openOnClick: false },
+            }),
             Image,
             Youtube.configure({ controls: true, nocookie: true, modestBranding: true }),
             Telegram,

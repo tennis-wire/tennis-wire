@@ -14,6 +14,14 @@ const eslintConfig = defineConfig([
         },
         rules: {
             'prettier/prettier': 'error',
+            '@typescript-eslint/no-unused-vars': [
+                'warn',
+                {
+                    argsIgnorePattern: '^_',
+                    varsIgnorePattern: '^_',
+                    caughtErrorsIgnorePattern: '^_',
+                },
+            ],
         },
     },
     globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts']),
