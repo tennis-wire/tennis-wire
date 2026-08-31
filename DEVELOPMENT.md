@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - JDK 25 (the Gradle toolchain resolves it automatically)
-- Node 20+
+- Node 24 LTS (minimum 22.13, pinned in `.nvmrc`) 20+
 - Python 3.12+ and [uv](https://docs.astral.sh/uv/)
 - Docker with Compose v2
 - ffmpeg (required by the transcription worker for audio extraction)
