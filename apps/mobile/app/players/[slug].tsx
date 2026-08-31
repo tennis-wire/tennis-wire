@@ -14,15 +14,23 @@ export default function PlayerScreen() {
             <ScrollView contentContainerStyle={{ padding: 16 }}>
                 {/* Player header */}
                 <View style={{ alignItems: 'center', marginBottom: 24 }}>
-                    <View style={{
-                        width: 80, height: 80, borderRadius: 40,
-                        backgroundColor: colors.bgAlt,
-                        justifyContent: 'center', alignItems: 'center', marginBottom: 12,
-                    }}>
+                    <View
+                        style={{
+                            width: 80,
+                            height: 80,
+                            borderRadius: 40,
+                            backgroundColor: colors.bgAlt,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            marginBottom: 12,
+                        }}
+                    >
                         <Text variant="h1">ЯС</Text>
                     </View>
                     <Text variant="display">Янник Синнер</Text>
-                    <Text variant="bodySmall" style={{ marginTop: 4 }}>Италия · #1 ATP</Text>
+                    <Text variant="bodySmall" style={{ marginTop: 4 }}>
+                        Италия · #1 ATP
+                    </Text>
                 </View>
 
                 {/* Quick stats */}
@@ -41,7 +49,9 @@ export default function PlayerScreen() {
 
                 {/* Bio */}
                 <Card style={{ padding: 16, marginBottom: 20 }}>
-                    <Text variant="label" style={{ marginBottom: 8 }}>Информация</Text>
+                    <Text variant="label" style={{ marginBottom: 8 }}>
+                        Информация
+                    </Text>
                     <View style={{ gap: 6 }}>
                         <Text variant="body">Дата рождения: 16 августа 2001</Text>
                         <Text variant="body">Рост: 188 см</Text>
@@ -51,7 +61,9 @@ export default function PlayerScreen() {
                 </Card>
 
                 {/* Related content */}
-                <Text variant="h2" style={{ marginBottom: 12 }}>Связанный контент</Text>
+                <Text variant="h2" style={{ marginBottom: 12 }}>
+                    Связанный контент
+                </Text>
                 {[
                     { title: 'Синнер выиграл Miami Open 2026', type: 'Новость', time: '2 ч назад' },
                     { title: 'Сезон Синнера: доминирующая сила', type: 'Материал', time: '1 день' },
@@ -59,14 +71,20 @@ export default function PlayerScreen() {
                     <View key={item.title}>
                         <View style={{ paddingVertical: 12 }}>
                             <Text variant="caption">{item.type}</Text>
-                            <Text variant="h3" style={{ marginTop: 2 }}>{item.title}</Text>
-                            <Text variant="caption" style={{ marginTop: 4 }}>{item.time}</Text>
+                            <Text variant="h3" style={{ marginTop: 2 }}>
+                                {item.title}
+                            </Text>
+                            <Text variant="caption" style={{ marginTop: 4 }}>
+                                {item.time}
+                            </Text>
                         </View>
                         {i < arr.length - 1 && <Divider />}
                     </View>
                 ))}
 
-                <Text variant="caption" style={{ marginTop: 24, textAlign: 'center' }}>slug: {slug}</Text>
+                <Text variant="caption" style={{ marginTop: 24, textAlign: 'center' }}>
+                    slug: {slug}
+                </Text>
             </ScrollView>
         </Screen>
     )

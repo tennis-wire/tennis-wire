@@ -94,7 +94,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             setFontPair,
             toggleDark,
         }),
-        [state, colors, fonts, isReady, setPalette, setFontPair, toggleDark],
+        [state, colors, fonts, isReady, setPalette, setFontPair, toggleDark]
     )
 
     return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>

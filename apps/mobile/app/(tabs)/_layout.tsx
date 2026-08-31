@@ -32,7 +32,9 @@ export default function TabLayout() {
                 name="index"
                 options={{
                     title: 'Главная',
-                    tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} />,
+                    tabBarIcon: ({ color, size }) => (
+                        <Ionicons name="home" size={size} color={color} />
+                    ),
                 }}
             />
             <Tabs.Screen
@@ -40,7 +42,9 @@ export default function TabLayout() {
                 options={{
                     headerShown: false,
                     title: 'Новости',
-                    tabBarIcon: ({ color, size }) => <Ionicons name="newspaper" size={size} color={color} />,
+                    tabBarIcon: ({ color, size }) => (
+                        <Ionicons name="newspaper" size={size} color={color} />
+                    ),
                 }}
             />
             <Tabs.Screen
@@ -48,7 +52,9 @@ export default function TabLayout() {
                 options={{
                     headerShown: false,
                     title: 'Live',
-                    tabBarIcon: ({ color, size }) => <Ionicons name="radio" size={size} color={color} />,
+                    tabBarIcon: ({ color, size }) => (
+                        <Ionicons name="radio" size={size} color={color} />
+                    ),
                 }}
             />
             <Tabs.Screen
@@ -56,7 +62,9 @@ export default function TabLayout() {
                 options={{
                     headerShown: false,
                     title: 'Турниры',
-                    tabBarIcon: ({ color, size }) => <Ionicons name="trophy" size={size} color={color} />,
+                    tabBarIcon: ({ color, size }) => (
+                        <Ionicons name="trophy" size={size} color={color} />
+                    ),
                 }}
             />
             <Tabs.Screen

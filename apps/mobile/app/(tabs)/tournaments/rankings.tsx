@@ -41,7 +41,15 @@ export default function RankingsScreen() {
     return (
         <Screen>
             {/* Segment control */}
-            <View style={{ flexDirection: 'row', margin: 16, backgroundColor: colors.bgAlt, borderRadius: 10, padding: 3 }}>
+            <View
+                style={{
+                    flexDirection: 'row',
+                    margin: 16,
+                    backgroundColor: colors.bgAlt,
+                    borderRadius: 10,
+                    padding: 3,
+                }}
+            >
                 {(['atp', 'wta'] as Tour[]).map((t) => (
                     <Pressable
                         key={t}
@@ -54,7 +62,10 @@ export default function RankingsScreen() {
                             backgroundColor: tour === t ? colors.surface : 'transparent',
                         }}
                     >
-                        <Text variant="label" color={tour === t ? colors.primary : colors.textMuted}>
+                        <Text
+                            variant="label"
+                            color={tour === t ? colors.primary : colors.textMuted}
+                        >
                             {t.toUpperCase()}
                         </Text>
                     </Pressable>
@@ -63,9 +74,15 @@ export default function RankingsScreen() {
 
             {/* Table header */}
             <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 8 }}>
-                <Text variant="caption" style={{ width: 36 }}>#</Text>
-                <Text variant="caption" style={{ flex: 1 }}>Игрок</Text>
-                <Text variant="caption" style={{ width: 70, textAlign: 'right' }}>Очки</Text>
+                <Text variant="caption" style={{ width: 36 }}>
+                    #
+                </Text>
+                <Text variant="caption" style={{ flex: 1 }}>
+                    Игрок
+                </Text>
+                <Text variant="caption" style={{ width: 70, textAlign: 'right' }}>
+                    Очки
+                </Text>
             </View>
 
             <FlatList
@@ -75,14 +92,23 @@ export default function RankingsScreen() {
                 renderItem={({ item }) => (
                     <Pressable
                         onPress={() => router.push(`/players/${item.slug}`)}
-                        style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 }}
+                        style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingHorizontal: 16,
+                            paddingVertical: 12,
+                        }}
                     >
-                        <Text variant="h3" style={{ width: 36 }}>{item.rank}</Text>
+                        <Text variant="h3" style={{ width: 36 }}>
+                            {item.rank}
+                        </Text>
                         <View style={{ flex: 1 }}>
                             <Text variant="body">{item.name}</Text>
                             <Text variant="caption">{item.country}</Text>
                         </View>
-                        <Text variant="label" style={{ width: 70, textAlign: 'right' }}>{item.pts}</Text>
+                        <Text variant="label" style={{ width: 70, textAlign: 'right' }}>
+                            {item.pts}
+                        </Text>
                     </Pressable>
                 )}
             />
