@@ -125,9 +125,10 @@ addopts = [
 filterwarnings = [
     "error",
     "ignore::DeprecationWarning",
-    # starlette's own deprecation class does not subclass DeprecationWarning;
-    # httpx -> httpx2 TestClient migration is upstream noise for now
-    "ignore::starlette.exceptions.StarletteDeprecationWarning",
+    # starlette's StarletteDeprecationWarning can't be referenced by import path:
+    # the class doesn't exist in older starlette, and pytest resolves categories
+    # at startup. Match by message instead (version-independent).
+    "ignore:Using 'httpx' with 'starlette.testclient' is deprecated",
 ]
 
 # ============== COVERAGE ==============
