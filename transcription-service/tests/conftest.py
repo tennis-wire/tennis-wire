@@ -7,7 +7,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from transcription.api.routes import get_arq_redis, get_job_storage, get_s3_storage
+from transcription.api.deps import get_arq_redis, get_job_storage, get_s3_storage
 from transcription.main import create_app
 from transcription.models import TranscriptionJob
 

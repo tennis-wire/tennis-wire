@@ -6,6 +6,7 @@ from typing import Annotated
 from arq.connections import ArqRedis
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 
+from transcription.api.deps import get_arq_redis, get_job_storage, get_s3_storage
 from transcription.api.schemas import (
     HealthResponse,
     JobCreatedResponse,
@@ -31,37 +32,12 @@ def _gpu_available() -> bool:
     return bool(torch.cuda.is_available())
 
 
-# ============== Dependencies ==============
-
-
-async def get_job_storage() -> JobStorage:
-    """Get job storage instance."""
-    # In production, this would be injected properly
-    from transcription.main import get_redis_pool
-
-    redis = await get_redis_pool()
-    return JobStorage(redis)
-
-
-async def get_s3_storage() -> S3Storage:
-    """Get S3 storage instance."""
-    settings = get_settings()
-    return S3Storage(settings)
-
-
-async def get_arq_redis() -> ArqRedis:
-    """Get ARQ Redis connection for enqueuing jobs."""
-    from transcription.main import get_redis_pool
-
-    return await get_redis_pool()
-
-
 # ============== Routes ==============
 
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check(
-    settings: Annotated[Settings, Depends(get_settings)],
+    arq: Annotated[ArqRedis, Depends(get_arq_redis)],
 ) -> HealthResponse:
     """Health check endpoint."""
     from transcription import __version__
@@ -69,8 +45,7 @@ async def health_check(
     # Check Redis
     redis_connected = True
     try:
-        redis = await get_arq_redis()
-        await redis.ping()
+        await arq.ping()
     except Exception:
         redis_connected = False
 

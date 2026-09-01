@@ -5,7 +5,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import structlog
-from arq.connections import ArqRedis, create_pool
+from arq.connections import RedisSettings, create_pool
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -39,24 +39,10 @@ structlog.configure(
 
 logger = structlog.get_logger()
 
-# Global Redis pool
-_redis_pool: ArqRedis | None = None
-
-
-async def get_redis_pool() -> ArqRedis:
-    """Get or create Redis connection pool."""
-    global _redis_pool
-    if _redis_pool is None:
-        settings = get_settings()
-        from arq.connections import RedisSettings
-
-        _redis_pool = await create_pool(RedisSettings.from_dsn(str(settings.redis_url)))
-    return _redis_pool
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Application lifespan manager."""
+    """Application lifespan: owns the ARQ Redis pool via app.state."""
     settings = get_settings()
     logger.info(
         "Starting transcription service",
@@ -64,17 +50,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         env=settings.app_env,
     )
 
-    # Initialize Redis pool
-    await get_redis_pool()
+    redis = await create_pool(RedisSettings.from_dsn(str(settings.redis_url)))
+    app.state.redis = redis
     logger.info("Redis connected")
 
     yield
 
-    # Cleanup
-    global _redis_pool
-    if _redis_pool:
-        await _redis_pool.close()
-        _redis_pool = None
+    await redis.close()
     logger.info("Shutdown complete")
 
 

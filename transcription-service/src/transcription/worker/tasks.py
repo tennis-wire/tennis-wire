@@ -162,18 +162,36 @@ async def shutdown(ctx: dict[str, Any]) -> None:
     logger.info("Worker shutting down...")
 
 
-class WorkerSettings:
-    """ARQ worker settings."""
+def _build_worker_settings() -> type[object]:
+    """Construct ARQ worker settings.
 
-    functions: ClassVar = [func(transcribe, name=TRANSCRIBE_TASK_NAME)]
-    on_startup = startup
-    on_shutdown = shutdown
+    Built lazily (exposed via module ``__getattr__``) so that importing this
+    module never evaluates configuration; ``arq transcription.worker.tasks.WorkerSettings``
+    resolves the attribute at worker startup, which is the only place the
+    Redis DSN is actually needed.
+    """
+    settings = get_settings()
 
-    # Redis connection - must be a class attribute, not a method
-    redis_settings = RedisSettings.from_dsn(str(get_settings().redis_url))
+    class WorkerSettings:
+        """ARQ worker settings."""
 
-    # Job settings
-    max_jobs = 2
-    job_timeout = 3600
-    keep_result = 3600
-    health_check_interval = 30
+        functions: ClassVar = [func(transcribe, name=TRANSCRIBE_TASK_NAME)]
+        on_startup = startup
+        on_shutdown = shutdown
+
+        redis_settings = RedisSettings.from_dsn(str(settings.redis_url))
+
+        # Job settings
+        max_jobs = 2
+        job_timeout = 3600
+        keep_result = 3600
+        health_check_interval = 30
+
+    return WorkerSettings
+
+
+def __getattr__(name: str) -> type[object]:
+    """PEP 562: lazily expose WorkerSettings without import-time side effects."""
+    if name == "WorkerSettings":
+        return _build_worker_settings()
+    raise AttributeError(name)
