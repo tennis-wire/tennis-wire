@@ -1,34 +1,46 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
-  "enabledManagers": [
-    "gradle",
-    "gradle-wrapper",
-    "pep621",
-    "docker-compose",
-    "github-actions"
-  ],
-  "timezone": "Europe/Vienna",
-  "schedule": ["before 8am on saturday"],
-  "prConcurrentLimit": 5,
-  "labels": ["deps"],
-  "rangeStrategy": "update-lockfile",
-  "lockFileMaintenance": {
-    "enabled": true,
-    "schedule": ["before 8am on saturday"]
-  },
-  "packageRules": [
-    {
-      "description": "MinIO CE is archived; the pinned digest is final by design",
-      "matchDatasources": ["docker"],
-      "matchPackageNames": ["minio/minio", "minio/mc"],
-      "enabled": false
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": ["config:recommended"],
+    "enabledManagers": [
+        "npm",
+        "gradle",
+        "gradle-wrapper",
+        "pep621",
+        "docker-compose",
+        "github-actions"
+    ],
+    "timezone": "Europe/Vienna",
+    "schedule": ["before 8am on saturday"],
+    "prConcurrentLimit": 5,
+    "labels": ["deps"],
+    "rangeStrategy": "update-lockfile",
+    "lockFileMaintenance": {
+        "enabled": true,
+        "schedule": ["before 8am on saturday"]
     },
-    {
-      "description": "whisperx>=3.8 requires torch>=2.6; blocked until the torch cap is lifted (GPU worker rebuild)",
-      "matchPackageNames": ["torch", "torchaudio", "whisperx"],
-      "matchUpdateTypes": ["major", "minor"],
-      "enabled": false
-    }
-  ]
+    "packageRules": [
+        {
+            "description": "MinIO CE is archived; the pinned digest is final by design",
+            "matchDatasources": ["docker"],
+            "matchPackageNames": ["minio/minio", "minio/mc"],
+            "enabled": false
+        },
+        {
+            "description": "whisperx>=3.8 requires torch>=2.6; blocked until the torch cap is lifted (GPU worker rebuild)",
+            "matchPackageNames": ["torch", "torchaudio", "whisperx"],
+            "matchUpdateTypes": ["major", "minor"],
+            "enabled": false
+        },
+        {
+            "description": "Mobile: Expo packages move in lockstep, keep them in a single PR",
+            "matchFileNames": ["apps/mobile/package.json"],
+            "groupName": "mobile deps"
+        },
+        {
+            "description": "Mobile: a major means an Expo SDK bump; do it by hand with expo install --fix",
+            "matchFileNames": ["apps/mobile/package.json"],
+            "matchUpdateTypes": ["major"],
+            "enabled": false
+        }
+    ]
 }
