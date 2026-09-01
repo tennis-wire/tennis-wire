@@ -1,6 +1,6 @@
 """Tests for API endpoints."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 from fastapi.testclient import TestClient
 
@@ -14,8 +14,7 @@ class TestHealthEndpoint:
 
     def test_health_check(self, client: TestClient) -> None:
         """Test health check returns ok."""
-        with patch("transcription.api.routes.get_arq_redis", new=AsyncMock()):
-            response = client.get("/api/health")
+        response = client.get("/api/health")
 
         assert response.status_code == 200
         data = response.json()
