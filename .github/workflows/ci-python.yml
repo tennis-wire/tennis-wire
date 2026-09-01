@@ -7,9 +7,6 @@ on:
       - "transcription-service/**"
       - ".github/workflows/ci-python.yml"
   pull_request:
-    paths:
-      - "transcription-service/**"
-      - ".github/workflows/ci-python.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

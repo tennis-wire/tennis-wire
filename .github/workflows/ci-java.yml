@@ -14,16 +14,6 @@ on:
       - "content-service/**"
       - ".github/workflows/ci-java.yml"
   pull_request:
-    paths:
-      - "*.gradle.kts"
-      - "**/*.gradle.kts"
-      - "gradle.properties"
-      - "gradle/**"
-      - "gradlew*"
-      - "editorial-bff/**"
-      - "api-gateway/**"
-      - "content-service/**"
-      - ".github/workflows/ci-java.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
