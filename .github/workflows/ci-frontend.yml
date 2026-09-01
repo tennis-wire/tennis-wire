@@ -1,0 +1,100 @@
+name: CI Frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/**"
+      - ".prettierrc"
+      - ".nvmrc"
+      - ".github/workflows/ci-frontend.yml"
+  pull_request:
+    paths:
+      - "apps/**"
+      - ".prettierrc"
+      - ".nvmrc"
+      - ".github/workflows/ci-frontend.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  editorial-ui:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/editorial-ui
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/editorial-ui/package-lock.json
+
+      - run: npm ci
+
+      - name: Format check
+        run: npx prettier . --check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc -b
+
+      - name: Build
+        run: npm run build
+
+  public-web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/public-web
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/public-web/package-lock.json
+
+      - run: npm ci
+
+      - name: Format check
+        run: npx prettier . --check
+
+      - name: Lint
+        run: npm run lint
+
+      # type check happens inside `next build`
+      - name: Build
+        run: npm run build
+
+  mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - run: npm ci
+
+      - name: Format check
+        run: npx prettier . --check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit

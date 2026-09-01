@@ -18,7 +18,6 @@ coverage/
 *.tsbuildinfo
 apps/mobile/ios/
 apps/mobile/android/
-apps/mobile/.npmrc
 
 # ─── Python ──────────────────────────────────────────────────────────────────
 __pycache__/
