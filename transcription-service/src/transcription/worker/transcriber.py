@@ -1,6 +1,5 @@
 """WhisperX transcriber implementation."""
 
-import asyncio
 import tempfile
 from pathlib import Path
 from typing import Any, cast
@@ -12,6 +11,7 @@ from transcription.models import TranscriptionResult
 
 logger = structlog.get_logger()
 
+AUDIO_CODEC = "wav"
 
 class Transcriber:
     """WhisperX-based audio/video transcriber (full features, may have compatibility issues)."""
@@ -244,7 +244,7 @@ class MediaDownloader:
             "postprocessors": [
                 {
                     "key": "FFmpegExtractAudio",
-                    "preferredcodec": "wav",
+                    "preferredcodec": AUDIO_CODEC,
                     "preferredquality": "192",
                 }
             ],
@@ -256,14 +256,26 @@ class MediaDownloader:
 
         loop = asyncio.get_running_loop()
 
-        def do_download() -> str:
+        def do_download() -> Path:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-                # Get the actual output file
-                if info:
-                    filename = str(ydl.prepare_filename(info))
-                    return filename.replace(".webm", ".wav").replace(".m4a", ".wav")
-            raise ValueError("Failed to extract info from URL")
+                result = ydl.extract_info(url, download=True)
+                if not result:
+                    raise ValueError("Failed to extract media info from URL")
+
+                # After postprocessing yt-dlp records the real output path here.
+                # prepare_filename() still reports the pre-conversion container, so
+                # the fallback swaps in the codec extension rather than guessing.
+                downloads = result.get("requested_downloads") or []
+                filepath = downloads[0].get("filepath") if downloads else None
+                path = (
+                    Path(filepath)
+                    if filepath
+                    else Path(ydl.prepare_filename(result)).with_suffix(f".{AUDIO_CODEC}")
+                )
+
+                if not path.exists():
+                    raise ValueError(f"Downloaded audio not found: {path}")
+                return path
 
         if on_progress:
             await on_progress(15, "Downloading...")
@@ -275,4 +287,4 @@ class MediaDownloader:
         if on_progress:
             await on_progress(30, "Download complete")
 
-        return Path(downloaded_file)
+        return downloaded_file
