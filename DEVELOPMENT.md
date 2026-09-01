@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - JDK 25 (the Gradle toolchain resolves it automatically)
-- Node 24 LTS (minimum 22.13, pinned in `.nvmrc`) 20+
+- Node 24 LTS, pinned in `.nvmrc`
 - Python 3.12+ and [uv](https://docs.astral.sh/uv/)
 - Docker with Compose v2
 - ffmpeg (required by the transcription worker for audio extraction)
@@ -87,13 +87,18 @@ browser — bucket administration is done with `mc`.
 
 ## Services
 
+All browser and mobile traffic goes through the gateway, including the
+editorial UI: the frontends know one backend host and nothing else.
+
 | Service | Port | Notes |
 |---|---|---|
-| api-gateway | 8090 | routes `/api/**` to the services below |
-| editorial-bff | 8080 | |
+| api-gateway | 8090 | routes `/api/**` to the services below; terminates CORS |
+| editorial-bff | 8080 | AI chat and translation |
 | content-service | 8091 | requires PostgreSQL |
 | transcription-service | 8001 | requires Redis + MinIO |
 | editorial-ui (Vite) | 5173 | |
+| public-web (Next.js) | 3000 | |
+| mobile (Expo dev server) | 8081 | |
 
 ### Java services
 
@@ -118,12 +123,64 @@ uv run arq transcription.worker.tasks.WorkerSettings      # worker
 
 Set `WHISPER_DEVICE=cpu` in `.env` on machines without an NVIDIA GPU.
 
+### Frontends
+
+Each app under `apps/` has its own `package-lock.json` and is installed
+separately — there is no workspace root.
+
+```bash
+cd apps/editorial-ui && npm ci && npm run dev     # :5173
+cd apps/public-web   && npm ci && npm run dev     # :3000
+cd apps/mobile       && npm ci && npm start       # Expo
+```
+
+Formatting is shared: a single `.prettierrc` at the repository root applies to
+all three apps, each of which keeps its own `.prettierignore`. ESLint config is
+per app.
+
+`apps/mobile/.npmrc` sets `legacy-peer-deps=true` and is committed on purpose,
+so that CI resolves peers the same way a local install does. The reason is
+documented in the file itself.
+
+Expo dependencies are updated with `expo install --fix`, never with
+`npm update`. Renovate is configured accordingly: mobile packages are grouped
+into one PR and majors are disabled, because a major there means an SDK bump.
+
 ## Checks
 
 ```bash
 ./gradlew check                       # spotless, PMD, SpotBugs, tests
-cd transcription-service && uv run ruff check . && uv run mypy src && uv run pytest
+
+cd transcription-service
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy src
+uv run pytest
+
+cd apps/<app>                         # editorial-ui | public-web | mobile
+npx prettier . --check
+npm run lint
+npx tsc -b                            # editorial-ui
+npx tsc --noEmit                      # mobile
+npm run build                         # editorial-ui, public-web (next build type-checks)
 ```
 
-CI runs the same checks in `.github/workflows/ci-java.yml` and `ci-python.yml`,
-each with path filters.
+## CI
+
+Three workflows: `ci-java.yml`, `ci-python.yml`, `ci-frontend.yml`. They run the
+same checks as above.
+
+Path filters are applied on `push` only. On pull requests every workflow runs
+unconditionally, so that every check always reports a status.
+
+This is deliberate. `main` is protected and all jobs are required checks, and a
+workflow skipped by a `paths` filter never reports its check at all — the pull
+request then waits forever on a status that will never arrive. **Do not add
+`paths` to a `pull_request` trigger.** If a job ever needs to be conditional,
+gate it with a job-level `if:` instead: a job skipped by a conditional reports
+as successful and satisfies the required check.
+
+Running everything on every pull request is cheap here: the repository is
+public, and standard GitHub-hosted runners are free for public repositories.
+Filtering per job (a `dorny/paths-filter` job feeding `if:` conditions) is worth
+revisiting only once a job gets slow enough that waiting on it hurts.
