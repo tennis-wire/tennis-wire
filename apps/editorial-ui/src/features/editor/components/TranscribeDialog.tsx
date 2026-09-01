@@ -82,8 +82,8 @@ export const TranscribeDialog: React.FC<Props> = ({ open, onClose, onInsert }) =
         }
     }, [])
 
-    // Polling статуса через API
-    const pollStatus = useCallback(async (id: string) => {
+    // Polling status via API
+    const pollStatus = useCallback(async function poll(id: string) {
         try {
             const data = await getJobStatus(id)
             setStatus(data.status)
@@ -96,7 +96,7 @@ export const TranscribeDialog: React.FC<Props> = ({ open, onClose, onInsert }) =
             } else if (data.status === 'failed') {
                 setError(data.error || 'Транскрипция не удалась')
             } else {
-                pollingRef.current = setTimeout(() => pollStatus(id), 2000)
+                pollingRef.current = setTimeout(() => poll(id), 2000)
             }
         } catch (err) {
             console.error('Polling error:', err)

@@ -23,6 +23,7 @@ export default function Editor() {
     const [activeTab, setActiveTab] = useState(0)
     const [isAIPanelOpen, setIsAIPanelOpen] = useState(false)
     const [translateDialogOpen, setTranslateDialogOpen] = useState(false)
+    const [translateSession, setTranslateSession] = useState(0)
     const [transcribeDialogOpen, setTranscribeDialogOpen] = useState(false)
     const [articleId, setArticleId] = useState<string | null>(null)
 
@@ -212,7 +213,10 @@ export default function Editor() {
                                 <>
                                     <Toolbar
                                         editor={editor}
-                                        onTranslateClick={() => setTranslateDialogOpen(true)}
+                                        onTranslateClick={() => {
+                                            setTranslateSession((s) => s + 1)
+                                            setTranslateDialogOpen(true)
+                                        }}
                                         onTranscribeClick={() => setTranscribeDialogOpen(true)}
                                     />
                                     <EditorContentArea
@@ -285,6 +289,7 @@ export default function Editor() {
             />
 
             <TranslateDialog
+                key={translateSession}
                 open={translateDialogOpen}
                 onClose={() => setTranslateDialogOpen(false)}
                 selectedText={getSelectedText()}
