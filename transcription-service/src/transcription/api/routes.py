@@ -17,6 +17,7 @@ from transcription.api.schemas import (
 from transcription.config import Settings, get_settings
 from transcription.constants import TRANSCRIBE_TASK_NAME
 from transcription.models import JobStatus, TranscriptionJob
+from transcription.security import check_media_url_allowed
 from transcription.storage.jobs import JobStorage
 from transcription.storage.s3 import S3Storage
 
@@ -66,8 +67,17 @@ async def transcribe_url(
     request: TranscribeUrlRequest,
     job_storage: Annotated[JobStorage, Depends(get_job_storage)],
     arq: Annotated[ArqRedis, Depends(get_arq_redis)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> JobCreatedResponse:
     """Start transcription from URL (YouTube, etc.)."""
+    try:
+        check_media_url_allowed(str(request.url), settings.allowed_media_hosts)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
     job_id = str(uuid.uuid4())
 
     job = TranscriptionJob(
