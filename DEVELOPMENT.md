@@ -36,6 +36,7 @@ Docker Desktop or machine restart the containers stay down until `up -d`.
 | Redis | `redis:8-alpine` | 6379 | — |
 | MinIO (S3 API) | `minio/minio` pinned | 9000 | `minioadmin` / `minioadmin` |
 | MinIO console | — | 9001 | `minioadmin` / `minioadmin` |
+| Keycloak | `quay.io/keycloak/keycloak` pinned | 8180 | `admin` / `admin` |
 
 These credentials are local development defaults and are intentionally in the
 repository. They must never be reused anywhere else.
@@ -84,6 +85,71 @@ last release published to Docker Hub and will not receive updates. This is
 acceptable for a local-only emulator; production object storage is a separate
 decision. The community console is a read-only object
 browser — bucket administration is done with `mc`.
+
+### Identity
+
+Keycloak holds identity only: who someone is, which roles they have, which
+tokens they get. Everything else about a user lives in the services.
+
+The realm is imported from `docker/keycloak/import/tennis-wire-realm.json` at
+container creation. There is **no volume**: the container keeps its H2 store on
+its own filesystem, so recreating it wipes the realm and reimports the file.
+That is what keeps the file the single source of truth.
+
+```bash
+docker compose up -d --force-recreate keycloak   # after editing the realm file
+```
+
+`docker compose restart keycloak` keeps the filesystem and does **not**
+reimport. Neither does plain `up -d` when only the mounted JSON changed. The
+log line to look for is `Import finished successfully`; `Strategy:
+IGNORE_EXISTING` above it means an existing realm is left alone.
+
+The file is written by hand and is not a Keycloak export. Use the admin console
+at <http://localhost:8180> to try things out, then port the result back into the
+JSON yourself. Three reasons not to export:
+
+- `kc.sh export` cannot run against a live `start-dev` server — the H2 file is
+  locked by the running process, and there is no volume to export from once the
+  container is gone.
+- Partial export from the console omits users entirely and replaces client
+  secrets with asterisks.
+- A full export is thousands of lines of generated UUIDs, which makes every
+  diff unreadable.
+
+Keep the file small and describe only what is ours. Keycloak creates the
+built-in client scopes, authentication flows and `default-roles-tennis-wire`
+itself. One trap worth knowing: a realm-level `clientScopes` array **replaces**
+the built-in scopes rather than adding to them, which strips `roles`, `profile`
+and `email` from every client and produces tokens with no `realm_access.roles`.
+That is why the audience mapper is repeated on each client instead.
+
+Local principals:
+
+| Principal | Credentials | Roles |
+|---|---|---|
+| `dev` | `dev` / `dev` | `author`, `admin` (so also `moderator` and `user`) |
+| `reader` | `reader` / `reader` | `user` |
+| `moderation-bot` | client secret `dev-moderation-bot-secret` | `moderator-bot` |
+
+`dev-cli` is a password-grant client that exists only for `curl` and for the
+gateway integration test. ROPC is deprecated in OAuth 2.1; this client must
+never appear in a deployed realm.
+
+```bash
+TOKEN=$(curl -s -d grant_type=password -d client_id=dev-cli \
+  -d username=dev -d password=dev \
+  http://localhost:8180/realms/tennis-wire/protocol/openid-connect/token \
+  | jq -r .access_token)
+
+echo "$TOKEN" | jq -R 'split(".")[1] | @base64d | fromjson | {aud, azp, realm_access}'
+```
+
+Production is a separate problem, deliberately unsolved: `--import-realm` only
+creates a realm that does not exist yet and never updates one, so it is not a
+configuration-management mechanism. What must not drift between local and
+production are the role, client and scope names, and those are fixed in
+`architecture/auth.md`, not here.
 
 ## Services
 
