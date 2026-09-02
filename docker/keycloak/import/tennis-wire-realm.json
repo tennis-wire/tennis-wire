@@ -127,6 +127,60 @@
                     }
                 }
             ]
+        },
+        {
+            "clientId": "dev-cli",
+            "name": "Password grant for local curl and tests",
+            "description": "Local artefact. The production realm must not contain this client.",
+            "enabled": true,
+            "publicClient": true,
+            "standardFlowEnabled": false,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": true,
+            "serviceAccountsEnabled": false,
+            "protocolMappers": [
+                {
+                    "name": "tennis-wire-api-audience",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-audience-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "included.custom.audience": "tennis-wire-api",
+                        "access.token.claim": "true",
+                        "id.token.claim": "false",
+                        "introspection.token.claim": "true"
+                    }
+                }
+            ]
+        }
+    ],
+
+    "users": [
+        {
+            "username": "dev",
+            "enabled": true,
+            "emailVerified": true,
+            "email": "dev@tennis-wire.local",
+            "firstName": "Dev",
+            "lastName": "Staff",
+            "credentials": [{ "type": "password", "value": "dev", "temporary": false }],
+            "realmRoles": ["author", "admin"]
+        },
+        {
+            "username": "reader",
+            "enabled": true,
+            "emailVerified": true,
+            "email": "reader@tennis-wire.local",
+            "firstName": "Dev",
+            "lastName": "Reader",
+            "credentials": [{ "type": "password", "value": "reader", "temporary": false }],
+            "realmRoles": ["user"]
+        },
+        {
+            "username": "service-account-moderation-bot",
+            "enabled": true,
+            "serviceAccountClientId": "moderation-bot",
+            "realmRoles": ["moderator-bot"]
         }
     ],
 
