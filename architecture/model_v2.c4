@@ -1,3 +1,11 @@
+// Модель системы tennis-wire.
+//
+// Соглашение: тег #planned помечает всё, чего ещё нет в репозитории.
+// Виды без суффикса Target показывают текущее состояние (as-is) и исключают
+// такие элементы; виды с суффиксом Target — целевую картину (to-be).
+// Если элемент существует, но связь ещё не подключена, это указано в подписи
+// к связи.
+
 specification {
   element actor {
     style {
@@ -53,6 +61,8 @@ specification {
       color amber
     }
   }
+
+  tag planned
 }
 
 model {
@@ -62,6 +72,7 @@ model {
   }
 
   actor registeredUser 'Пользователь' {
+    #planned
     description 'Зарегистрированный пользователь: комментарии, фэнтези, личный кабинет'
   }
 
@@ -70,26 +81,32 @@ model {
   }
 
   actor admin 'Админ' {
+    #planned
     description 'Управление системой, пользователями, контентом'
   }
 
   // ===== EXTERNAL SYSTEMS =====
   external tennisDataSources 'Источники данных' {
+    #planned
     description 'ATP, WTA, ITF, ESPN, соцсети'
 
     external atpWta 'ATP/WTA/ITF' {
+      #planned
       description 'Официальные источники: результаты, рейтинги, сетки'
     }
 
     external sportsMedia 'Спортивные медиа' {
+      #planned
       description 'ESPN, Tennis.com, Eurosport и др.'
     }
 
     external socialMedia 'Соцсети' {
+      #planned
       description 'Twitter/X, Instagram'
     }
 
     external telegramChannels 'Telegram-каналы' {
+      #planned
       description 'Теннисные каналы и чаты'
     }
   }
@@ -99,14 +116,16 @@ model {
 
     external deepl 'DeepL API' {
       description 'Переводы контента'
+      technology 'deepl-java'
     }
 
-    external aiApi 'AI API' {
-      description 'OpenAI/Claude для помощи в редактуре'
+    external anthropicApi 'Anthropic API' {
+      description 'Claude — помощь в редактуре, AI-чат в редакторе'
+      technology 'anthropic-java'
     }
 
     external youtube 'YouTube' {
-      description 'Источник видео для транскрипции'
+      description 'Источник видео для транскрипции (yt-dlp)'
     }
   }
 
@@ -116,25 +135,30 @@ model {
 
     // ----- PARSING SUBSYSTEM -----
     container parsingSubsystem 'Парсинг' {
+      #planned
       description 'Сбор данных из внешних источников'
       technology 'Python'
 
       service parserOrchestrator 'Parser Orchestrator' {
+        #planned
         description 'Управление парсерами, расписание, мониторинг'
         technology 'Python'
       }
 
       service atpParser 'ATP/WTA Parser' {
+        #planned
         description 'Парсер официальных источников'
         technology 'Python, Scrapy'
       }
 
       service mediaParser 'Media Parser' {
+        #planned
         description 'Парсер спортивных медиа'
         technology 'Python, BeautifulSoup'
       }
 
       service socialParser 'Social Parser' {
+        #planned
         description 'Парсер соцсетей'
         technology 'Python, API clients'
       }
@@ -142,44 +166,48 @@ model {
 
     // ----- AGGREGATOR -----
     container aggregator 'Aggregator Service' {
+      #planned
       description 'Агрегация и первичная обработка сырых данных'
       technology 'Java, Spring Boot'
 
       service aggregatorApi 'Aggregator API' {
+        #planned
         description 'API для Curator UI и внутренних сервисов'
       }
 
       service deduplicator 'Deduplicator' {
+        #planned
         description 'Дедупликация и нормализация данных'
       }
 
       database aggregatorDb 'Aggregator DB' {
+        #planned
         description 'Сырые данные, статусы обработки'
         technology 'PostgreSQL / MongoDB'
       }
     }
 
-    // ----- EDITORIAL (Curator + Editor) -----
-    container editorial 'Editorial' {
-      description 'Редакторский интерфейс: курирование и создание контента'
-      technology 'React, TypeScript, Tiptap, Vite'
+    // ----- EDITORIAL -----
+    container editorial 'Editorial UI' {
+      description 'Редакторский SPA: курирование и создание контента. Все обращения к бэкенду идут через API Gateway'
+      technology 'React, TypeScript, Vite, Tiptap, MUI'
 
       webapp curatorApp 'Curator UI' {
-        description 'Интерфейс отбора спарсенных материалов'
+        description 'Интерфейс отбора спарсенных материалов. Сейчас заглушка: своего бэкенда нет, ждёт Aggregator'
       }
 
       webapp editorApp 'Editor UI' {
-        description 'Редактор контента'
+        description 'Редактор контента: черновики, AI-чат, перевод, транскрипция'
       }
     }
 
     // ----- EDITORIAL BFF -----
     container editorialBff 'Editorial BFF' {
-      description 'Backend for Frontend: проксирование AI/DeepL, бизнес-логика редактора'
+      description 'Backend for Frontend: проксирование Anthropic и DeepL для редактора'
       technology 'Java, Spring Boot'
 
       service editorialBffApi 'Editorial BFF API' {
-        description 'API для AI-чата, перевода, транскрипции'
+        description 'AI-чат и перевод. Транскрипция через BFF не проходит'
       }
     }
 
@@ -205,45 +233,50 @@ model {
 
       database transcriptionStorage 'Media Storage' {
         description 'Загруженные файлы и JSON-результаты'
-        technology 'S3 / MinIO'
+        technology 'S3 (локально — MinIO)'
       }
     }
 
     // ----- CONTENT SERVICE -----
     container contentService 'Content Service' {
-      description 'Управление контентом: черновики, публикация'
+      description 'Управление контентом: черновики, публикация, публичная выдача'
       technology 'Java, Spring Boot'
 
       service contentApi 'Content API' {
-        description 'CRUD для статей, новостей, черновиков'
+        description 'CRUD статей и тегов (/api/editorial/**), публичная выдача (/api/public/**). Поиск сейчас — SQL по подстроке внутри сервиса'
       }
 
       database contentDb 'Content DB' {
-        description 'Статьи, новости, черновики, матчи, турниры'
-        technology 'PostgreSQL'
+        description 'Статьи, теги, разделы'
+        technology 'PostgreSQL, Liquibase'
       }
     }
 
     // ----- SEARCH SERVICE -----
     container searchService 'Search Service' {
+      #planned
       description 'Полнотекстовый поиск по контенту'
       technology 'Elasticsearch'
     }
 
     // ----- USER SERVICE -----
     container userService 'User Service' {
+      #planned
       description 'Пользователи и авторизация'
       technology 'Java, Spring Boot'
 
       service authService 'Auth Service' {
+        #planned
         description 'Регистрация, логин, JWT'
       }
 
       service userApi 'User API' {
+        #planned
         description 'Профили, настройки'
       }
 
       database userDb 'User DB' {
+        #planned
         description 'Пользователи, роли, сессии'
         technology 'PostgreSQL'
       }
@@ -251,14 +284,17 @@ model {
 
     // ----- COMMENTS SERVICE -----
     container commentsService 'Comments Service' {
+      #planned
       description 'Комментарии к контенту'
       technology 'Java, Spring Boot'
 
       service commentsApi 'Comments API' {
+        #planned
         description 'CRUD для комментариев'
       }
 
       database commentsDb 'Comments DB' {
+        #planned
         description 'Комментарии, реакции'
         technology 'PostgreSQL'
       }
@@ -266,27 +302,28 @@ model {
 
     // ----- API GATEWAY -----
     container apiGateway 'API Gateway' {
-      description 'Единая точка входа для публичных клиентов (Web, Mobile)'
+      description 'Единая точка входа для всех клиентов, включая редакторский UI. Здесь же терминируется CORS'
       technology 'Spring Cloud Gateway'
     }
 
     // ----- CLIENT APPS -----
-    container webApp 'Web Application' {
+    container webApp 'Public Web' {
       description 'Основной сайт для читателей'
-      technology 'React / Next.js'
+      technology 'Next.js, TypeScript'
 
       webapp publicSite 'Public Site' {
         description 'Новости, результаты, статьи'
       }
 
       webapp userCabinet 'User Cabinet' {
+        #planned
         description 'Личный кабинет, настройки'
       }
     }
 
     container mobileApp 'Mobile Application' {
       description 'Мобильное приложение'
-      technology 'React Native'
+      technology 'Expo, React Native'
 
       mobile iosApp 'iOS App'
       mobile androidApp 'Android App'
@@ -296,87 +333,150 @@ model {
 
   // ===== RELATIONSHIPS =====
 
-  // Actors -> System
-  reader -> tennisService.webApp 'Читает контент'
+  // --- Actors ---
+  reader -> tennisService.webApp.publicSite 'Читает контент'
   registeredUser -> tennisService.webApp 'Использует сервис'
   registeredUser -> tennisService.mobileApp 'Использует сервис'
   author -> tennisService.editorial 'Создаёт контент'
   admin -> tennisService.webApp 'Управляет системой'
 
-  // External sources -> Parsers
+  // --- External sources -> Parsers ---
   tennisDataSources.atpWta -> tennisService.parsingSubsystem.atpParser 'Данные'
   tennisDataSources.sportsMedia -> tennisService.parsingSubsystem.mediaParser 'Данные'
   tennisDataSources.socialMedia -> tennisService.parsingSubsystem.socialParser 'Данные'
   tennisDataSources.telegramChannels -> tennisService.parsingSubsystem.socialParser 'Данные'
 
-  // Parsers -> Aggregator
+  // --- Parsers -> Aggregator ---
   tennisService.parsingSubsystem.parserOrchestrator -> tennisService.parsingSubsystem.atpParser 'Управляет'
   tennisService.parsingSubsystem.parserOrchestrator -> tennisService.parsingSubsystem.mediaParser 'Управляет'
   tennisService.parsingSubsystem.parserOrchestrator -> tennisService.parsingSubsystem.socialParser 'Управляет'
-  
+
   tennisService.parsingSubsystem.atpParser -> tennisService.aggregator.aggregatorApi 'Сырые данные'
   tennisService.parsingSubsystem.mediaParser -> tennisService.aggregator.aggregatorApi 'Сырые данные'
   tennisService.parsingSubsystem.socialParser -> tennisService.aggregator.aggregatorApi 'Сырые данные'
 
-  // Aggregator internal
+  // --- Aggregator internal ---
   tennisService.aggregator.aggregatorApi -> tennisService.aggregator.deduplicator 'Обработка'
   tennisService.aggregator.deduplicator -> tennisService.aggregator.aggregatorDb 'Сохранение'
   tennisService.aggregator.aggregatorApi -> tennisService.aggregator.aggregatorDb 'CRUD'
 
-  // Editorial -> Aggregator (Curator читает сырые данные)
-  tennisService.editorial.curatorApp -> tennisService.aggregator.aggregatorApi 'Список материалов'
+  // --- Editorial ---
+  // Весь редакторский трафик идёт через gateway: apiConfig.ts знает только GATEWAY_URL.
+  tennisService.editorial.editorApp -> tennisService.apiGateway 'Черновики, AI-чат, перевод, транскрипция'
   tennisService.editorial.curatorApp -> tennisService.editorial.editorApp 'В работу'
+  tennisService.editorial.curatorApp -> tennisService.apiGateway 'Список спарсенных материалов'
 
-  // Editorial -> Services (напрямую, без API Gateway)
-  tennisService.editorial.editorApp -> tennisService.aggregator.aggregatorApi 'Получает сырой контент'
-  tennisService.editorial.editorApp -> tennisService.editorialBff.editorialBffApi 'AI/Translate запросы'
-  tennisService.editorial.editorApp -> tennisService.contentService.contentApi 'Черновики и публикация'
+  // --- API Gateway -> Services ---
+  tennisService.apiGateway -> tennisService.editorialBff.editorialBffApi '/api/ai/**, /api/translate/**'
+  tennisService.apiGateway -> tennisService.transcriptionService.transcriptionApi '/api/transcribe/**'
+  tennisService.apiGateway -> tennisService.contentService.contentApi '/api/editorial/**, /api/public/**'
+  tennisService.apiGateway -> tennisService.aggregator.aggregatorApi '/api/aggregator/**'
+  tennisService.apiGateway -> tennisService.searchService '/api/search/**'
+  tennisService.apiGateway -> tennisService.userService.authService '/api/auth/**'
+  tennisService.apiGateway -> tennisService.userService.userApi '/api/users/**'
+  tennisService.apiGateway -> tennisService.commentsService.commentsApi '/api/comments/**'
 
-  // Editorial BFF -> Transcription
-  tennisService.editorialBff.editorialBffApi -> tennisService.transcriptionService.transcriptionApi 'Задачи транскрипции'
+  // --- Editorial BFF -> External APIs ---
+  tennisService.editorialBff.editorialBffApi -> externalApis.deepl 'Переводы'
+  tennisService.editorialBff.editorialBffApi -> externalApis.anthropicApi 'AI-обработка'
 
-  // Transcription internal
+  // --- Transcription internal ---
   tennisService.transcriptionService.transcriptionApi -> tennisService.transcriptionService.transcriptionQueue 'Ставит задачи, читает статусы'
   tennisService.transcriptionService.transcriptionWorker -> tennisService.transcriptionService.transcriptionQueue 'Забирает задачи, пишет статусы'
   tennisService.transcriptionService.transcriptionApi -> tennisService.transcriptionService.transcriptionStorage 'Загрузки, presigned-ссылки'
   tennisService.transcriptionService.transcriptionWorker -> tennisService.transcriptionService.transcriptionStorage 'Аудио и результаты'
   tennisService.transcriptionService.transcriptionWorker -> externalApis.youtube 'Скачивает аудио'
 
-  // Editorial BFF -> External APIs
-  tennisService.editorialBff.editorialBffApi -> externalApis.deepl 'Переводы'
-  tennisService.editorialBff.editorialBffApi -> externalApis.aiApi 'AI-обработка'
-
-  // Content Service internal
+  // --- Content Service ---
   tennisService.contentService.contentApi -> tennisService.contentService.contentDb 'CRUD'
   tennisService.contentService.contentApi -> tennisService.searchService 'Индексация'
 
-  // Search Service
-  tennisService.apiGateway -> tennisService.searchService 'Поиск'
-
-  // User Service internal
+  // --- User / Comments internal ---
   tennisService.userService.authService -> tennisService.userService.userDb 'Auth data'
   tennisService.userService.userApi -> tennisService.userService.userDb 'User data'
-
-  // Comments Service internal
   tennisService.commentsService.commentsApi -> tennisService.commentsService.commentsDb 'CRUD'
 
-  // API Gateway -> Services
-  tennisService.apiGateway -> tennisService.contentService.contentApi 'API'
-  tennisService.apiGateway -> tennisService.userService.authService 'Auth'
-  tennisService.apiGateway -> tennisService.userService.userApi 'Users'
-  tennisService.apiGateway -> tennisService.commentsService.commentsApi 'Comments'
-
-  // Client Apps -> API Gateway
-  tennisService.webApp.publicSite -> tennisService.apiGateway 'API calls'
-  tennisService.webApp.userCabinet -> tennisService.apiGateway 'API calls'
-  tennisService.mobileApp.iosApp -> tennisService.apiGateway 'API calls'
-  tennisService.mobileApp.androidApp -> tennisService.apiGateway 'API calls'
+  // --- Client Apps -> API Gateway ---
+  tennisService.webApp.publicSite -> tennisService.apiGateway 'Контент (пока не подключено: работает на моках)'
+  tennisService.webApp.userCabinet -> tennisService.apiGateway 'Профиль, настройки'
+  tennisService.mobileApp.iosApp -> tennisService.apiGateway 'Контент (пока не подключено: работает на моках)'
+  tennisService.mobileApp.androidApp -> tennisService.apiGateway 'Контент (пока не подключено: работает на моках)'
 }
 
 views {
+
+  // ===== AS-IS =====
+
   view index of tennisService {
-    title 'Tennis News Service - System Context'
-    description 'Общий вид системы'
+    title 'Контекст системы — как есть'
+    description 'Что реально существует в репозитории'
+
+    include *
+    include reader
+    include author
+    include externalApis
+
+    exclude element.tag = #planned
+  }
+
+  view containers of tennisService {
+    title 'Контейнеры — как есть'
+
+    include tennisService.*
+
+    exclude element.tag = #planned
+  }
+
+  view editorialFlow {
+    title 'Editorial Flow — как есть'
+    description 'Автор → редакторский UI → gateway → BFF / Content / Transcription'
+
+    include author
+    include tennisService.editorial
+    include tennisService.editorial.*
+    include tennisService.apiGateway
+    include tennisService.editorialBff
+    include tennisService.editorialBff.*
+    include tennisService.contentService
+    include tennisService.contentService.*
+    include tennisService.transcriptionService
+    include externalApis
+    include externalApis.*
+
+    exclude element.tag = #planned
+  }
+
+  view transcriptionFlow {
+    title 'Transcription Flow'
+    description 'Gateway → API → очередь → worker → хранилище. BFF в этом пути не участвует'
+
+    include tennisService.apiGateway
+    include tennisService.transcriptionService
+    include tennisService.transcriptionService.*
+    include externalApis.youtube
+  }
+
+  view readerFlow {
+    title 'Reader Flow — как есть'
+    description 'Публичные клиенты. Сетевые вызовы пока не подключены'
+
+    include reader
+    include tennisService.webApp
+    include tennisService.webApp.*
+    include tennisService.mobileApp
+    include tennisService.mobileApp.*
+    include tennisService.apiGateway
+    include tennisService.contentService
+    include tennisService.contentService.*
+
+    exclude element.tag = #planned
+  }
+
+  // ===== TO-BE =====
+
+  view indexTarget of tennisService {
+    title 'Контекст системы — целевая'
+    description 'Существующее плюс запланированное (бледным)'
 
     include *
     include reader
@@ -385,18 +485,27 @@ views {
     include admin
     include tennisDataSources
     include externalApis
+
+    style element.tag = #planned {
+      color gray
+      opacity 30%
+    }
   }
 
-  view containers of tennisService {
-    title 'Tennis News Service - Containers'
-    description 'Контейнеры системы'
+  view containersTarget of tennisService {
+    title 'Контейнеры — целевая'
 
     include tennisService.*
+
+    style element.tag = #planned {
+      color gray
+      opacity 30%
+    }
   }
 
   view parsingFlow {
-    title 'Parsing Flow'
-    description 'Поток данных от источников до агрегатора'
+    title 'Parsing Flow — целевая'
+    description 'Поток данных от источников до агрегатора. Не реализовано'
 
     include tennisDataSources
     include tennisDataSources.*
@@ -404,54 +513,5 @@ views {
     include tennisService.parsingSubsystem.*
     include tennisService.aggregator
     include tennisService.aggregator.*
-  }
-
-  view editorialFlow {
-    title 'Editorial Flow'
-    description 'Поток создания контента: Curator → Editor → Publication'
-
-    include author
-    include tennisService.aggregator
-    include tennisService.aggregator.*
-    include tennisService.editorial
-    include tennisService.editorial.*
-    include tennisService.editorialBff
-    include tennisService.editorialBff.*
-    include tennisService.contentService
-    include tennisService.contentService.*
-    include tennisService.transcriptionService
-    include externalApis
-    include externalApis.*
-  }
-
-  view transcriptionFlow {
-    title 'Transcription Flow'
-    description 'Асинхронная транскрипция: API → очередь → worker → хранилище'
-
-    include tennisService.editorialBff
-    include tennisService.editorialBff.*
-    include tennisService.transcriptionService
-    include tennisService.transcriptionService.*
-    include externalApis.youtube
-  }
-
-  view readerFlow {
-    title 'Reader Flow'
-    description 'Поток для читателей'
-
-    include reader
-    include registeredUser
-    include tennisService.webApp
-    include tennisService.webApp.*
-    include tennisService.mobileApp
-    include tennisService.mobileApp.*
-    include tennisService.apiGateway
-    include tennisService.contentService
-    include tennisService.contentService.*
-    include tennisService.searchService
-    include tennisService.userService
-    include tennisService.userService.*
-    include tennisService.commentsService
-    include tennisService.commentsService.*
   }
 }
