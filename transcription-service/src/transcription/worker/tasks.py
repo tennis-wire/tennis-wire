@@ -66,7 +66,7 @@ async def transcribe(ctx: dict[str, Any], job_id: str) -> dict[str, Any]:
     job.started_at = datetime.now(UTC)
     await job_storage.save(job)
 
-    downloader = MediaDownloader()
+    downloader = MediaDownloader(settings)
     transcriber: Transcriber = ctx["transcriber"]
     audio_path: Path | None = None
 

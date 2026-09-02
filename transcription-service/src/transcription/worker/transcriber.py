@@ -12,6 +12,9 @@ from transcription.models import TranscriptionResult
 
 logger = structlog.get_logger()
 
+# FFmpegExtractAudio always writes this codec, whatever the source container is.
+AUDIO_CODEC = "wav"
+
 
 class Transcriber:
     """WhisperX-based audio/video transcriber (full features, may have compatibility issues)."""
@@ -202,10 +205,27 @@ class Transcriber:
         return TranscriptionResult.from_whisperx(result, detected_language)
 
 
+def check_duration(info: dict[str, Any], max_seconds: int) -> None:
+    """Reject media longer than the configured limit.
+
+    yt-dlp reports duration during metadata extraction, before any bytes are
+    downloaded. Media with unknown duration is rejected too: there is no way
+    to bound the work it would cost.
+    """
+    duration = info.get("duration")
+    if duration is None:
+        raise ValueError("Could not determine media duration")
+    if duration > max_seconds:
+        raise ValueError(
+            f"Media is {int(duration) // 60} min long, limit is {max_seconds // 60} min"
+        )
+
+
 class MediaDownloader:
     """Download media from URLs (YouTube, etc.)."""
 
-    def __init__(self) -> None:
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
         self._temp_dir: tempfile.TemporaryDirectory[str] | None = None
 
     @property
@@ -232,7 +252,6 @@ class MediaDownloader:
         Returns:
             Path to downloaded file
         """
-        import asyncio
 
         import yt_dlp
 
@@ -243,11 +262,15 @@ class MediaDownloader:
 
         ydl_opts = {
             "format": "bestaudio/best",
+            # A playlist URL would otherwise queue every entry behind a single job.
+            "noplaylist": True,
+            # Hard stop mid-download for sources that omit or misreport duration.
+            "max_filesize": self.settings.max_file_size_bytes,
             "outtmpl": str(output_path),
             "postprocessors": [
                 {
                     "key": "FFmpegExtractAudio",
-                    "preferredcodec": "wav",
+                    "preferredcodec": AUDIO_CODEC,
                     "preferredquality": "192",
                 }
             ],
@@ -255,18 +278,40 @@ class MediaDownloader:
             "no_warnings": True,
         }
 
-        logger.info("Downloading media", url=url)
-
         loop = asyncio.get_running_loop()
 
-        def do_download() -> str:
+        def probe() -> dict[str, Any]:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-                # Get the actual output file
-                if info:
-                    filename = str(ydl.prepare_filename(info))
-                    return filename.replace(".webm", ".wav").replace(".m4a", ".wav")
-            raise ValueError("Failed to extract info from URL")
+                info = ydl.extract_info(url, download=False)
+                if not info:
+                    raise ValueError("Failed to extract media info from URL")
+                return cast("dict[str, Any]", info)
+
+        info = await loop.run_in_executor(None, probe)
+        check_duration(info, self.settings.max_duration_seconds)
+
+        logger.info("Downloading media", url=url, duration=info.get("duration"))
+
+        def do_download() -> Path:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                result = ydl.extract_info(url, download=True)
+                if not result:
+                    raise ValueError("Failed to extract media info from URL")
+
+                # After postprocessing yt-dlp records the real output path here.
+                # prepare_filename() still reports the pre-conversion container, so
+                # the fallback swaps in the codec extension rather than guessing.
+                downloads = result.get("requested_downloads") or []
+                filepath = downloads[0].get("filepath") if downloads else None
+                path = (
+                    Path(filepath)
+                    if filepath
+                    else Path(ydl.prepare_filename(result)).with_suffix(f".{AUDIO_CODEC}")
+                )
+
+                if not path.exists():
+                    raise ValueError(f"Downloaded audio not found: {path}")
+                return path
 
         if on_progress:
             await on_progress(15, "Downloading...")
@@ -278,4 +323,4 @@ class MediaDownloader:
         if on_progress:
             await on_progress(30, "Download complete")
 
-        return Path(downloaded_file)
+        return downloaded_file

@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, RedisDsn
+from pydantic import Field, RedisDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -43,6 +43,11 @@ class Settings(BaseSettings):
 
     # Limits
     max_file_size_mb: int = 500
+    max_duration_minutes: int = 180
+
+    @property
+    def max_duration_seconds(self) -> int:
+        return self.max_duration_minutes * 60
 
     @property
     def is_development(self) -> bool:
@@ -51,6 +56,18 @@ class Settings(BaseSettings):
     @property
     def max_file_size_bytes(self) -> int:
         return self.max_file_size_mb * 1024 * 1024
+
+    # Security
+    # Subdomains of each entry are allowed too (m.youtube.com, music.youtube.com).
+    allowed_media_hosts: list[str] = ["youtube.com", "youtu.be"]
+
+    @field_validator("allowed_media_hosts", mode="before")
+    @classmethod
+    def _split_hosts(cls, value: object) -> object:
+        """Accept a comma-separated string: that is all an env var can carry."""
+        if isinstance(value, str):
+            return [host.strip().lower() for host in value.split(",") if host.strip()]
+        return value
 
 
 @lru_cache
