@@ -75,7 +75,10 @@ class Transcriber:
 
     def _load_diarize_pipeline(self) -> None:
         """Load speaker diarization pipeline."""
-        import whisperx
+        # whisperx dropped the package-root re-export: since 3.4 this lives in
+        # whisperx.diarize, and the old call raised AttributeError that the
+        # caller's broad except swallowed as "diarization failed".
+        from whisperx.diarize import DiarizationPipeline
 
         if self._diarize_pipeline is not None:
             return
@@ -84,7 +87,7 @@ class Transcriber:
             raise ValueError("HF_TOKEN required for speaker diarization")
 
         logger.info("Loading diarization pipeline")
-        self._diarize_pipeline = whisperx.DiarizationPipeline(
+        self._diarize_pipeline = DiarizationPipeline(
             use_auth_token=self.settings.hf_token,
             device=self.device,
         )
