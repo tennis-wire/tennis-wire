@@ -186,8 +186,10 @@ def _build_worker_settings() -> type[object]:
 
         redis_settings = RedisSettings.from_dsn(str(settings.redis_url))
 
-        # Job settings
-        max_jobs = 2
+        # One job at a time. The whisper model is loaded once per worker and
+        # shared via ctx, and faster-whisper cannot run concurrent transcribes
+        # on a single model instance. Scale with worker replicas instead.
+        max_jobs = 1
         job_timeout = 3600
         keep_result = 3600
         health_check_interval = 30
