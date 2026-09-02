@@ -5,6 +5,10 @@
 // такие элементы; виды с суффиксом Target — целевую картину (to-be).
 // Если элемент существует, но связь ещё не подключена, это указано в подписи
 // к связи.
+//
+// Auth: топология identity-провайдера, клиентов и валидации токенов — здесь;
+// роли, клиенты, TTL и политика — в architecture/auth.md (источник правды),
+// решение — в docs/adr/0001-identity-provider.md.
 
 specification {
   element actor {
@@ -78,6 +82,11 @@ model {
 
   actor author 'Автор' {
     description 'Создаёт и публикует контент через редакторский интерфейс'
+  }
+
+  actor moderator 'Модератор' {
+    #planned
+    description 'Следит за комментариями: скрывает, банит, разбирает жалобы и сигналы бота'
   }
 
   actor admin 'Админ' {
@@ -262,24 +271,44 @@ model {
     // ----- USER SERVICE -----
     container userService 'User Service' {
       #planned
-      description 'Пользователи и авторизация'
+      description 'Профили и настройки. Владеет внутренним user_id и связью с Identity Provider. Аутентификации здесь нет'
       technology 'Java, Spring Boot'
-
-      service authService 'Auth Service' {
-        #planned
-        description 'Регистрация, логин, JWT'
-      }
 
       service userApi 'User API' {
         #planned
-        description 'Профили, настройки'
+        description 'Профили, настройки, /api/users/me'
       }
 
       database userDb 'User DB' {
         #planned
-        description 'Пользователи, роли, сессии'
+        description 'Профили; identity_link (provider, sub) → user_id'
         technology 'PostgreSQL'
       }
+    }
+
+    // ----- IDENTITY PROVIDER -----
+    container identity 'Identity Provider' {
+      #planned
+      description 'Аутентификация, роли, токены для всех клиентов. Только identity: прикладные данные пользователя — в User Service'
+      technology 'Keycloak'
+
+      service identityOidc 'OIDC' {
+        #planned
+        description 'Authorization Code + PKCE, client_credentials для бота, JWKS для сервисов'
+      }
+
+      database identityDb 'Identity DB' {
+        #planned
+        description 'Realm: пользователи, роли, клиенты, сессии'
+        technology 'PostgreSQL (локально — H2, без volume)'
+      }
+    }
+
+    // ----- MODERATION BOT -----
+    container moderationBot 'Moderation Bot' {
+      #planned
+      description 'Автомодерация комментариев: регулярки + LLM. Способ реализации и место в топологии не определены — см. auth.md §11'
+      technology 'TBD'
     }
 
     // ----- COMMENTS SERVICE -----
@@ -338,7 +367,9 @@ model {
   registeredUser -> tennisService.webApp 'Использует сервис'
   registeredUser -> tennisService.mobileApp 'Использует сервис'
   author -> tennisService.editorial 'Создаёт контент'
+  moderator -> tennisService.editorial 'Модерирует комментарии (интерфейс не спроектирован)'
   admin -> tennisService.webApp 'Управляет системой'
+  admin -> tennisService.identity 'Заводит сотрудников, роли, отзыв доступа (admin-консоль)'
 
   // --- External sources -> Parsers ---
   tennisDataSources.atpWta -> tennisService.parsingSubsystem.atpParser 'Данные'
@@ -372,7 +403,6 @@ model {
   tennisService.apiGateway -> tennisService.contentService.contentApi '/api/editorial/**, /api/public/**'
   tennisService.apiGateway -> tennisService.aggregator.aggregatorApi '/api/aggregator/**'
   tennisService.apiGateway -> tennisService.searchService '/api/search/**'
-  tennisService.apiGateway -> tennisService.userService.authService '/api/auth/**'
   tennisService.apiGateway -> tennisService.userService.userApi '/api/users/**'
   tennisService.apiGateway -> tennisService.commentsService.commentsApi '/api/comments/**'
 
@@ -392,9 +422,26 @@ model {
   tennisService.contentService.contentApi -> tennisService.searchService 'Индексация'
 
   // --- User / Comments internal ---
-  tennisService.userService.authService -> tennisService.userService.userDb 'Auth data'
-  tennisService.userService.userApi -> tennisService.userService.userDb 'User data'
+  tennisService.userService.userApi -> tennisService.userService.userDb 'Профили, identity_link'
   tennisService.commentsService.commentsApi -> tennisService.commentsService.commentsDb 'CRUD'
+
+  // --- Auth: клиенты -> Identity Provider ---
+  // Идентификаторы клиентов и роли — auth.md §2–§3
+  tennisService.editorial -> tennisService.identity.identityOidc 'OIDC Authorization Code + PKCE (client editorial-ui)'
+  tennisService.webApp -> tennisService.identity.identityOidc 'OIDC, confidential client (public-web)'
+  tennisService.mobileApp -> tennisService.identity.identityOidc 'OIDC Authorization Code + PKCE (client mobile)'
+  tennisService.moderationBot -> tennisService.identity.identityOidc 'client_credentials (client moderation-bot, роль moderator-bot)'
+
+  // --- Auth: валидация токенов по JWKS ---
+  tennisService.apiGateway -> tennisService.identity.identityOidc 'JWKS: валидация JWT, роль -> маршрут'
+  tennisService.contentService.contentApi -> tennisService.identity.identityOidc 'JWKS: валидация JWT'
+  tennisService.transcriptionService.transcriptionApi -> tennisService.identity.identityOidc 'JWKS: валидация JWT, owner у задач'
+
+  // --- Identity internal ---
+  tennisService.identity.identityOidc -> tennisService.identity.identityDb 'Realm data'
+
+  // --- Moderation bot -> API Gateway ---
+  tennisService.moderationBot -> tennisService.apiGateway 'Пометка / скрытие комментариев (/api/comments/**)'
 
   // --- Client Apps -> API Gateway ---
   tennisService.webApp.publicSite -> tennisService.apiGateway 'Контент (пока не подключено: работает на моках)'
@@ -513,5 +560,26 @@ views {
     include tennisService.parsingSubsystem.*
     include tennisService.aggregator
     include tennisService.aggregator.*
+  }
+
+  view authFlowTarget {
+    title 'Auth Flow — целевая'
+    description 'Клиенты получают токены у Identity Provider; gateway и сервисы валидируют их по JWKS. Роли и политика — auth.md. Не реализовано'
+
+    include registeredUser
+    include author
+    include moderator
+    include admin
+    include tennisService.identity
+    include tennisService.identity.*
+    include tennisService.editorial
+    include tennisService.webApp
+    include tennisService.mobileApp
+    include tennisService.moderationBot
+    include tennisService.apiGateway
+    include tennisService.contentService.contentApi
+    include tennisService.transcriptionService.transcriptionApi
+    include tennisService.userService
+    include tennisService.userService.*
   }
 }
