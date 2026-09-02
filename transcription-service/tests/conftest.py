@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from transcription.api.deps import get_arq_redis, get_job_storage, get_s3_storage
+from transcription.config import Settings, get_settings
 from transcription.main import create_app
 from transcription.models import TranscriptionJob
 
@@ -58,12 +59,14 @@ def app(
     job_storage: FakeJobStorage,
     mock_arq: AsyncMock,
     mock_s3: MagicMock,
+    settings: Settings,
 ) -> Iterator[FastAPI]:
     """Test application with all external dependencies overridden."""
     application = create_app()
     application.dependency_overrides[get_job_storage] = lambda: job_storage
     application.dependency_overrides[get_arq_redis] = lambda: mock_arq
     application.dependency_overrides[get_s3_storage] = lambda: mock_s3
+    application.dependency_overrides[get_settings] = lambda: settings
     yield application
     application.dependency_overrides.clear()
 
@@ -82,3 +85,13 @@ def mock_job() -> TranscriptionJob:
         source_url="https://youtube.com/watch?v=test",
         language="en",
     )
+
+
+@pytest.fixture
+def settings() -> Settings:
+    """Settings with the developer's local .env ignored.
+
+    The API builds Settings at request time, so without this the outcome of a
+    test depends on whatever the machine happens to have in .env.
+    """
+    return Settings(_env_file=None)
