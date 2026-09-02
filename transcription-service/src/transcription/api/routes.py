@@ -1,7 +1,10 @@
 """API routes for transcription service."""
 
+import os
+import re
 import uuid
-from typing import Annotated
+from pathlib import Path
+from typing import IO, Annotated
 
 from arq.connections import ArqRedis
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
@@ -97,6 +100,31 @@ async def transcribe_url(
     )
 
 
+def _measure(fileobj: IO[bytes]) -> int:
+    """Return the exact size of an already-buffered upload.
+
+    UploadFile.size comes from the multipart parser and can be None, in which
+    case the previous check silently passed everything through. The body is
+    fully spooled by the time the handler runs, so seeking to the end is exact
+    and costs nothing.
+    """
+    fileobj.seek(0, os.SEEK_END)
+    size = fileobj.tell()
+    fileobj.seek(0)
+    return size
+
+
+def _safe_suffix(filename: str | None) -> str:
+    """Derive a storage-safe extension from a client-supplied filename.
+
+    The filename is attacker-controlled and used to be interpolated into the S3
+    key as-is, so "../../results/<id>/transcript.json" addressed another job's
+    output. Only a short alphanumeric extension survives.
+    """
+    suffix = Path(filename or "").suffix.lower()
+    return suffix if re.fullmatch(r"\.[a-z0-9]{1,8}", suffix) else ""
+
+
 @router.post(
     "/transcribe/file",
     response_model=JobCreatedResponse,
@@ -112,10 +140,10 @@ async def transcribe_file(
     enable_diarization: bool = False,
 ) -> JobCreatedResponse:
     """Start transcription from uploaded file."""
-    # Validate file size
-    if file.size and file.size > settings.max_file_size_bytes:
+    size = _measure(file.file)
+    if size > settings.max_file_size_bytes:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail=f"File size exceeds {settings.max_file_size_mb}MB limit",
         )
 
@@ -131,7 +159,7 @@ async def transcribe_file(
     job_id = str(uuid.uuid4())
 
     # Upload to S3
-    s3_key = f"uploads/{job_id}/{file.filename}"
+    s3_key = f"uploads/{job_id}/source{_safe_suffix(file.filename)}"
     await s3.upload_file(file.file, s3_key, content_type)
 
     job = TranscriptionJob(

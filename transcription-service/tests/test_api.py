@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 from fastapi.testclient import TestClient
 
 from tests.conftest import FakeJobStorage
+from transcription.config import Settings
 from transcription.constants import TRANSCRIBE_TASK_NAME
 from transcription.models import JobStatus, TranscriptionJob
 
@@ -183,8 +184,52 @@ class TestCancelEndpoint:
         assert response.status_code == 404
 
 
-def test_transcribe_url_rejects_disallowed_host(client: TestClient, mock_arq: AsyncMock) -> None:
-    response = client.post("/api/transcribe/url", json={"url": "https://evil.com/video"})
+class TestTranscribeFileEndpoint:
+    """Tests for file upload endpoint."""
 
-    assert response.status_code == 400
-    mock_arq.enqueue_job.assert_not_called()
+    def test_upload_creates_job_with_sanitised_key(
+        self,
+        client: TestClient,
+        job_storage: FakeJobStorage,
+    ) -> None:
+        response = client.post(
+            "/api/transcribe/file",
+            files={"file": ("../../results/other/transcript.json.mp3", b"data", "audio/mpeg")},
+        )
+
+        assert response.status_code == 202
+        job_id = response.json()["job_id"]
+        assert job_storage.jobs[job_id].source_file == f"uploads/{job_id}/source.mp3"
+
+    def test_upload_rejects_oversized_file(
+        self,
+        client: TestClient,
+        settings: Settings,
+        mock_arq: AsyncMock,
+    ) -> None:
+        settings.max_file_size_mb = 1
+
+        response = client.post(
+            "/api/transcribe/file",
+            files={"file": ("big.mp3", b"x" * 2 * 1024 * 1024, "audio/mpeg")},
+        )
+
+        assert response.status_code == 413
+        mock_arq.enqueue_job.assert_not_called()
+
+    def test_upload_rejects_non_media(self, client: TestClient, mock_arq: AsyncMock) -> None:
+        response = client.post(
+            "/api/transcribe/file",
+            files={"file": ("notes.txt", b"data", "text/plain")},
+        )
+
+        assert response.status_code == 415
+        mock_arq.enqueue_job.assert_not_called()
+
+    def test_transcribe_url_rejects_disallowed_host(
+        self, client: TestClient, mock_arq: AsyncMock
+    ) -> None:
+        response = client.post("/api/transcribe/url", json={"url": "https://evil.com/video"})
+
+        assert response.status_code == 400
+        mock_arq.enqueue_job.assert_not_called()
