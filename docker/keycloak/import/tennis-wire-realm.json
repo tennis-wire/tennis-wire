@@ -1,0 +1,30 @@
+{
+  "realm": "tennis-wire",
+  "displayName": "Tennis Wire",
+  "enabled": true,
+  "sslRequired": "external",
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "registrationAllowed": false,
+  "resetPasswordAllowed": true,
+  "verifyEmail": false,
+
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 28800,
+
+  "roles": {
+    "realm": [
+      { "name": "user", "description": "Registered reader: comments, fantasy, own profile" },
+      { "name": "author", "description": "Staff: editorial contour" },
+      { "name": "moderator", "description": "Staff: comment moderation" },
+      { "name": "moderator-bot", "description": "Service account of the automatic moderator" },
+      {
+        "name": "admin",
+        "description": "Administrator",
+        "composite": true,
+        "composites": { "realm": ["user", "author", "moderator"] }
+      }
+    ]
+  }
+}
