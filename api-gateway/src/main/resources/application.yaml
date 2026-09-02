@@ -83,9 +83,9 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, info, gateway
+        include: health, info
   endpoint:
-    gateway:
-      enabled: true
     health:
-      show-details: always
+      # Anonymous probes get a bare UP; details need a token with the admin role.
+      show-details: when-authorized
+      roles: admin

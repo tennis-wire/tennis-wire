@@ -24,6 +24,8 @@ import reactor.core.publisher.Mono;
 @EnableWebFluxSecurity
 public class SecurityConfig {
 
+    private static final String ADMIN = "admin";
+
     private static final String AUTHOR = "author";
 
     private static final String[] EDITORIAL_PATHS = {
@@ -36,6 +38,9 @@ public class SecurityConfig {
                         // health/** covers the liveness and readiness probes
                         .pathMatchers("/actuator/health/**", "/actuator/info")
                         .permitAll()
+                        // Exposed only under the local profile, and admin-only even there.
+                        .pathMatchers("/actuator/gateway/**")
+                        .hasRole(ADMIN)
                         .pathMatchers("/api/public/**")
                         .permitAll()
                         .pathMatchers(EDITORIAL_PATHS)

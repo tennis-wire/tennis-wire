@@ -53,8 +53,32 @@ class GatewayAuthorizationTest {
     }
 
     @Test
-    void gatewayActuatorIsNotReachable() {
+    void gatewayActuatorRejectsAnonymous() {
         client.get().uri("/actuator/gateway").exchange().expectStatus().isUnauthorized();
+    }
+
+    @Test
+    void gatewayActuatorRejectsNonAdmin() {
+        client.mutateWith(mockJwt().authorities(new SimpleGrantedAuthority("ROLE_author")))
+                .get()
+                .uri("/actuator/gateway")
+                .exchange()
+                .expectStatus()
+                .isForbidden();
+    }
+
+    @Test
+    void healthIsAnonymousAndCarriesNoDetails() {
+        client.get()
+                .uri("/actuator/health")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.status")
+                .isEqualTo("UP")
+                .jsonPath("$.components")
+                .doesNotExist();
     }
 
     @Test
