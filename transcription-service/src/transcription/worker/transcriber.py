@@ -24,6 +24,8 @@ class Transcriber:
         self.settings = settings
         self._model: Any | None = None
         self._align_model: Any | None = None
+        self._align_metadata: Any | None = None
+        self._align_language: str | None = None
         self._diarize_pipeline: Any | None = None
 
     @property
@@ -62,11 +64,21 @@ class Transcriber:
             compute_type=self.compute_type,
         )
 
+    def _align_model_matches(self, language: str) -> bool:
+        """Whether the cached alignment model is the one this language needs."""
+        return self._align_model is not None and self._align_language == language
+
     def _load_align_model(self, language: str) -> None:
-        """Load alignment model for word-level timestamps."""
+        """Load alignment model for word-level timestamps.
+
+        The model is language-specific, so the cache is keyed by language. It
+        used to be keyed by nothing at all: a second job in another language
+        reused the first job's model and got either an exception or wrong word
+        timings, and both outcomes were swallowed by the caller's warning.
+        """
         import whisperx
 
-        if self._align_model is not None:
+        if self._align_model_matches(language):
             return
 
         logger.info("Loading alignment model", language=language)
@@ -76,6 +88,7 @@ class Transcriber:
         )
         self._align_model = model
         self._align_metadata = metadata
+        self._align_language = language
 
     def _load_diarize_pipeline(self) -> None:
         """Load speaker diarization pipeline."""
