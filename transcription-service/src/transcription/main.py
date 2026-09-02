@@ -7,7 +7,6 @@ from contextlib import asynccontextmanager
 import structlog
 from arq.connections import RedisSettings, create_pool
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 from transcription import __version__
 from transcription.api.routes import router
@@ -71,15 +70,6 @@ def create_app() -> FastAPI:
         docs_url="/docs" if settings.is_development else None,
         redoc_url="/redoc" if settings.is_development else None,
         lifespan=lifespan,
-    )
-
-    # CORS
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"] if settings.is_development else [],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
     )
 
     # Routes
