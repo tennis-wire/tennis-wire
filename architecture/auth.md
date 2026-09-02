@@ -98,7 +98,7 @@ CORS терминируется в gateway (сделано).
 Решается **до** шага 2, потому что gateway становится resource server первым.
 
 - **Основной объём — без Keycloak:** тестовая RSA-пара в test resources; в Spring — `mockJwt()` из `spring-security-test` (для WebFlux — `SecurityMockServerConfigurers.mockJwt()`), в Python — PyJWT с тестовым ключом и подмена `issuer`/`jwks` через `dependency_overrides`.
-- **Один интеграционный тест на реальный flow:** Testcontainers-модуль Keycloak, поднимающий контейнер с тем же `realm-export.json`. Медленный, поэтому один. Он же проверяет, что realm JSON валиден и маппинг `realm_access.roles` работает с настоящим токеном.
+- **Один интеграционный тест на реальный flow:** Testcontainers-модуль Keycloak, поднимающий контейнер с тем же `tennis-wire-realm.json`. Медленный, поэтому один. Он же проверяет, что realm JSON валиден и маппинг `realm_access.roles` работает с настоящим токеном.
 
 ## 10. Порядок реализации
 
