@@ -16,6 +16,7 @@ from transcription.constants import TRANSCRIBE_TASK_NAME
 from transcription.models import JobStatus
 from transcription.storage.jobs import JobStorage
 from transcription.storage.s3 import S3Storage
+from transcription.worker.media import check_duration, probe_media
 from transcription.worker.transcriber import MediaDownloader, Transcriber
 
 logger = structlog.get_logger()
@@ -82,8 +83,12 @@ async def transcribe(ctx: dict[str, Any], job_id: str) -> dict[str, Any]:
             audio_path = await downloader.download(job.source_url, on_progress=update_progress)
         elif job.source_file:
             await update_progress(5, "Downloading from storage...")
-            audio_path = await asyncio.to_thread(_make_temp_path, ".wav")
+            audio_path = await asyncio.to_thread(_make_temp_path, ".media")
             await s3.download_file(job.source_file, audio_path)
+
+            await update_progress(15, "Checking media...")
+            check_duration(await probe_media(audio_path), settings.max_duration_seconds)
+
             await update_progress(20, "Download complete")
         else:
             raise ValueError("No source URL or file provided")

@@ -9,6 +9,7 @@ import structlog
 
 from transcription.config import Settings
 from transcription.models import TranscriptionResult
+from transcription.worker.media import check_duration
 
 logger = structlog.get_logger()
 
@@ -205,22 +206,6 @@ class Transcriber:
         return TranscriptionResult.from_whisperx(result, detected_language)
 
 
-def check_duration(info: dict[str, Any], max_seconds: int) -> None:
-    """Reject media longer than the configured limit.
-
-    yt-dlp reports duration during metadata extraction, before any bytes are
-    downloaded. Media with unknown duration is rejected too: there is no way
-    to bound the work it would cost.
-    """
-    duration = info.get("duration")
-    if duration is None:
-        raise ValueError("Could not determine media duration")
-    if duration > max_seconds:
-        raise ValueError(
-            f"Media is {int(duration) // 60} min long, limit is {max_seconds // 60} min"
-        )
-
-
 class MediaDownloader:
     """Download media from URLs (YouTube, etc.)."""
 
@@ -288,7 +273,7 @@ class MediaDownloader:
                 return cast("dict[str, Any]", info)
 
         info = await loop.run_in_executor(None, probe)
-        check_duration(info, self.settings.max_duration_seconds)
+        check_duration(info.get("duration"), self.settings.max_duration_seconds)
 
         logger.info("Downloading media", url=url, duration=info.get("duration"))
 
