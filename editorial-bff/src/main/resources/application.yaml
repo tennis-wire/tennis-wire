@@ -7,9 +7,3 @@ server:
 # --- DeepL ---
 deepl:
   auth-key: ${DEEPL_AUTH_KEY:}
-
-# --- CORS (for local frontend dev) ---
-cors:
-  allowed-origins: "http://localhost:5173"
-
-

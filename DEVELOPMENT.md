@@ -90,6 +90,10 @@ browser — bucket administration is done with `mc`.
 All browser and mobile traffic goes through the gateway, including the
 editorial UI: the frontends know one backend host and nothing else.
 
+CORS lives only on the gateway. The services behind it have none, so pointing
+a frontend straight at `:8080` or `:8001` will fail preflight — that is the
+intended behaviour, not a misconfiguration.
+
 | Service | Port | Notes |
 |---|---|---|
 | api-gateway | 8090 | routes `/api/**` to the services below; terminates CORS |
