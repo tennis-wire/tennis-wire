@@ -184,13 +184,6 @@ class TestCancelEndpoint:
         assert response.status_code == 404
 
 
-def test_transcribe_url_rejects_disallowed_host(client: TestClient, mock_arq: AsyncMock) -> None:
-    response = client.post("/api/transcribe/url", json={"url": "https://evil.com/video"})
-
-    assert response.status_code == 400
-    mock_arq.enqueue_job.assert_not_called()
-
-
 class TestTranscribeFileEndpoint:
     """Tests for file upload endpoint."""
 
@@ -231,4 +224,12 @@ class TestTranscribeFileEndpoint:
         )
 
         assert response.status_code == 415
+        mock_arq.enqueue_job.assert_not_called()
+
+    def test_transcribe_url_rejects_disallowed_host(
+        self, client: TestClient, mock_arq: AsyncMock
+    ) -> None:
+        response = client.post("/api/transcribe/url", json={"url": "https://evil.com/video"})
+
+        assert response.status_code == 400
         mock_arq.enqueue_job.assert_not_called()

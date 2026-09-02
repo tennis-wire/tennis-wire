@@ -1,4 +1,4 @@
-"""Duration limit for media downloads."""
+"""Duration limits and ffprobe output parsing."""
 
 import json
 
