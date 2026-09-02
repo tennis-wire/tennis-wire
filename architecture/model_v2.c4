@@ -8,7 +8,7 @@
 //
 // Auth: топология identity-провайдера, клиентов и валидации токенов — здесь;
 // роли, клиенты, TTL и политика — в architecture/auth.md (источник правды),
-// решение — в docs/adr/0001-identity-provider.md.
+// решение — в architecture/0001-identity-provider.md.
 
 specification {
   element actor {

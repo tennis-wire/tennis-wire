@@ -35,7 +35,11 @@ Realm-роли (client-роли не используем — проще мап�
 | `mobile` | `apps/mobile` (Expo) | public | Authorization Code + PKCE | `expo-auth-session` |
 | `moderation-bot` | бот-модератор | confidential, service account | `client_credentials` | — |
 
-Саморегистрация в realm включена и даёт только роль `user`. Путь к `author` / `moderator` — только через администратора.
+Путь к `author` / `moderator` — только через администратора.
+
+Саморегистрация в realm **выключена** до запуска читателей: роль `user` пока некому потреблять, а открытая регистрация — лишняя поверхность на staff-only системе. Включается вместе с comments/fantasy, тогда же `user` становится default-ролью realm.
+
+Локально в realm есть ещё клиент `dev-cli` (public, password grant) и пользователи `dev` / `reader` — артефакты разработки для `curl` и тестов. В целевом realm их нет.
 
 ## 4. Токены
 
@@ -44,7 +48,8 @@ Realm-роли (client-роли не используем — проще мап�
 - **Читательские клиенты (`public-web`, `mobile`):** более длинные сессии через per-client override — конкретные значения решаются на этапе подключения читателей.
 - **Формат:** JWT, подпись RS256, ключи ротируются в Keycloak; сервисы берут их по JWKS.
 - **Роли в токене:** `realm_access.roles`. В Spring нужен `JwtAuthenticationConverter` с маппингом в `ROLE_*`.
-- **Audience:** Keycloak по умолчанию не ставит `aud` для API. В realm добавляется audience mapper со значением `tennis-wire-api` во все клиенты; gateway и сервисы проверяют `aud`, а не только `iss`.
+- **Audience:** Keycloak по умолчанию не ставит `aud` для API. В каждом клиенте заводится audience mapper (`oidc-audience-mapper`, `included.custom.audience: tennis-wire-api`); gateway и сервисы проверяют `aud`, а не только `iss`.
+  Маппер намеренно продублирован по клиентам, а не вынесен в общий client scope: realm-уровневый массив `clientScopes` в файле импорта **заменяет** встроенные scope'ы вместо того, чтобы дополнять их, и вместе с ними пропадает `roles` — токены приходят без `realm_access.roles`. Четыре копии маппера дешевле, чем ручное описание всех встроенных scope'ов.
 - **Обязательные claims для сервисов:** `iss`, `aud`, `sub`, `exp`, `realm_access.roles`, `azp` (какой клиент выпустил). Для staff дополнительно `email`, `preferred_username` — для логов и owner у задач.
 
 ## 5. Модель идентичности
@@ -73,30 +78,33 @@ CORS терминируется в gateway (сделано).
 
 ## 7. Валидация в сервисах
 
-- **Java (`api-gateway`, `content-service`, `editorial-bff`):** `spring-boot-starter-oauth2-resource-server`, `issuer-uri` + проверка `aud`, общий конвертер ролей. Gateway дополнительно пробрасывает `Authorization` downstream (token relay).
+- **Java (`api-gateway`, `content-service`, `editorial-bff`):** `spring-boot-starter-oauth2-resource-server`. `issuer-uri` и `audiences` — свойства `spring.security.oauth2.resourceserver.jwt.*`, кода для проверки `aud` писать не нужно: Boot сам добавляет валидатор (свойство есть с 2.7, работает одинаково для servlet и reactive). Собственного кода остаётся только конвертер ролей `realm_access.roles` → `ROLE_*`. Gateway дополнительно пробрасывает `Authorization` downstream (token relay).
 - **Python (`transcription-service`):** PyJWT + `PyJWKClient` (кэш JWKS из коробки), проверка `iss`, `aud`, `exp`, роли `author`. Зависимость FastAPI в `api/deps.py`. Не считается долгом — делается в том же шаге, что и Java-сервисы.
 - **`transcription-service` — owner у задачи:** при создании job сохраняется `sub` (и `preferred_username` для логов); появляется список «мои задачи»; вопрос «кто занял GPU-воркера» получает ответ.
 
 ## 8. Realm как код
 
-- Файл: `docker/keycloak/realm-export.json`. Содержит realm `tennis-wire`, роли §2, клиенты §3, audience mapper, TTL §4, тестового пользователя с ролями `author` + `admin` и тестовый секрет бота.
-- **Локально:** Keycloak в `docker-compose.yml`, порт `127.0.0.1:8180`, `start-dev --import-realm`, **без volume** (dev-file H2). JSON реимпортируется на каждом старте, поэтому остаётся единственным источником правды и не дрейфует в volume.
-- **Правки через UI:** после правки — `kc.sh export --realm tennis-wire --file ...` из контейнера, результат коммитится. Правка без экспорта теряется при следующем старте — это намеренно.
-- **Прод:** `start --optimized`, `KC_DB=postgres`, отдельная БД `keycloak` и владеющая роль создаются init-скриптом до первого старта (та же последовательность, что с Liquibase); hostname и TLS — через ingress.
-- **Версия:** образ `quay.io/keycloak/keycloak`, пиновать мажор `26`, минорные обновления Renovate разрешены (в отличие от MinIO). Бутстрап-админ в 26.x: `KC_BOOTSTRAP_ADMIN_USERNAME` / `KC_BOOTSTRAP_ADMIN_PASSWORD`. Перед стартом реализации свериться с документацией текущего 26.x — имена переменных менялись между мажорами.
+- Файл: `docker/keycloak/import/tennis-wire-realm.json`. Содержит realm `tennis-wire`, роли §2, клиенты §3 с audience mapper, TTL §4, dev-пользователей и dev-клиент (§3).
+- **Файл пишется руками, экспорт не используется.** Три причины: `kc.sh export` не работает против живого `start-dev` (H2-файл заблокирован процессом, а без volume экспортировать потом неоткуда); partial export из консоли не содержит пользователей и заменяет секреты клиентов на звёздочки; полный экспорт — тысячи строк сгенерированных UUID, дифф нечитаем.
+- **Что описываем:** только своё. Встроенные client scopes, authentication flows и `default-roles-tennis-wire` Keycloak создаёт сам; попытка описать их руками ломает импорт или молча обнуляет дефолты (см. §4 про `clientScopes`).
+- **Локально:** Keycloak в `docker-compose.yml`, порт `127.0.0.1:8180`, `start-dev --import-realm`, **без volume** (dev-file H2). Realm реимпортируется при пересоздании контейнера: `docker compose up -d --force-recreate keycloak`. `restart` и обычный `up -d` при изменении только смонтированного JSON импорт не запускают — стратегия импорта `IGNORE_EXISTING`.
+- **Консоль** используется для экспериментов; найденное переносится в JSON руками. Правка без переноса теряется при пересоздании контейнера — это намеренно.
+- **Прод — отдельный механизм, решение отложено до шага 5.** `--import-realm` создаёт realm только если его ещё нет и не применяет обновления, поэтому управлять конфигурацией им нельзя. Кандидаты: `keycloak-config-cli` (декларативно и идемпотентно, но community и привязан к версиям Keycloak — проверить наличие сборки под текущий мажор) либо Terraform-провайдер. Общими между локальным и прод-realm должны остаться имена ролей, клиентов и audience — они зафиксированы здесь, в §2–§4, а не в JSON.
+- **Прод-инфраструктура:** `start --optimized`, `KC_DB=postgres`, отдельная БД `keycloak` и владеющая роль создаются init-скриптом до первого старта (та же последовательность, что с Liquibase); hostname и TLS — через ingress.
+- **Версия:** образ `quay.io/keycloak/keycloak`, пин полной версии, минорные обновления Renovate разрешены (в отличие от MinIO). В community-сборке нет LTS: security-фиксы получает только последний релиз, поэтому отставать нельзя. Бутстрап-админ в 26.x: `KC_BOOTSTRAP_ADMIN_USERNAME` / `KC_BOOTSTRAP_ADMIN_PASSWORD`.
 
 ## 9. Тестирование
 
 Решается **до** шага 2, потому что gateway становится resource server первым.
 
 - **Основной объём — без Keycloak:** тестовая RSA-пара в test resources; в Spring — `mockJwt()` из `spring-security-test` (для WebFlux — `SecurityMockServerConfigurers.mockJwt()`), в Python — PyJWT с тестовым ключом и подмена `issuer`/`jwks` через `dependency_overrides`.
-- **Один интеграционный тест на реальный flow:** Testcontainers-модуль Keycloak, поднимающий контейнер с тем же `realm-export.json`. Медленный, поэтому один. Он же проверяет, что realm JSON валиден и маппинг `realm_access.roles` работает с настоящим токеном.
+- **Один интеграционный тест на реальный flow:** Testcontainers-модуль Keycloak, поднимающий контейнер с тем же `tennis-wire-realm.json`. Медленный, поэтому один. Он же проверяет, что realm JSON валиден и маппинг `realm_access.roles` работает с настоящим токеном.
 
 ## 10. Порядок реализации
 
 | Шаг | Ветка | Содержание |
 |---|---|---|
-| 1 | `chore/keycloak-local` | Keycloak в compose, `realm-export.json` (§2–§4, §8), проверка руками: логин в консоль, получение токена `curl` |
+| 1 | `chore/keycloak-local` | Keycloak в compose, `tennis-wire-realm.json` (§2–§4, §8), dev-клиент и dev-пользователи; проверка руками: логин в консоль, получение токена `curl`, разбор claims |
 | 2 | `security/gateway-auth` | Gateway → resource server: §6, конвертер ролей, `aud`, закрытие actuator; тестовая RSA-пара + один Testcontainers-тест |
 | 3 | `security/editorial-ui-login` | PKCE в `editorial-ui`, Bearer в запросах к gateway |
 | 4 | `security/services-jwt` | `content-service` и `transcription-service` валидируют JWT сами; owner у job и список «мои» |

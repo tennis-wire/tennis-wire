@@ -34,6 +34,37 @@ services:
       retries: 5
       start_period: 10s
 
+  # ============== Keycloak ==============
+  # Identity provider (ADR-0001). start-dev with the in-container dev-file H2
+  # store and NO volume: the realm below is reimported on every container
+  # creation, so the JSON is the only source of truth and cannot drift.
+  #
+  # Consequence: `docker compose restart keycloak` keeps the container
+  # filesystem and does NOT reimport. Use --force-recreate after editing.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.0
+    container_name: tw-keycloak
+    ports:
+      - "127.0.0.1:8180:8080"
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+    command: ["start-dev", "--import-realm"]
+    volumes:
+      - ./docker/keycloak/import:/opt/keycloak/data/import:ro
+    healthcheck:
+      # The image ships no curl or wget; health lives on management port 9000.
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '\"status\": \"UP\"' <&3",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
   # ============== Redis ==============
   # Task queue for transcription-service (arq).
   redis:
