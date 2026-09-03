@@ -3,16 +3,37 @@
 // Every request goes to the API gateway. It is the only backend host this app
 // knows about and the only origin CORS is configured for; the services behind
 // it carry no CORS of their own, so addressing them directly cannot work.
-//
-// Today this only joins the path to the host. It exists so that the
-// Authorization header, the token refresh and the 401 policy have exactly one
-// place to live once login lands.
+
+import { userManager } from '../auth/userManager'
+import { createApiFetch } from './createApiFetch'
 
 const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL ?? 'http://localhost:8090'
 
-/**
- * @param path gateway path starting with a slash, e.g. '/api/editorial/articles'
- */
-export function apiFetch(path: string, init?: RequestInit): Promise<Response> {
-    return fetch(`${GATEWAY_URL}${path}`, init)
-}
+export const apiFetch = createApiFetch({
+    baseUrl: GATEWAY_URL,
+
+    // Read at send time, never captured in a closure: after a silent renew a
+    // captured token is the previous one, and the request would 401 for no
+    // reason anybody could see.
+    async getAccessToken() {
+        const user = await userManager.getUser()
+        return user && !user.expired ? user.access_token : null
+    },
+
+    // Uses the refresh token when there is one; oidc-client-ts falls back to a
+    // hidden iframe otherwise, which will fail, which is the answer we want.
+    async refresh() {
+        try {
+            const user = await userManager.signinSilent()
+            return user?.access_token ?? null
+        } catch {
+            return null
+        }
+    },
+
+    // Dropping the user makes isAuthenticated false, and RequireAuth sends the
+    // browser to Keycloak. Blunt, and replaced by the expiry banner next.
+    onSessionExpired() {
+        void userManager.removeUser()
+    },
+})
