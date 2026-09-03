@@ -129,6 +129,21 @@ class GatewayKeycloakIT {
     }
 
     @Test
+    void tokenForAnotherAudienceIsUnauthorized() {
+        // Correctly signed by our realm, for a real user with the author role, but carrying
+        // no aud=tennis-wire-api. Rejected before authorities are ever considered, so this
+        // is a 401 rather than a 403.
+        var token = passwordToken("no-audience", "dev", "dev");
+
+        client.get()
+                .uri(EDITORIAL)
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .exchange()
+                .expectStatus()
+                .isUnauthorized();
+    }
+
+    @Test
     void anonymousIsUnauthorized() {
         client.get().uri(EDITORIAL).exchange().expectStatus().isUnauthorized();
     }
@@ -148,9 +163,13 @@ class GatewayKeycloakIT {
     }
 
     private static String passwordToken(String username, String password) {
+        return passwordToken(CLI, username, password);
+    }
+
+    private static String passwordToken(String clientId, String username, String password) {
         return accessToken(Map.of(
                 "grant_type", "password",
-                "client_id", CLI,
+                "client_id", clientId,
                 "username", username,
                 "password", password));
     }
