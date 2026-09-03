@@ -89,7 +89,7 @@ export const articlesApi = {
         if (params?.page !== undefined) searchParams.set('page', String(params.page))
         if (params?.size !== undefined) searchParams.set('size', String(params.size))
 
-        const url = `/api/editorial/articles/${searchParams.toString() ? `?${searchParams}` : ''}`
+        const url = `/api/editorial/articles${searchParams.toString() ? `?${searchParams}` : ''}`
         const response = await apiFetch(url)
         return handleResponse<PagedResponse<ArticleSummaryResponse>>(response)
     },
@@ -155,7 +155,7 @@ export const tagsApi = {
         if (params?.page !== undefined) searchParams.set('page', String(params.page))
         if (params?.size !== undefined) searchParams.set('size', String(params.size))
 
-        const url = `/api/editorial/tags/${searchParams.toString() ? `?${searchParams}` : ''}`
+        const url = `/api/editorial/tags${searchParams.toString() ? `?${searchParams}` : ''}`
         const response = await apiFetch(url)
         return handleResponse<PagedResponse<Tag>>(response)
     },
