@@ -4,6 +4,7 @@
 // knows about and the only origin CORS is configured for; the services behind
 // it carry no CORS of their own, so addressing them directly cannot work.
 
+import { reportSessionExpired } from '../auth/sessionExpiry'
 import { userManager } from '../auth/userManager'
 import { createApiFetch } from './createApiFetch'
 
@@ -31,9 +32,8 @@ export const apiFetch = createApiFetch({
         }
     },
 
-    // Dropping the user makes isAuthenticated false, and RequireAuth sends the
-    // browser to Keycloak. Blunt, and replaced by the expiry banner next.
-    onSessionExpired() {
-        void userManager.removeUser()
-    },
+    // The user is deliberately left in place: dropping it would make
+    // RequireAuth redirect, unloading the tab and everything held in state.
+    // The banner asks instead.
+    onSessionExpired: reportSessionExpired,
 })

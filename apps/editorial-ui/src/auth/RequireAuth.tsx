@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 
 import AuthScreen from './AuthScreen'
+import SessionExpiredBanner from './SessionExpiredBanner'
 
 /**
  * Sends anonymous visitors to Keycloak and holds the tree until a token is in
@@ -31,5 +32,10 @@ export default function RequireAuth({ children }: { children: ReactNode }) {
     if (!auth.isAuthenticated) {
         return <AuthScreen message="Проверяем вход…" />
     }
-    return <>{children}</>
+    return (
+        <>
+            {children}
+            <SessionExpiredBanner />
+        </>
+    )
 }

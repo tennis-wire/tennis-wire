@@ -7,6 +7,8 @@
 
 import { InMemoryWebStorage, UserManager, WebStorageStateStore } from 'oidc-client-ts'
 
+import { reportSessionExpired } from './sessionExpiry'
+
 const AUTHORITY = import.meta.env.VITE_OIDC_AUTHORITY ?? 'http://localhost:8180/realms/tennis-wire'
 const CLIENT_ID = import.meta.env.VITE_OIDC_CLIENT_ID ?? 'editorial-ui'
 
@@ -15,6 +17,9 @@ export const userManager = new UserManager({
     client_id: CLIENT_ID,
     redirect_uri: `${window.location.origin}/auth/callback`,
     post_logout_redirect_uri: `${window.location.origin}/logged-out`,
+    // Defaults to redirect_uri, which would load the whole editor bundle into a
+    // popup that lives for half a second.
+    popup_redirect_uri: `${window.location.origin}/popup-callback.html`,
     response_type: 'code',
     // profile and email are default client scopes in Keycloak and arrive either
     // way; listing them says out loud which claims the app relies on.
@@ -33,6 +38,13 @@ export const userManager = new UserManager({
     automaticSilentRenew: true,
     // Session monitoring needs a hidden iframe and third-party cookies.
     monitorSession: false,
+})
+
+// Renewal failing is what the 8 h cap looks like from in here. Without this the
+// banner would wait for the next request, so a tab left open overnight would
+// look signed in until someone typed into it.
+userManager.events.addSilentRenewError(() => {
+    reportSessionExpired()
 })
 
 /** Drops ?code and ?state from the URL so a reload cannot replay a used code. */
