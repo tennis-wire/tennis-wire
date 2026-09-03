@@ -21,9 +21,11 @@
         "@tiptap/extension-youtube": "^3.13.0",
         "@tiptap/react": "^3.9.0",
         "@tiptap/starter-kit": "^3.9.0",
+        "oidc-client-ts": "^3.5.0",
         "react": "^19.1.1",
         "react-diff-viewer-continued": "^4.0.6",
         "react-dom": "^19.1.1",
+        "react-oidc-context": "^3.3.1",
         "react-router-dom": "^7.13.0"
     },
     "devDependencies": {
