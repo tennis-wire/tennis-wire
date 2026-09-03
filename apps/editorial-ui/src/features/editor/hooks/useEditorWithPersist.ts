@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useEditor } from '@tiptap/react'
+import { useAuth } from 'react-oidc-context'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -8,11 +9,12 @@ import { Telegram, Video } from '../extensions'
 import type { ContentMetadata } from '../types/content'
 import { defaultNewsMetadata } from '../types/content'
 
-const CONTENT_KEY = 'editor-content'
-const METADATA_KEY = 'editor-metadata'
+// Written before the editor knew who was using it. Dropped rather than
+// migrated: guessing whose draft it was is worse than losing one.
+const UNOWNED_KEYS = ['editor-content', 'editor-metadata']
 
-function loadMetadata(): ContentMetadata {
-    const saved = localStorage.getItem(METADATA_KEY)
+function loadMetadata(key: string | null): ContentMetadata {
+    const saved = key === null ? null : localStorage.getItem(key)
     if (saved) {
         try {
             return JSON.parse(saved)
@@ -24,7 +26,15 @@ function loadMetadata(): ContentMetadata {
 }
 
 export function useEditorWithPersist() {
-    const [metadata, setMetadata] = useState<ContentMetadata>(loadMetadata)
+    const auth = useAuth()
+    // The editor only mounts inside RequireAuth, so this is set on the first
+    // render. The null branches below exist so that a draft can never be
+    // written to a key somebody else would read.
+    const sub = auth.user?.profile.sub
+    const contentKey = sub === undefined ? null : `editor-content:${sub}`
+    const metadataKey = sub === undefined ? null : `editor-metadata:${sub}`
+
+    const [metadata, setMetadata] = useState<ContentMetadata>(() => loadMetadata(metadataKey))
     const [originalContent, setOriginalContent] = useState<string | undefined>(undefined)
 
     const editor = useEditor({
@@ -41,28 +51,36 @@ export function useEditorWithPersist() {
         ],
         content: '',
         onUpdate: ({ editor }) => {
-            localStorage.setItem(CONTENT_KEY, editor.getHTML())
+            if (contentKey === null) return
+            localStorage.setItem(contentKey, editor.getHTML())
         },
     })
 
+    // одноразовая уборка ключей, писавшихся до появления логина
+    useEffect(() => {
+        for (const key of UNOWNED_KEYS) localStorage.removeItem(key)
+    }, [])
+
     // восстановление контента из localStorage
     useEffect(() => {
-        if (!editor) return
-        const savedContent = localStorage.getItem(CONTENT_KEY)
+        if (!editor || contentKey === null) return
+        const savedContent = localStorage.getItem(contentKey)
         if (savedContent) editor.commands.setContent(savedContent)
-    }, [editor])
+    }, [editor, contentKey])
 
     // дебаунс-сохранение метаданных
     useEffect(() => {
+        if (metadataKey === null) return
         const timer = setTimeout(() => {
-            localStorage.setItem(METADATA_KEY, JSON.stringify(metadata))
+            localStorage.setItem(metadataKey, JSON.stringify(metadata))
         }, 1000)
         return () => clearTimeout(timer)
-    }, [metadata])
+    }, [metadata, metadataKey])
 
     const clearPersisted = () => {
-        localStorage.removeItem(CONTENT_KEY)
-        localStorage.removeItem(METADATA_KEY)
+        if (contentKey === null || metadataKey === null) return
+        localStorage.removeItem(contentKey)
+        localStorage.removeItem(metadataKey)
     }
 
     return { editor, metadata, setMetadata, originalContent, setOriginalContent, clearPersisted }
