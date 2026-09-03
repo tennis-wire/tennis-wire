@@ -64,7 +64,7 @@ Realm-роли (client-роли не используем — проще мап�
 | Маршрут | Требование | Примечание |
 |---|---|---|
 | `/actuator/health`, `/actuator/info` | анонимно | `show-details: when-authorized`; K8s-пробам нужен именно анонимный health без деталей |
-| `/actuator/gateway` | не экспонируется | Только в локальном профиле для отладки |
+| `/actuator/gateway` | `admin` | Экспонируется только профилем `local`; роль требуется и там. Профиль управляет экспозицией, security — доступом |
 | `/api/public/**` | анонимно | |
 | `/api/editorial/**`, `/api/ai/**`, `/api/translate/**`, `/api/transcribe/**` | `author` | |
 | `/api/aggregator/**` | `author` | planned |
@@ -95,10 +95,13 @@ CORS терминируется в gateway (сделано).
 
 ## 9. Тестирование
 
-Решается **до** шага 2, потому что gateway становится resource server первым.
+Схема подтверждена на gateway (шаг 2); для остальных сервисов остаётся образцом.
 
-- **Основной объём — без Keycloak:** тестовая RSA-пара в test resources; в Spring — `mockJwt()` из `spring-security-test` (для WebFlux — `SecurityMockServerConfigurers.mockJwt()`), в Python — PyJWT с тестовым ключом и подмена `issuer`/`jwks` через `dependency_overrides`.
-- **Один интеграционный тест на реальный flow:** Testcontainers-модуль Keycloak, поднимающий контейнер с тем же `tennis-wire-realm.json`. Медленный, поэтому один. Он же проверяет, что realm JSON валиден и маппинг `realm_access.roles` работает с настоящим токеном.
+- **Основной объём — без Keycloak.** В Spring — `mockJwt()` из `SecurityMockServerConfigurers`: он подменяет `SecurityContext` целиком, декодер не вызывается, тестовая RSA-пара не нужна. В Python — PyJWT с тестовым ключом и подмена `issuer`/`jwks` через `dependency_overrides`. Такие тесты проверяют **правила**, но не конвертер ролей: authorities задаются напрямую.
+- **Один интеграционный тест на реальный flow.** Testcontainers поднимает Keycloak с тем же `tennis-wire-realm.json`, что монтируется в compose (файл добавлен в тестовые ресурсы, копии нет). Downstream заменён на HTTP-заглушку, поэтому проверяется и то, что gateway пробрасывает `Authorization` дальше. Медленный, поэтому один.
+- **Что он покрывает:** валидность realm-файла, разбор настоящего токена, маппинг `realm_access.roles` → `ROLE_*`, разграничение ролей (`author` проходит, `user` и `moderator-bot` — нет), token relay.
+- **Известная дыра:** неверный `aud` не проверяется ничем. Все клиенты realm несут audience mapper, поэтому токена без нужного `aud` неоткуда взять. Закрывается клиентом без маппера в dev-realm или самоподписанным токеном; долг записан, не забыт.
+- **Хрупкость тестового харнесса, стоившая времени.** `WebTestClient.bindToApplicationContext` создаёт запрос без схемы и хоста, и CORS-preflight падает с 403 при исправной конфигурации: `CorsUtils` сравнивает `Origin` с origin самого запроса. Лечится `baseUrl` у клиента. Аналогично, бин `WebTestClient` при `RANDOM_PORT` в Boot 4 не регистрируется — клиент собирается руками через `local.server.port`.
 
 ## 10. Порядок реализации
 

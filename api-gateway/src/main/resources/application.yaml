@@ -5,6 +5,16 @@ spring:
   application:
     name: api-gateway
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/tennis-wire}
+          # aud comes from the per-client audience mapper (auth.md §4). Boot builds
+          # the validator from this property, so there is no code for it.
+          audiences:
+            - tennis-wire-api
+
   cloud:
     gateway:
       server:
@@ -73,9 +83,9 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, info, gateway
+        include: health, info
   endpoint:
-    gateway:
-      enabled: true
     health:
-      show-details: always
+      # Anonymous probes get a bare UP; details need a token with the admin role.
+      show-details: when-authorized
+      roles: admin

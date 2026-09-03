@@ -22,7 +22,7 @@ docker compose down -v    # stop and wipe all volumes
 Individual components, when the full stack is not needed:
 
 ```bash
-docker compose up -d postgres                  # java services only
+docker compose up -d postgres keycloak         # java services only
 docker compose up -d redis minio minio-init    # transcription only
 ```
 
@@ -144,6 +144,21 @@ TOKEN=$(curl -s -d grant_type=password -d client_id=dev-cli \
 
 echo "$TOKEN" | jq -R 'split(".")[1] | @base64d | fromjson | {aud, azp, realm_access}'
 ```
+
+The gateway validates tokens against this realm, so it needs Keycloak running
+before it can serve anything that is not anonymous. It does start without it —
+the issuer is resolved lazily — and only fails when a request carries a token.
+
+To read the gateway's own routing table, run it under the `local` profile and
+present an admin token:
+
+```bash
+./gradlew :api-gateway:bootRun --args='--spring.profiles.active=local'
+curl -s -H "Authorization: Bearer $TOKEN" localhost:8090/actuator/gateway
+```
+
+`/actuator/health` stays anonymous for the probes but only shows components to
+a token with the admin role.
 
 Production is a separate problem, deliberately unsolved: `--import-realm` only
 creates a realm that does not exist yet and never updates one, so it is not a
