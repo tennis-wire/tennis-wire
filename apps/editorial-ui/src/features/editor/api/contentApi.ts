@@ -1,7 +1,7 @@
 // Content Service API client
 // All requests go through API Gateway
 
-import { CONTENT_API } from './apiConfig'
+import { apiFetch } from '../../../api/apiFetch'
 import type {
     ArticleResponse,
     ArticleSummaryResponse,
@@ -56,7 +56,7 @@ export const articlesApi = {
      * Create a new draft article
      */
     async create(data: CreateArticleRequest): Promise<ArticleResponse> {
-        const response = await fetch(`${CONTENT_API}/articles`, {
+        const response = await apiFetch('/api/editorial/articles', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
@@ -68,7 +68,7 @@ export const articlesApi = {
      * Get article by ID (full, with content)
      */
     async getById(id: string): Promise<ArticleResponse> {
-        const response = await fetch(`${CONTENT_API}/articles/${id}`)
+        const response = await apiFetch(`/api/editorial/articles/${id}`)
         return handleResponse<ArticleResponse>(response)
     },
 
@@ -89,8 +89,8 @@ export const articlesApi = {
         if (params?.page !== undefined) searchParams.set('page', String(params.page))
         if (params?.size !== undefined) searchParams.set('size', String(params.size))
 
-        const url = `${CONTENT_API}/articles${searchParams.toString() ? `?${searchParams}` : ''}`
-        const response = await fetch(url)
+        const url = `/api/editorial/articles${searchParams.toString() ? `?${searchParams}` : ''}`
+        const response = await apiFetch(url)
         return handleResponse<PagedResponse<ArticleSummaryResponse>>(response)
     },
 
@@ -98,7 +98,7 @@ export const articlesApi = {
      * Partial update article
      */
     async update(id: string, data: UpdateArticleRequest): Promise<ArticleResponse> {
-        const response = await fetch(`${CONTENT_API}/articles/${id}`, {
+        const response = await apiFetch(`/api/editorial/articles/${id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
@@ -110,7 +110,7 @@ export const articlesApi = {
      * Delete draft article
      */
     async delete(id: string): Promise<void> {
-        const response = await fetch(`${CONTENT_API}/articles/${id}`, {
+        const response = await apiFetch(`/api/editorial/articles/${id}`, {
             method: 'DELETE',
         })
         return handleResponse<void>(response)
@@ -120,7 +120,7 @@ export const articlesApi = {
      * Publish article
      */
     async publish(id: string): Promise<PublishResponse> {
-        const response = await fetch(`${CONTENT_API}/articles/${id}/publish`, {
+        const response = await apiFetch(`/api/editorial/articles/${id}/publish`, {
             method: 'POST',
         })
         return handleResponse<PublishResponse>(response)
@@ -130,7 +130,7 @@ export const articlesApi = {
      * Unpublish article (back to draft)
      */
     async unpublish(id: string): Promise<ArticleResponse> {
-        const response = await fetch(`${CONTENT_API}/articles/${id}/unpublish`, {
+        const response = await apiFetch(`/api/editorial/articles/${id}/unpublish`, {
             method: 'POST',
         })
         return handleResponse<ArticleResponse>(response)
@@ -155,8 +155,8 @@ export const tagsApi = {
         if (params?.page !== undefined) searchParams.set('page', String(params.page))
         if (params?.size !== undefined) searchParams.set('size', String(params.size))
 
-        const url = `${CONTENT_API}/tags${searchParams.toString() ? `?${searchParams}` : ''}`
-        const response = await fetch(url)
+        const url = `/api/editorial/tags${searchParams.toString() ? `?${searchParams}` : ''}`
+        const response = await apiFetch(url)
         return handleResponse<PagedResponse<Tag>>(response)
     },
 
@@ -164,7 +164,7 @@ export const tagsApi = {
      * Create tag
      */
     async create(data: { name: string; slug?: string; type: string }): Promise<Tag> {
-        const response = await fetch(`${CONTENT_API}/tags`, {
+        const response = await apiFetch('/api/editorial/tags', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
@@ -176,7 +176,7 @@ export const tagsApi = {
      * Update tag
      */
     async update(id: string, data: { name?: string; slug?: string }): Promise<Tag> {
-        const response = await fetch(`${CONTENT_API}/tags/${id}`, {
+        const response = await apiFetch(`/api/editorial/tags/${id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
@@ -188,7 +188,7 @@ export const tagsApi = {
      * Delete tag
      */
     async delete(id: string): Promise<void> {
-        const response = await fetch(`${CONTENT_API}/tags/${id}`, {
+        const response = await apiFetch(`/api/editorial/tags/${id}`, {
             method: 'DELETE',
         })
         return handleResponse<void>(response)

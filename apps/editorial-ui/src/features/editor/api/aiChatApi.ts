@@ -1,4 +1,4 @@
-import { API_BASE } from './apiConfig'
+import { apiFetch } from '../../../api/apiFetch'
 
 export interface ChatMessage {
     role: 'user' | 'assistant'
@@ -15,7 +15,7 @@ interface SendChatOptions {
 export async function sendChatMessage(options: SendChatOptions): Promise<string> {
     const { messages, onChunk, context, signal } = options
 
-    const response = await fetch(`${API_BASE}/api/ai/chat`, {
+    const response = await apiFetch(`/api/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages, context }),

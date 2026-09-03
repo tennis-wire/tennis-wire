@@ -1,4 +1,4 @@
-import { TRANSCRIBE_API } from './apiConfig'
+import { apiFetch } from '../../../api/apiFetch'
 
 export interface TranscriptionSegment {
     start: number
@@ -30,7 +30,7 @@ export async function transcribeUrl(
     language?: string,
     enableDiarization?: boolean
 ): Promise<{ job_id: string }> {
-    const response = await fetch(`${TRANSCRIBE_API}/api/transcribe/url`, {
+    const response = await apiFetch(`/api/transcribe/url`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -57,7 +57,7 @@ export async function transcribeFile(
     if (language) formData.append('language', language)
     if (enableDiarization) formData.append('enable_diarization', 'true')
 
-    const response = await fetch(`${TRANSCRIBE_API}/api/transcribe/file`, {
+    const response = await apiFetch(`/api/transcribe/file`, {
         method: 'POST',
         body: formData,
     })
@@ -70,14 +70,14 @@ export async function transcribeFile(
 
 /** check task status */
 export async function getJobStatus(jobId: string): Promise<TranscriptionJob> {
-    const response = await fetch(`${TRANSCRIBE_API}/api/transcribe/${jobId}`)
+    const response = await apiFetch(`/api/transcribe/${jobId}`)
     if (!response.ok) throw new Error('Ошибка получения статуса')
     return response.json()
 }
 
 /** get the result */
 export async function getJobResult(jobId: string): Promise<TranscriptionResult> {
-    const response = await fetch(`${TRANSCRIBE_API}/api/transcribe/${jobId}/result`)
+    const response = await apiFetch(`/api/transcribe/${jobId}/result`)
     if (!response.ok) throw new Error('Ошибка получения результата')
     const data = await response.json()
     return data.result
@@ -85,5 +85,5 @@ export async function getJobResult(jobId: string): Promise<TranscriptionResult> 
 
 /** cancel task */
 export async function cancelJob(jobId: string): Promise<void> {
-    await fetch(`${TRANSCRIBE_API}/api/transcribe/${jobId}`, { method: 'DELETE' })
+    await apiFetch(`/api/transcribe/${jobId}`, { method: 'DELETE' })
 }

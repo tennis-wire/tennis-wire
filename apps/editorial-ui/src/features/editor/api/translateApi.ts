@@ -1,4 +1,4 @@
-import { API_BASE } from './apiConfig'
+import { apiFetch } from '../../../api/apiFetch'
 
 export interface TranslateResult {
     text: string
@@ -10,7 +10,7 @@ export async function translate(
     sourceLang: string | null,
     targetLang: string
 ): Promise<TranslateResult> {
-    const response = await fetch(`${API_BASE}/api/translate`, {
+    const response = await apiFetch(`/api/translate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, sourceLang, targetLang }),
