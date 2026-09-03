@@ -129,6 +129,17 @@
             ]
         },
         {
+            "clientId": "no-audience",
+            "name": "Client without the api audience mapper",
+            "description": "Local artefact. Issues tokens that must NOT be accepted by our services; exists so that aud validation is covered by a test rather than assumed.",
+            "enabled": true,
+            "publicClient": true,
+            "standardFlowEnabled": false,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": true,
+            "serviceAccountsEnabled": false
+        },
+        {
             "clientId": "dev-cli",
             "name": "Password grant for local curl and tests",
             "description": "Local artefact. The production realm must not contain this client.",
