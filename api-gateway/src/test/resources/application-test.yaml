@@ -1,0 +1,16 @@
+# Integration test profile. Replaces the real routes with one catch-all pointing
+# at a stub, so authorization can be observed end to end without the services.
+# test.downstream-url and the issuer are supplied by GatewayKeycloakIT.
+test:
+  downstream-url: http://localhost:1
+
+spring:
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: test-downstream
+              uri: ${test.downstream-url}
+              predicates:
+                - Path=/api/**

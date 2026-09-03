@@ -15,7 +15,18 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-starter-security-test")
     testImplementation("io.projectreactor:reactor-test")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
+    testImplementation(libs.testcontainers.keycloak)
+    testImplementation(libs.wiremock.standalone)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+// GatewayKeycloakIT imports the same realm file docker-compose does, so the two
+// cannot drift apart.
+sourceSets {
+    named("test") {
+        resources.srcDir(rootProject.file("docker/keycloak/import"))
+    }
 }
 
 dependencyManagement {
