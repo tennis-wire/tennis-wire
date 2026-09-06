@@ -16,6 +16,7 @@ import { useImageDrop } from '../hooks/useImageDrop'
 import { useEditorActions } from '../hooks/useEditorActions'
 import { useSnackbar } from '../hooks/useSnackbar'
 import { ThemeSwitcher, useAppTheme } from '../../../theme'
+import UserMenu from '../../../auth/UserMenu.tsx'
 
 import '../styles/editor.css'
 
@@ -149,7 +150,10 @@ export default function Editor() {
                                 Editor
                             </Box>
                         </Box>
-                        <ThemeSwitcher />
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <ThemeSwitcher />
+                            <UserMenu />
+                        </Box>
                     </Box>
 
                     <MetadataPanel
