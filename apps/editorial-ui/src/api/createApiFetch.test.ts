@@ -12,16 +12,18 @@ function setup(options: { fetchImpl?: FetchMock; refresh?: RefreshMock } = {}) {
     const refresh = options.refresh ?? vi.fn(async () => 'new-token' as string | null)
     const getAccessToken = vi.fn(async () => 'old-token' as string | null)
     const onSessionExpired = vi.fn()
+    const onSessionRestored = vi.fn()
 
     const apiFetch = createApiFetch({
         baseUrl: 'http://gateway.test',
         getAccessToken,
         refresh,
         onSessionExpired,
+        onSessionRestored,
         fetchImpl,
     })
 
-    return { apiFetch, fetchImpl, refresh, getAccessToken, onSessionExpired }
+    return { apiFetch, fetchImpl, refresh, getAccessToken, onSessionExpired, onSessionRestored }
 }
 
 function sentAuth(fetchImpl: FetchMock, call: number): string | null {
@@ -92,5 +94,20 @@ describe('createApiFetch', () => {
         expect(refresh).not.toHaveBeenCalled()
         expect(onSessionExpired).not.toHaveBeenCalled()
         expect(fetchImpl).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe('createApiFetch after a transient renewal failure', () => {
+    it('reports the session restored once a refresh succeeds', async () => {
+        const fetchImpl = vi
+            .fn<typeof fetch>()
+            .mockResolvedValueOnce(new Response(null, { status: 401 }))
+            .mockResolvedValueOnce(ok())
+        const { apiFetch, onSessionRestored, onSessionExpired } = setup({ fetchImpl })
+
+        await apiFetch('/api/editorial/articles')
+
+        expect(onSessionRestored).toHaveBeenCalledTimes(1)
+        expect(onSessionExpired).not.toHaveBeenCalled()
     })
 })

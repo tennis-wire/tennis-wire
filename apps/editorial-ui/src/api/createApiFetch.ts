@@ -12,6 +12,8 @@ export interface ApiFetchDeps {
     refresh: () => Promise<string | null>
     /** Called once when refresh fails and the session cannot be saved. */
     onSessionExpired: () => void
+    /** Called after a refresh succeeds, which proves the session is alive. */
+    onSessionRestored: () => void
     fetchImpl?: typeof fetch
 }
 
@@ -19,8 +21,8 @@ export function createApiFetch(deps: ApiFetchDeps) {
     const doFetch = deps.fetchImpl ?? globalThis.fetch
     // One refresh at a time. The transcription poller alone can put several
     // requests in flight, and each of them hitting an expired token would
-    // otherwise fire its own refresh — which, with rotation enabled, is how a
-    // session gets torn down by its own client.
+    // otherwise fire its own refresh. Rotation is off in the realm, so today
+    // that is merely wasteful — see auth.md §4 before turning it on.
     let inFlight: Promise<string | null> | null = null
 
     function refreshOnce(): Promise<string | null> {
@@ -54,6 +56,9 @@ export function createApiFetch(deps: ApiFetchDeps) {
             deps.onSessionExpired()
             return response
         }
+        // A renewal that failed on a flaky network may have already raised the
+        // banner. Getting a token back disproves it.
+        deps.onSessionRestored()
         // Bodies here are strings or FormData, both of which survive being
         // handed to fetch twice. A streamed body would not.
         return send(path, init, token)
