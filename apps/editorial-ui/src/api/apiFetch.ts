@@ -4,7 +4,7 @@
 // knows about and the only origin CORS is configured for; the services behind
 // it carry no CORS of their own, so addressing them directly cannot work.
 
-import { reportSessionExpired } from '../auth/sessionExpiry'
+import { clearSessionExpired, reportSessionExpired } from '../auth/sessionExpiry'
 import { userManager } from '../auth/userManager'
 import { createApiFetch } from './createApiFetch'
 
@@ -36,4 +36,8 @@ export const apiFetch = createApiFetch({
     // RequireAuth redirect, unloading the tab and everything held in state.
     // The banner asks instead.
     onSessionExpired: reportSessionExpired,
+
+    // A renewal that failed on a flaky network raises the banner from the
+    // UserManager side. A token obtained here proves the session outlived it.
+    onSessionRestored: clearSessionExpired,
 })
