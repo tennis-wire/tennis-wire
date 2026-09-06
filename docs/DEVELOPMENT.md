@@ -231,6 +231,36 @@ Expo dependencies are updated with `expo install --fix`, never with
 `npm update`. Renovate is configured accordingly: mobile packages are grouped
 into one PR and majors are disabled, because a major there means an SDK bump.
 
+#### editorial-ui and Keycloak
+
+Signing in needs the realm running: `docker compose up -d keycloak`. Everything
+under `/editor` and `/curator` sits behind the login; `dev` / `dev` gets in.
+`admin` / `admin` is the bootstrap admin of the `master` realm and cannot.
+
+Tokens are held in memory, so every reload runs the authorization code flow
+again. While the SSO cookie lives that is silent — expect a brief flash, not a
+login form. Nothing of the session reaches `localStorage`; the only thing there
+is the editor draft, keyed by the user's `sub`.
+
+There are two Vite entry points: `index.html` and `popup-callback.html`. The
+second is where Keycloak lands the re-authentication popup, and it is listed in
+`build.rollupOptions.input` — the dev server serves any root-level HTML on its
+own, but a build only emits what is listed. A third page means editing that
+list.
+
+Redirect URIs in the realm are exact paths rather than `http://localhost:5173/*`.
+Adding a route Keycloak has to redirect to means editing the realm file and
+recreating the container, as above. A rejected URI shows as `Invalid parameter:
+redirect_uri` on a Keycloak page.
+
+Tests run under `vitest`. The request-policy tests need no DOM and use the
+default `node` environment; component tests opt into jsdom with a
+`// @vitest-environment jsdom` comment on their first line, so there is no
+global jsdom cost.
+
+MUI 9 no longer accepts system props on `Stack`: `alignItems="center"` does not
+compile and belongs in `sx`.
+
 ## Checks
 
 ```bash
