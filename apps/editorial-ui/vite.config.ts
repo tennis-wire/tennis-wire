@@ -10,8 +10,8 @@ export default defineConfig({
             input: {
                 // The dev server serves any root-level .html on its own; a
                 // build only emits what is listed here.
-                main: resolve(__dirname, 'index.html'),
-                'popup-callback': resolve(__dirname, 'popup-callback.html'),
+                main: resolve(import.meta.dirname, 'index.html'),
+                'popup-callback': resolve(import.meta.dirname, 'popup-callback.html'),
             },
         },
     },
