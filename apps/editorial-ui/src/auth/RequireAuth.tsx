@@ -26,12 +26,18 @@ export default function RequireAuth({ children }: { children: ReactNode }) {
         })
     }, [auth, location])
 
-    if (auth.error) {
-        return <AuthScreen message={`Не удалось войти: ${auth.error.message}`} showRetry />
-    }
+    // A dead session is not a failed sign-in. react-oidc-context reports a
+    // failed silent renew through auth.error while leaving the user loaded, so
+    // checking error first would swap the editor for a full-page message —
+    // unmounting the tree the banner exists to keep alive.
     if (!auth.isAuthenticated) {
-        return <AuthScreen message="Проверяем вход…" />
+        return auth.error ? (
+            <AuthScreen message={`Не удалось войти: ${auth.error.message}`} showRetry />
+        ) : (
+            <AuthScreen message="Проверяем вход…" />
+        )
     }
+
     return (
         <>
             {children}
