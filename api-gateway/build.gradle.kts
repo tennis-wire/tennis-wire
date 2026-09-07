@@ -6,6 +6,8 @@ plugins {
 description = "API Gateway for Tennis Wire"
 
 dependencies {
+    implementation(project(":auth-support"))
+
     implementation("org.springframework.cloud:spring-cloud-starter-gateway-server-webflux")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-security")

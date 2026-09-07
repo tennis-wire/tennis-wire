@@ -1,5 +1,7 @@
 package com.tenniswire.api_gateway.config;
 
+import com.tenniswire.auth_support.KeycloakJwtAuthenticationConverter;
+import com.tenniswire.auth_support.Roles;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -8,7 +10,6 @@ import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
@@ -18,15 +19,11 @@ import reactor.core.publisher.Mono;
 
 /**
  * <p>The gateway is not the only line of defence: the services behind it validate the same token
- * against the same issuer.
+ * against the same issuer, with the same role mapping from auth-support.
  */
 @Configuration
 @EnableWebFluxSecurity
 public class SecurityConfig {
-
-    private static final String ADMIN = "admin";
-
-    private static final String AUTHOR = "author";
 
     private static final String[] EDITORIAL_PATHS = {
         "/api/editorial/**", "/api/ai/**", "/api/translate/**", "/api/transcribe/**"
@@ -40,11 +37,11 @@ public class SecurityConfig {
                         .permitAll()
                         // Exposed only under the local profile, and admin-only even there.
                         .pathMatchers("/actuator/gateway/**")
-                        .hasRole(ADMIN)
+                        .hasRole(Roles.ADMIN)
                         .pathMatchers("/api/public/**")
                         .permitAll()
                         .pathMatchers(EDITORIAL_PATHS)
-                        .hasRole(AUTHOR)
+                        .hasRole(Roles.AUTHOR)
                         // Fail closed: a route without a rule is unreachable, not merely
                         // reachable by anyone who happens to be logged in.
                         .anyExchange()
@@ -59,9 +56,7 @@ public class SecurityConfig {
     }
 
     private Converter<Jwt, Mono<AbstractAuthenticationToken>> jwtAuthenticationConverter() {
-        var converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(new KeycloakRealmRoleConverter());
-        return new ReactiveJwtAuthenticationConverterAdapter(converter);
+        return new ReactiveJwtAuthenticationConverterAdapter(KeycloakJwtAuthenticationConverter.create());
     }
 
     // CORS config applied at Security filter level — ensures preflight gets headers
