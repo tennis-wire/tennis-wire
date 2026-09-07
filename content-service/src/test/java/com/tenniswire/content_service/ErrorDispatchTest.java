@@ -28,8 +28,8 @@ class ErrorDispatchTest {
     void unknownPublicPathIs404NotAnAuthError() throws Exception {
         var port = environment.getRequiredProperty("local.server.port", Integer.class);
         var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/public/nope"))
-            .GET()
-            .build();
+                .GET()
+                .build();
 
         var response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.discarding());
 
