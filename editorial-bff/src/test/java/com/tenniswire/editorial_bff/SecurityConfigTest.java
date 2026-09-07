@@ -61,4 +61,11 @@ class SecurityConfigTest {
         mvc.perform(get("/api/public/articles").with(jwt().authorities(new SimpleGrantedAuthority("ROLE_admin"))))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void unknownPublicPathIs404NotAnAuthError() throws Exception {
+        // Without the ERROR dispatch rule this comes back as 401: the 404 is rendered
+        // through /error, which anyRequest().denyAll() would otherwise refuse.
+        mvc.perform(get("/api/public/nope")).andExpect(status().isNotFound());
+    }
 }

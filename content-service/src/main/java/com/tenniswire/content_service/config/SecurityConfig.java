@@ -2,6 +2,7 @@ package com.tenniswire.content_service.config;
 
 import com.tenniswire.auth_support.KeycloakJwtAuthenticationConverter;
 import com.tenniswire.auth_support.Roles;
+import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -27,7 +28,13 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http.authorizeHttpRequests(requests -> requests.requestMatchers("/api/public/**")
+        return http.authorizeHttpRequests(requests -> requests
+                        // The error dispatch (/error) must pass, or every 404 and 500 from a
+                        // permitted path comes back as 401/403 instead. Only the container
+                        // issues this dispatch, after the real request was already authorized.
+                        .dispatcherTypeMatchers(DispatcherType.ERROR)
+                        .permitAll()
+                        .requestMatchers("/api/public/**")
                         .permitAll()
                         .requestMatchers(SPRINGDOC_PATHS)
                         .permitAll()
