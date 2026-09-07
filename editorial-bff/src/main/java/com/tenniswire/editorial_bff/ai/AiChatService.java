@@ -11,8 +11,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class AiChatService {
 
-    private static final String SYSTEM_PROMPT =
-        """
+    private static final String SYSTEM_PROMPT = """
         Ты — AI-помощник редакции Tennis Wire, теннисного новостного сайта.
         Ты работаешь рядом с редактором, прямо в окне редактирования статьи.
 
@@ -35,14 +34,22 @@ public class AiChatService {
         - На вопрос отвечай развёрнуто, на просьбу — делом.
         """;
 
-    private static final String CONTEXT_PREAMBLE =
-        """
+    private static final String DOCUMENT_PREAMBLE = """
 
         ---
 
         Ниже — материал, открытый сейчас в редакторе. Это справочный
         контекст, а не задание: собеседник может спрашивать о нём, а может
         и о чём-то постороннем. Отталкивайся от того, о чём тебя спросили.
+
+        """;
+
+    private static final String SELECTION_PREAMBLE = """
+
+        ---
+
+        Ниже — фрагмент, который собеседник выделил в редакторе. Скорее
+        всего, речь именно о нём.
 
         """;
 
@@ -66,17 +73,17 @@ public class AiChatService {
 
         try (var streamResponse = client.messages().createStreaming(params)) {
             streamResponse.stream()
-                .flatMap(event -> event.contentBlockDelta().stream())
-                .flatMap(deltaEvent -> deltaEvent.delta().text().stream())
-                .forEach(textDelta -> textConsumer.accept(textDelta.text()));
+                    .flatMap(event -> event.contentBlockDelta().stream())
+                    .flatMap(deltaEvent -> deltaEvent.delta().text().stream())
+                    .forEach(textDelta -> textConsumer.accept(textDelta.text()));
         }
     }
 
     private MessageCreateParams buildParams(AiChatRequest request) {
         var builder = MessageCreateParams.builder()
-            .model(Model.CLAUDE_SONNET_4_5)
-            .maxTokens(4096L)
-            .system(buildSystem(request));
+                .model(Model.CLAUDE_SONNET_4_5)
+                .maxTokens(4096L)
+                .system(buildSystem(request));
 
         for (ChatMessage msg : request.messages()) {
             if ("user".equals(msg.role())) {
@@ -107,6 +114,6 @@ public class AiChatService {
         if (context == null || context.isBlank()) {
             return SYSTEM_PROMPT;
         }
-        return SYSTEM_PROMPT + CONTEXT_PREAMBLE + context;
+        return SYSTEM_PROMPT + (request.isSelection() ? SELECTION_PREAMBLE : DOCUMENT_PREAMBLE) + context;
     }
 }

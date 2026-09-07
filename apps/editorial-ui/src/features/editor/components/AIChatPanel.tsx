@@ -97,6 +97,7 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
                     )
                 },
                 context: context.text || undefined,
+                isSelection: context.isSelection,
                 signal: abortRef.current.signal,
             })
         } catch (error: unknown) {
