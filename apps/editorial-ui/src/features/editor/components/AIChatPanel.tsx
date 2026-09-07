@@ -15,6 +15,7 @@ import { useAppTheme } from '../../../theme'
 
 import { sendChatMessage } from '../api/aiChatApi'
 import { MarkdownMessage } from './MarkdownMessage'
+import { markdownToHtml } from '../lib/markdown'
 
 interface Message {
     id: string
@@ -119,28 +120,42 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
         }
     }
 
-    const handleCopy = (text: string, id: string) => {
-        navigator.clipboard.writeText(text)
+    const handleCopy = async (text: string, id: string) => {
+        // Two flavours on purpose. text/html is what the editor picks up, so a
+        // paste keeps its formatting; text/plain stays markdown because a paste
+        // into Telegram or a ticket reads better with the asterisks left in.
+        try {
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                    'text/html': new Blob([markdownToHtml(text)], { type: 'text/html' }),
+                    'text/plain': new Blob([text], { type: 'text/plain' }),
+                }),
+            ])
+        } catch {
+            await navigator.clipboard.writeText(text)
+        }
         setCopiedId(id)
         setTimeout(() => setCopiedId(null), 2000)
     }
 
     const handleInsert = (text: string, mode: 'replace' | 'below') => {
         if (!editor) return
+
+        // TipTap parses a string that looks like markup, so converting first is
+        // what turns ** into bold instead of literal asterisks in the document.
+        const html = markdownToHtml(text)
+
         if (mode === 'replace') {
             const { from, to } = editor.state.selection
             if (from !== to) {
-                editor.chain().focus().deleteSelection().insertContent(text).run()
-            } else {
-                editor.chain().focus().insertContent(text).run()
+                editor.chain().focus().deleteSelection().insertContent(html).run()
+                return
             }
-        } else {
-            editor
-                .chain()
-                .focus()
-                .insertContent('\n\n' + text)
-                .run()
         }
+
+        // The '\n\n' prefix is gone: a newline is not a paragraph break in
+        // ProseMirror, and the converted HTML carries its own block structure.
+        editor.chain().focus().insertContent(html).run()
     }
 
     const handleStop = () => {
