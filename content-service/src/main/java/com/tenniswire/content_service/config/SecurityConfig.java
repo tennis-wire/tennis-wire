@@ -20,9 +20,9 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    // Not routed through the gateway, so reachable only on the service port. Left open
-    // for local development; a deployed instance turns the docs off with
-    // springdoc.api-docs.enabled=false rather than putting them behind a role.
+    // Not routed through the gateway, so reachable only on the service port. permitAll
+    // here is harmless in the default profile, where springdoc is off and the paths do
+    // not exist; under the local profile it lets the docs open without a token.
     private static final String[] SPRINGDOC_PATHS = {"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"};
 
     @Bean

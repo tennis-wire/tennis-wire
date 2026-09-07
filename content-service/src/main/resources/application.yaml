@@ -42,9 +42,13 @@ logging:
     org.hibernate.orm.jdbc.bind: TRACE
 
 springdoc:
+  # Off by default: the docs are not routed through the gateway and describe the
+  # whole API to anyone who reaches the service port. The local profile turns them on.
   api-docs:
+    enabled: false
     path: /v3/api-docs
   swagger-ui:
+    enabled: false
     path: /swagger-ui.html
     tags-sorter: alpha
     operations-sorter: method
