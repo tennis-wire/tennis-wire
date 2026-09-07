@@ -14,6 +14,7 @@ import type { Editor } from '@tiptap/react'
 import { useAppTheme } from '../../../theme'
 
 import { sendChatMessage } from '../api/aiChatApi'
+import { MarkdownMessage } from './MarkdownMessage'
 
 interface Message {
     id: string
@@ -269,16 +270,20 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
                                 borderRadius: '12px',
                             }}
                         >
-                            <Typography
-                                sx={{
-                                    whiteSpace: 'pre-wrap',
-                                    fontSize: '0.875rem',
-                                    color: colors.text,
-                                    lineHeight: 1.6,
-                                }}
-                            >
-                                {message.content}
-                            </Typography>
+                            {message.role === 'assistant' ? (
+                                <MarkdownMessage content={message.content} />
+                            ) : (
+                                <Typography
+                                    sx={{
+                                        whiteSpace: 'pre-wrap',
+                                        fontSize: '0.875rem',
+                                        color: colors.text,
+                                        lineHeight: 1.6,
+                                    }}
+                                >
+                                    {message.content}
+                                </Typography>
+                            )}
                         </Paper>
 
                         {message.role === 'assistant' && message.content && !isLoading && (
