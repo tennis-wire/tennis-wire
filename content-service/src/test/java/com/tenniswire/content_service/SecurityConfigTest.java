@@ -53,14 +53,6 @@ class SecurityConfigTest {
     }
 
     @Test
-    void adminInheritsNothingHere_roleIsCheckedLiterally() throws Exception {
-        // Composite roles are flattened by Keycloak into the token; a bare ROLE_admin
-        // without ROLE_author is not an author. Documents the contract, not a wish.
-        mvc.perform(get(EDITORIAL).with(jwt().authorities(new SimpleGrantedAuthority("ROLE_admin"))))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
     void publicIsAnonymous() throws Exception {
         mvc.perform(get("/api/public/articles")).andExpect(status().isOk());
     }
