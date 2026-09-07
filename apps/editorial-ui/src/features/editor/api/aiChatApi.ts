@@ -9,16 +9,17 @@ interface SendChatOptions {
     messages: ChatMessage[]
     onChunk: (accumulated: string) => void
     context?: string
+    isSelection?: boolean
     signal?: AbortSignal
 }
 
 export async function sendChatMessage(options: SendChatOptions): Promise<string> {
-    const { messages, onChunk, context, signal } = options
+    const { messages, onChunk, context, isSelection, signal } = options
 
     const response = await apiFetch(`/api/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages, context }),
+        body: JSON.stringify({ messages, context, isSelection }),
         signal,
     })
 

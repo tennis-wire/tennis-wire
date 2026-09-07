@@ -6,30 +6,51 @@ import com.anthropic.models.messages.Model;
 import com.tenniswire.editorial_bff.ai.dto.AiChatRequest;
 import com.tenniswire.editorial_bff.ai.dto.ChatMessage;
 import java.util.function.Consumer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AiChatService {
 
-    private static final Logger log = LoggerFactory.getLogger(AiChatService.class);
-
     private static final String SYSTEM_PROMPT = """
-        Ты — AI-помощник для редактора теннисного новостного сайта Tennis Wire.
-        Твоя задача — помогать авторам создавать качественный контент о теннисе:
-        писать статьи с нуля, редактировать и улучшать существующие тексты,
-        предлагать заголовки, лиды и структуру материалов.
+        Ты — AI-помощник редакции Tennis Wire, теннисного новостного сайта.
+        Ты работаешь рядом с редактором, прямо в окне редактирования статьи.
 
-        Правила:
-        - Пиши на том же языке, на котором написан текст пользователя.
-        - Сохраняй фактическую точность: имена игроков, счёт матчей, даты турниров.
-        - Используй профессиональную теннисную терминологию.
-        - Сохраняй HTML-форматирование, если оно присутствует в тексте.
-        - Если пользователь просит отредактировать текст — отвечай только
-          обработанным текстом без пояснений, если не просят иначе.
-        - Если пользователь задаёт вопрос или просит написать что-то с нуля —
-          отвечай развёрнуто и по делу.
+        Чаще всего тебя просят о работе с текстом: написать материал с нуля,
+        вычитать черновик, предложить заголовок, лид или структуру. Но ты
+        обычный собеседник: если спрашивают о другом — отвечай по существу,
+        а не переводи разговор обратно на теннис.
+
+        Как отвечать:
+        - Пиши на языке собеседника.
+        - Отвечай в Markdown: **жирный**, списки, заголовки. Разметку
+          разбирает редактор, поэтому HTML-теги руками писать не нужно.
+        - Береги факты: имена игроков, счёт, даты и названия турниров.
+          Не уверен — так и скажи, вместо того чтобы угадывать.
+        - Пиши так, как принято в спортивной журналистике, и свободно
+          пользуйся теннисной терминологией.
+        - Просят отредактировать или переписать — отдавай готовый текст без
+          вступлений вроде «вот исправленный вариант». Короткая ремарка
+          уместна, если ты поменял смысл или заметил фактическую ошибку.
+        - На вопрос отвечай развёрнуто, на просьбу — делом.
+        """;
+
+    private static final String DOCUMENT_PREAMBLE = """
+
+        ---
+
+        Ниже — материал, открытый сейчас в редакторе. Это справочный
+        контекст, а не задание: собеседник может спрашивать о нём, а может
+        и о чём-то постороннем. Отталкивайся от того, о чём тебя спросили.
+
+        """;
+
+    private static final String SELECTION_PREAMBLE = """
+
+        ---
+
+        Ниже — фрагмент, который собеседник выделил в редакторе. Скорее
+        всего, речь именно о нём.
+
         """;
 
     private final AnthropicClient client;
@@ -62,15 +83,8 @@ public class AiChatService {
         var builder = MessageCreateParams.builder()
                 .model(Model.CLAUDE_SONNET_4_5)
                 .maxTokens(4096L)
-                .system(SYSTEM_PROMPT);
+                .system(buildSystem(request));
 
-        // If article context is provided, inject it as the first exchange
-        if (request.context() != null && !request.context().isBlank()) {
-            builder.addUserMessage("Контекст — текст статьи, с которой я работаю:\n\n" + request.context());
-            builder.addAssistantMessage("Понял, работаю с этим текстом. Что нужно сделать?");
-        }
-
-        // Add conversation history from the frontend
         for (ChatMessage msg : request.messages()) {
             if ("user".equals(msg.role())) {
                 builder.addUserMessage(msg.content());
@@ -80,5 +94,26 @@ public class AiChatService {
         }
 
         return builder.build();
+    }
+
+    /**
+     * Puts the article into the system block rather than a fabricated exchange.
+     *
+     * <p>The previous version opened every conversation with an invented pair of
+     * turns — the article as a user message, and an assistant reply saying it was
+     * ready to work on that text. Nobody said that second line, and it framed
+     * every following question as a task about the article, which is why a plain
+     * greeting came back as a menu of editing services.
+     *
+     * <p>Standing instructions belong in the system block anyway. It also opens
+     * the door to prompt caching later, so a long article stops being re-billed
+     * as input on every turn.
+     */
+    private String buildSystem(AiChatRequest request) {
+        var context = request.context();
+        if (context == null || context.isBlank()) {
+            return SYSTEM_PROMPT;
+        }
+        return SYSTEM_PROMPT + (request.isSelection() ? SELECTION_PREAMBLE : DOCUMENT_PREAMBLE) + context;
     }
 }

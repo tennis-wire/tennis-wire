@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
     Box,
     Paper,
@@ -10,6 +10,7 @@ import {
     Tooltip,
 } from '@mui/material'
 import { Send, Close, ContentCopy, Check, Refresh, Psychology } from '@mui/icons-material'
+import { useEditorState } from '@tiptap/react'
 import type { Editor } from '@tiptap/react'
 import { useAppTheme } from '../../../theme'
 
@@ -30,6 +31,15 @@ interface Props {
     onClose: () => void
 }
 
+/**
+ * Stands in for when there is no editor at all.
+ *
+ * `useEditorState` has nothing to run its selector against in that case and
+ * returns null, which is a different situation from an editor that exists but
+ * holds an empty document — the selector handles that one itself.
+ */
+const EMPTY_CONTEXT = { text: '', isSelection: false }
+
 export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
     const [messages, setMessages] = useState<Message[]>([])
     const [input, setInput] = useState('')
@@ -39,13 +49,25 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
     const abortRef = useRef<AbortController | null>(null)
     const { colors } = useAppTheme()
 
-    const getContext = useCallback((): { text: string; isSelection: boolean } => {
-        if (!editor) return { text: '', isSelection: false }
-        const { from, to } = editor.state.selection
-        const selectedText = editor.state.doc.textBetween(from, to, ' ')
-        if (selectedText.trim()) return { text: selectedText, isSelection: true }
-        return { text: editor.getText(), isSelection: false }
-    }, [editor])
+    /**
+     * Recomputed on every editor transaction rather than on React renders.
+     *
+     * The panel has no state of its own that changes when a selection moves, so
+     * reading the selection during render left the badge showing whatever it
+     * happened to compute last — it only caught up when something unrelated,
+     * like saving a draft, forced a re-render.
+     */
+    const context =
+        useEditorState({
+            editor,
+            selector: ({ editor: e }): { text: string; isSelection: boolean } => {
+                if (!e) return { text: '', isSelection: false }
+                const { from, to } = e.state.selection
+                const selectedText = e.state.doc.textBetween(from, to, ' ')
+                if (selectedText.trim()) return { text: selectedText, isSelection: true }
+                return { text: e.getText(), isSelection: false }
+            },
+        }) ?? EMPTY_CONTEXT
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -58,8 +80,6 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
     const handleSend = async (customPrompt?: string) => {
         const prompt = customPrompt || input.trim()
         if (!prompt || isLoading) return
-
-        const context = getContext()
 
         const userMessage: Message = {
             id: Date.now().toString(),
@@ -97,6 +117,7 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
                     )
                 },
                 context: context.text || undefined,
+                isSelection: context.isSelection,
                 signal: abortRef.current.signal,
             })
         } catch (error: unknown) {
@@ -168,8 +189,6 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
         setMessages([])
         setIsLoading(false)
     }
-
-    const context = getContext()
 
     if (!isOpen) return null
 
