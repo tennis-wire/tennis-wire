@@ -5,14 +5,19 @@
 
 ## Запуск
 
+Все команды — из корня репозитория.
+
 ```bash
 docker compose up -d postgres keycloak
-# один раз, если volume создан до появления сервиса:
-docker compose exec postgres psql -U postgres -c \
-  "CREATE ROLE discussion WITH LOGIN PASSWORD 'discussion'; CREATE DATABASE tennis_discussion OWNER discussion;"
-./gradlew :discussion-service:bootRun --args='--spring.profiles.active=local'   # swagger на :8093/swagger-ui.html
-./gradlew :discussion-service:test                                              # Testcontainers, postgres:18
-scripts/smoke.sh                                                                # сквозной прогон через dev-realm
+# один раз, если volume создан до появления сервиса (два отдельных -c: CREATE DATABASE
+# не работает внутри транзакции, в которую psql заворачивает одну строку команд):
+docker compose exec postgres psql -U postgres \
+  -c "CREATE ROLE discussion WITH LOGIN PASSWORD 'discussion'" \
+  -c "CREATE DATABASE tennis_discussion OWNER discussion"
+./gradlew :discussion-service:bootRun --args='--spring.profiles.active=local'  # swagger на :8093/swagger-ui.html
+./gradlew :discussion-service:test                                             # Testcontainers, postgres:18
+discussion-service/scripts/smoke.sh                                            # сквозной прогон через dev-realm
+BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 # то же через gateway
 ```
 
 ## API

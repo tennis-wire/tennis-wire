@@ -63,9 +63,15 @@ docker compose down -v && docker compose up -d   # wipes all local data
 or apply the same change to the running instance:
 
 ```bash
-docker compose exec postgres psql -U postgres -c \
-  "CREATE ROLE <role> WITH LOGIN PASSWORD '<password>'; CREATE DATABASE <db> OWNER <role>;"
+docker compose exec postgres psql -U postgres \
+  -c "CREATE ROLE <role> WITH LOGIN PASSWORD '<password>'" \
+  -c "CREATE DATABASE <db> OWNER <role>"
 ```
+
+Two separate `-c` flags, not one with both statements: psql wraps a single
+command string in an implicit transaction, and `CREATE DATABASE` cannot run
+inside one. The init script above gets away with a heredoc because statements
+read from stdin are each sent on their own, in autocommit.
 
 The PostgreSQL major version is pinned in two places that must move together:
 the root `docker-compose.yml` and `TestcontainersConfiguration` in each Java
@@ -181,6 +187,7 @@ intended behaviour, not a misconfiguration.
 | api-gateway | 8090 | routes `/api/**` to the services below; terminates CORS |
 | editorial-bff | 8080 | AI chat and translation |
 | content-service | 8091 | requires PostgreSQL |
+| discussion-service | 8093 | requires PostgreSQL |
 | transcription-service | 8001 | requires Redis + MinIO |
 | editorial-ui (Vite) | 5173 | |
 | public-web (Next.js) | 3000 | |
@@ -190,6 +197,7 @@ intended behaviour, not a misconfiguration.
 
 ```bash
 ./gradlew :content-service:bootRun
+./gradlew :discussion-service:bootRun
 ./gradlew :editorial-bff:bootRun
 ./gradlew :api-gateway:bootRun
 ```
