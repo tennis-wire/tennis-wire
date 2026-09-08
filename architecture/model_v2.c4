@@ -311,21 +311,18 @@ model {
       technology 'TBD'
     }
 
-    // ----- COMMENTS SERVICE -----
-    container commentsService 'Comments Service' {
-      #planned
-      description 'Комментарии к контенту'
+    // ----- DISCUSSION SERVICE -----
+    container discussionService 'Discussion Service' {
+      description 'Обсуждения: древовидные комментарии к любой сущности платформы, peer-блокировки, временные ограничения на комменты'
       technology 'Java, Spring Boot'
 
-      service commentsApi 'Comments API' {
-        #planned
-        description 'CRUD для комментариев'
+      service discussionApi 'Discussion API' {
+        description 'Комментарии и ветки (/api/discussion/comments/**), блокировки (/api/discussion/blocks/**), модерация (/api/discussion/moderation/**). Чтение анонимно, но токен, если есть, применяется: по нему считаются блокировки зрителя'
       }
 
-      database commentsDb 'Comments DB' {
-        #planned
-        description 'Комментарии, реакции'
-        technology 'PostgreSQL'
+      database discussionDb 'Discussion DB' {
+        description 'Комментарии (дерево на ltree), блокировки, ограничения на комменты'
+        technology 'PostgreSQL, Liquibase'
       }
     }
 
@@ -404,7 +401,7 @@ model {
   tennisService.apiGateway -> tennisService.aggregator.aggregatorApi '/api/aggregator/**'
   tennisService.apiGateway -> tennisService.searchService '/api/search/**'
   tennisService.apiGateway -> tennisService.userService.userApi '/api/users/**'
-  tennisService.apiGateway -> tennisService.commentsService.commentsApi '/api/comments/**'
+  tennisService.apiGateway -> tennisService.discussionService.discussionApi '/api/discussion/**'
 
   // --- Editorial BFF -> External APIs ---
   tennisService.editorialBff.editorialBffApi -> externalApis.deepl 'Переводы'
@@ -421,9 +418,9 @@ model {
   tennisService.contentService.contentApi -> tennisService.contentService.contentDb 'CRUD'
   tennisService.contentService.contentApi -> tennisService.searchService 'Индексация'
 
-  // --- User / Comments internal ---
+  // --- User / Discussion internal ---
   tennisService.userService.userApi -> tennisService.userService.userDb 'Профили, identity_link'
-  tennisService.commentsService.commentsApi -> tennisService.commentsService.commentsDb 'CRUD'
+  tennisService.discussionService.discussionApi -> tennisService.discussionService.discussionDb 'CRUD'
 
   // --- Auth: клиенты -> Identity Provider ---
   // Идентификаторы клиентов и роли — auth.md §2–§3
@@ -436,12 +433,13 @@ model {
   tennisService.apiGateway -> tennisService.identity.identityOidc 'JWKS: валидация JWT, роль -> маршрут'
   tennisService.contentService.contentApi -> tennisService.identity.identityOidc 'JWKS: валидация JWT'
   tennisService.transcriptionService.transcriptionApi -> tennisService.identity.identityOidc 'JWKS: валидация JWT, owner у задач'
+  tennisService.discussionService.discussionApi -> tennisService.identity.identityOidc 'JWKS: валидация JWT; на анонимных чтениях токен необязателен, но валидируется'
 
   // --- Identity internal ---
   tennisService.identity.identityOidc -> tennisService.identity.identityDb 'Realm data'
 
   // --- Moderation bot -> API Gateway ---
-  tennisService.moderationBot -> tennisService.apiGateway 'Пометка / скрытие комментариев (/api/comments/**)'
+  tennisService.moderationBot -> tennisService.apiGateway 'Скрытие комментариев (/api/discussion/moderation/**)'
 
   // --- Client Apps -> API Gateway ---
   tennisService.webApp.publicSite -> tennisService.apiGateway 'Контент (пока не подключено: работает на моках)'
@@ -515,6 +513,8 @@ views {
     include tennisService.apiGateway
     include tennisService.contentService
     include tennisService.contentService.*
+    include tennisService.discussionService
+    include tennisService.discussionService.*
 
     exclude element.tag = #planned
   }
@@ -579,6 +579,7 @@ views {
     include tennisService.apiGateway
     include tennisService.contentService.contentApi
     include tennisService.transcriptionService.transcriptionApi
+    include tennisService.discussionService.discussionApi
     include tennisService.userService
     include tennisService.userService.*
   }

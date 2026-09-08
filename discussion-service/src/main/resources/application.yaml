@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: discussion-service
+
+  datasource:
+    # stringtype=unspecified is required: the schema uses the native PostgreSQL enum
+    # type block_mode and the ltree type. Do not drop it.
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:tennis_discussion}?stringtype=unspecified
+    username: ${DB_USERNAME:discussion}
+    password: ${DB_PASSWORD:discussion}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Same issuer and audience as the gateway (auth.md §7): the service
+          # validates the token itself rather than trusting whoever forwarded it.
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/tennis-wire}
+          audiences:
+            - tennis-wire-api
+
+server:
+  port: 8093
+
+logging:
+  level:
+    com.tenniswire.discussion_service: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+
+springdoc:
+  # Off by default: the docs are not routed through the gateway and describe the
+  # whole API to anyone who reaches the service port. The local profile turns them on.
+  api-docs:
+    enabled: false
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: false
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method

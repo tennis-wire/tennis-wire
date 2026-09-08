@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
@@ -42,6 +43,14 @@ public class SecurityConfig {
                         .permitAll()
                         .pathMatchers(EDITORIAL_PATHS)
                         .hasRole(Roles.AUTHOR)
+                        // Discussion (auth.md §6): reads anonymous, writes need user, moderation
+                        // needs a moderator or the bot. The service repeats and refines these.
+                        .pathMatchers(HttpMethod.GET, "/api/discussion/comments/**")
+                        .permitAll()
+                        .pathMatchers("/api/discussion/moderation/**")
+                        .hasAnyRole(Roles.MODERATOR, Roles.MODERATOR_BOT)
+                        .pathMatchers("/api/discussion/**")
+                        .hasRole(Roles.USER)
                         // Fail closed: a route without a rule is unreachable, not merely
                         // reachable by anyone who happens to be logged in.
                         .anyExchange()
@@ -68,7 +77,7 @@ public class SecurityConfig {
                 "http://localhost:3000" // Public Web (Next.js dev server)
                 // TODO: add production domain
                 ));
-        config.setAllowedMethods(List.of("GET", "POST", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Content-Type", "Authorization"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);

@@ -92,7 +92,8 @@ Realm-роли (client-роли не используем — проще мап�
 ## 5. Модель идентичности
 
 - `user-service` владеет собственным `user_id` (UUID) и таблицей `identity_link (provider, sub) → user_id`. Запись создаётся при первом аутентифицированном обращении (upsert по `(provider, sub)`).
-- Остальные сервисы с пользовательскими данными (comments, fantasy) хранят только `user_id`. `sub` у них не появляется в схеме.
+- Остальные сервисы с пользовательскими данными (discussion, fantasy) хранят только `user_id`. `sub` у них не появляется в схеме.
+- **Временное отступление (`discussion-service`).** До появления `user-service` резолвер `security/UserIdResolver` берёт claim `user_id`, а если его нет — `sub`. То есть сегодня `comment.author_id`, `block.blocker_id/blocked_id` и `user_restriction.user_id/issued_by` физически содержат Keycloak `sub`. Замена — один бин, но данные, записанные до шага 5, придётся перелить через `identity_link`. Пока сервис не поднят в среде с настоящими пользователями, цена нулевая; после — это миграция.
 - **Staff-контур** (`content-service`, `transcription-service`) использует `sub` напрямую — для owner у задач и аудита. Смена провайдера в staff-контуре обрабатывается вручную, объём данных мал.
 - **Открытый вопрос:** как сервисы получают `user_id` из запроса, в котором есть только `sub`. Варианты: (а) резолв через `user-service` с кэшем; (б) custom claim `user_id` через user attribute + protocol mapper — но первый токен после регистрации claim не содержит. Решать при появлении второго сервиса-потребителя.
 
@@ -105,9 +106,9 @@ Realm-роли (client-роли не используем — проще мап�
 | `/api/public/**` | анонимно | |
 | `/api/editorial/**`, `/api/ai/**`, `/api/translate/**`, `/api/transcribe/**` | `author` | |
 | `/api/aggregator/**` | `author` | planned |
-| `/api/comments/**` GET | анонимно | planned |
-| `/api/comments/**` POST/PATCH/DELETE (свои) | `user` | planned |
-| `/api/comments/**` модерационные операции | `moderator` или `moderator-bot` | planned; точный набор путей — при проектировании comments-service |
+| `/api/discussion/comments/**` GET | анонимно | токен, если есть, всё равно валидируется — по нему применяются блокировки зрителя |
+| `/api/discussion/comments/**` POST/DELETE, `/api/discussion/blocks/**` | `user` | |
+| `/api/discussion/moderation/**` | `moderator` или `moderator-bot` | сервис сужает: `/moderation/restrictions/**` — только `moderator` |
 | `/api/users/me/**` | `user` | planned |
 | `/api/users/**` (прочее) | `admin` | planned |
 
@@ -115,7 +116,7 @@ CORS терминируется в gateway (сделано).
 
 ## 7. Валидация в сервисах
 
-- **Java (`api-gateway`, `content-service`, `editorial-bff`):** `spring-boot-starter-oauth2-resource-server`. `issuer-uri` и `audiences` — свойства `spring.security.oauth2.resourceserver.jwt.*`, кода для проверки `aud` писать не нужно: Boot сам добавляет валидатор (свойство есть с 2.7, работает одинаково для servlet и reactive). Собственного кода остаётся только конвертер ролей `realm_access.roles` → `ROLE_*`. Gateway дополнительно пробрасывает `Authorization` downstream (token relay).
+- **Java (`api-gateway`, `content-service`, `editorial-bff`, `discussion-service`):** `spring-boot-starter-oauth2-resource-server`. `issuer-uri` и `audiences` — свойства `spring.security.oauth2.resourceserver.jwt.*`, кода для проверки `aud` писать не нужно: Boot сам добавляет валидатор (свойство есть с 2.7, работает одинаково для servlet и reactive). Собственного кода остаётся только конвертер ролей `realm_access.roles` → `ROLE_*`. Gateway дополнительно пробрасывает `Authorization` downstream (token relay).
 - **Python (`transcription-service`):** PyJWT + `PyJWKClient` (кэш JWKS из коробки), проверка `iss`, `aud`, `exp`, роли `author`. Зависимость FastAPI в `api/deps.py`. Не считается долгом — делается в том же шаге, что и Java-сервисы.
 - **`transcription-service` — owner у задачи:** при создании job сохраняется `sub` (и `preferred_username` для логов); появляется список «мои задачи»; вопрос «кто занял GPU-воркера» получает ответ.
 
@@ -148,7 +149,7 @@ CORS терминируется в gateway (сделано).
 | 2 ✅ | `security/gateway-auth` | Gateway → resource server: §6, конвертер ролей, `aud`, закрытие actuator; тестовая RSA-пара + один Testcontainers-тест |
 | 3 ✅ | `refactor/editorial-ui/api-client`, `security/editorial-ui/login` | Общая обёртка над `fetch`; сужение redirect URI до конкретных путей; PKCE-логин, гвард маршрутов, выход; Bearer и политика 401/403 с single-flight обновлением; баннер истёкшей сессии с входом через попап; черновик по пользователю. Решения — §4 |
 | 4 | `security/services-jwt` | `content-service` и `transcription-service` валидируют JWT сами; owner у job и список «мои» |
-| 5 | позже | `public-web` (Auth.js), `mobile` (`expo-auth-session`), `user-service` с `user_id` и `identity_link`, per-client сессии для читателей |
+| 5 | позже | `public-web` (Auth.js), `mobile` (`expo-auth-session`), `user-service` с `user_id` и `identity_link`, per-client сессии для читателей; здесь же — замена резолвера в `discussion-service` и перелив `author_id` с `sub` на `user_id` (§5) |
 
 Модель `model_v2.c4` обновляется отдельной веткой после шага 2, когда топология реально изменится.
 
