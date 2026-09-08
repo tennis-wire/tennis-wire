@@ -105,9 +105,9 @@ Realm-роли (client-роли не используем — проще мап�
 | `/api/public/**` | анонимно | |
 | `/api/editorial/**`, `/api/ai/**`, `/api/translate/**`, `/api/transcribe/**` | `author` | |
 | `/api/aggregator/**` | `author` | planned |
-| `/api/comments/**` GET | анонимно | planned |
-| `/api/comments/**` POST/PATCH/DELETE (свои) | `user` | planned |
-| `/api/comments/**` модерационные операции | `moderator` или `moderator-bot` | planned; точный набор путей — при проектировании comments-service |
+| `/api/discussion/comments/**` GET | анонимно | токен, если есть, всё равно валидируется — по нему применяются блокировки зрителя |
+| `/api/discussion/comments/**` POST/DELETE, `/api/discussion/blocks/**` | `user` | |
+| `/api/discussion/moderation/**` | `moderator` или `moderator-bot` | сервис сужает: `/moderation/restrictions/**` — только `moderator` |
 | `/api/users/me/**` | `user` | planned |
 | `/api/users/**` (прочее) | `admin` | planned |
 
