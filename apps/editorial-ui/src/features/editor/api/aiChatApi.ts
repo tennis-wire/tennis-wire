@@ -5,21 +5,24 @@ export interface ChatMessage {
     content: string
 }
 
+export type AiModelId = 'HAIKU' | 'SONNET' | 'OPUS'
+
 interface SendChatOptions {
     messages: ChatMessage[]
     onChunk: (accumulated: string) => void
     context?: string
     isSelection?: boolean
+    model?: AiModelId
     signal?: AbortSignal
 }
 
 export async function sendChatMessage(options: SendChatOptions): Promise<string> {
-    const { messages, onChunk, context, isSelection, signal } = options
+    const { messages, onChunk, context, isSelection, model, signal } = options
 
     const response = await apiFetch(`/api/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages, context, isSelection }),
+        body: JSON.stringify({ messages, context, isSelection, model }),
         signal,
     })
 

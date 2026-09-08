@@ -2,7 +2,6 @@ package com.tenniswire.editorial_bff.ai;
 
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.models.messages.MessageCreateParams;
-import com.anthropic.models.messages.Model;
 import com.tenniswire.editorial_bff.ai.dto.AiChatRequest;
 import com.tenniswire.editorial_bff.ai.dto.ChatMessage;
 import java.util.function.Consumer;
@@ -53,6 +52,8 @@ public class AiChatService {
 
         """;
 
+    private static final long MAX_TOKENS = 8192L;
+
     private final AnthropicClient client;
 
     public AiChatService(AnthropicClient client) {
@@ -81,8 +82,8 @@ public class AiChatService {
 
     private MessageCreateParams buildParams(AiChatRequest request) {
         var builder = MessageCreateParams.builder()
-                .model(Model.CLAUDE_SONNET_4_5)
-                .maxTokens(4096L)
+                .model(request.model().toSdk())
+                .maxTokens(MAX_TOKENS)
                 .system(buildSystem(request));
 
         for (ChatMessage msg : request.messages()) {

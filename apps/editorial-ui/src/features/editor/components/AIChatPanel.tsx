@@ -8,6 +8,8 @@ import {
     Button,
     CircularProgress,
     Tooltip,
+    Select,
+    MenuItem,
 } from '@mui/material'
 import { Send, Close, ContentCopy, Check, Refresh, Psychology } from '@mui/icons-material'
 import { useEditorState } from '@tiptap/react'
@@ -15,6 +17,7 @@ import type { Editor } from '@tiptap/react'
 import { useAppTheme } from '../../../theme'
 
 import { sendChatMessage } from '../api/aiChatApi'
+import type { AiModelId } from '../api/aiChatApi'
 import { MarkdownMessage } from './MarkdownMessage'
 import { markdownToHtml } from '../lib/markdown'
 
@@ -40,11 +43,18 @@ interface Props {
  */
 const EMPTY_CONTEXT = { text: '', isSelection: false }
 
+const AI_MODELS: { id: AiModelId; label: string }[] = [
+    { id: 'HAIKU', label: 'Haiku · быстрая' },
+    { id: 'SONNET', label: 'Sonnet · обычная' },
+    { id: 'OPUS', label: 'Opus · сильная' },
+]
+
 export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
     const [messages, setMessages] = useState<Message[]>([])
     const [input, setInput] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [copiedId, setCopiedId] = useState<string | null>(null)
+    const [model, setModel] = useState<AiModelId>('SONNET')
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const abortRef = useRef<AbortController | null>(null)
     const { colors } = useAppTheme()
@@ -118,6 +128,7 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
                 },
                 context: context.text || undefined,
                 isSelection: context.isSelection,
+                model,
                 signal: abortRef.current.signal,
             })
         } catch (error: unknown) {
@@ -252,12 +263,36 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
                     py: 1,
                     backgroundColor: colors.bgAlt,
                     borderBottom: `1px solid ${colors.border}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 1,
                 }}
             >
                 <Typography sx={{ fontSize: '0.75rem', color: colors.textMuted }}>
                     📎 Контекст: {context.isSelection ? 'выделенный текст' : 'весь текст'}
                     {context.text && ` (${context.text.split(/\s+/).length} слов)`}
                 </Typography>
+
+                <Select
+                    value={model}
+                    onChange={(e) => setModel(e.target.value as AiModelId)}
+                    variant="standard"
+                    disableUnderline
+                    disabled={isLoading}
+                    sx={{
+                        fontSize: '0.75rem',
+                        color: colors.textMuted,
+                        '& .MuiSelect-select': { py: 0, pr: '20px !important' },
+                        '& .MuiSelect-icon': { color: colors.textMuted },
+                    }}
+                >
+                    {AI_MODELS.map((m) => (
+                        <MenuItem key={m.id} value={m.id} sx={{ fontSize: '0.8rem' }}>
+                            {m.label}
+                        </MenuItem>
+                    ))}
+                </Select>
             </Box>
 
             {/* messages */}

@@ -14,4 +14,12 @@ import java.util.List;
  *                    almost always what the question is about, the full text is
  *                    usually just background
  */
-public record AiChatRequest(@NotEmpty @Valid List<ChatMessage> messages, String context, boolean isSelection) {}
+public record AiChatRequest(
+        @NotEmpty @Valid List<ChatMessage> messages, String context, boolean isSelection, AiModel model) {
+
+    public AiChatRequest {
+        if (model == null) {
+            model = AiModel.SONNET;
+        }
+    }
+}
