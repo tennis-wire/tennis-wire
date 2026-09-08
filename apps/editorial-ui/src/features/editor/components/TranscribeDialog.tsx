@@ -420,7 +420,7 @@ export const TranscribeDialog: React.FC<Props> = ({ open, onClose, onInsert }) =
                                 p: 2,
                                 maxHeight: 300,
                                 overflow: 'auto',
-                                backgroundColor: '#fafafa',
+                                backgroundColor: 'background.default',
                                 fontFamily: 'monospace',
                                 fontSize: '0.875rem',
                                 whiteSpace: 'pre-wrap',
