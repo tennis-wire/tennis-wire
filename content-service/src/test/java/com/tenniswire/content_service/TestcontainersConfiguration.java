@@ -14,6 +14,8 @@ class TestcontainersConfiguration {
     @Bean
     @ServiceConnection
     PostgreSQLContainer postgresContainer() {
-        return new PostgreSQLContainer(POSTGRES_IMAGE);
+        // Same parameter as application.yaml: the schema's native enum types need it,
+        // and @ServiceConnection builds the JDBC URL from the container, not from the yaml.
+        return new PostgreSQLContainer(POSTGRES_IMAGE).withUrlParam("stringtype", "unspecified");
     }
 }

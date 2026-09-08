@@ -9,6 +9,7 @@ on:
       - "gradle.properties"
       - "gradle/**"
       - "gradlew*"
+      - "auth-support/**"
       - "editorial-bff/**"
       - "api-gateway/**"
       - "content-service/**"

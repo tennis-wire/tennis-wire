@@ -4,6 +4,7 @@ plugins {
 
 rootProject.name = "tennis-wire"
 
+include("auth-support")
 include("editorial-bff")
 include("api-gateway")
 include("content-service")

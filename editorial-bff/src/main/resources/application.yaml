@@ -1,6 +1,17 @@
 spring:
   application:
     name: Editorial BFF
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Same issuer and audience as the gateway (auth.md §7): the service
+          # validates the token itself rather than trusting whoever forwarded it.
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/tennis-wire}
+          audiences:
+            - tennis-wire-api
+
 server:
   port: 8080
 
