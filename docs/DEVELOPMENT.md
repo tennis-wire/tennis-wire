@@ -51,6 +51,7 @@ superuser.
 | Service | Database | Role | Password |
 |---|---|---|---|
 | content-service | `tennis_content` | `content` | `content` |
+| discussion-service | `tennis_discussion` | `discussion` | `discussion` |
 
 To add a service, append a `create_service_db` line to the init script, then
 either recreate the volume:
@@ -67,8 +68,8 @@ docker compose exec postgres psql -U postgres -c \
 ```
 
 The PostgreSQL major version is pinned in two places that must move together:
-the root `docker-compose.yml` and `TestcontainersConfiguration` in
-content-service.
+the root `docker-compose.yml` and `TestcontainersConfiguration` in each Java
+service (content-service, discussion-service).
 
 Note for PostgreSQL 18+: the data volume mounts at `/var/lib/postgresql`, not
 `/var/lib/postgresql/data`. The entrypoint refuses to start if it finds a mount

@@ -1,0 +1,7 @@
+# Development profile: enables the OpenAPI docs at http://localhost:8093/swagger-ui.html.
+# Not for a deployed environment. Same pattern as content-service.
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
