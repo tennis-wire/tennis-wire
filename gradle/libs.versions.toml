@@ -6,7 +6,7 @@ spotbugs-plugin = "6.5.11"
 spotbugs = "4.10.4"
 spotless = "8.10.2"
 testcontainers-keycloak = "4.2.0"
-wiremock = "3.13.1"
+wiremock = "3.13.2"
 
 [libraries]
 anthropic-java = { module = "com.anthropic:anthropic-java", version = "2.61.0" }
