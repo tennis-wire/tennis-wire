@@ -29,7 +29,7 @@ const CuratorPage: React.FC = () => {
                 sx={{
                     p: 4,
                     textAlign: 'center',
-                    bgcolor: '#f5f5f5',
+                    bgcolor: 'background.default',
                 }}
             >
                 <Typography variant="h6" color="text.secondary">

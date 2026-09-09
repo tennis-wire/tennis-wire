@@ -13,9 +13,10 @@ import {
     Paper,
     IconButton,
 } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import { Upload, Delete } from '@mui/icons-material'
 import type { ContentMetadata, ContentType } from '../types/content.ts'
-import { useAppTheme } from '../../../theme'
+import { RADIUS, useAppTheme } from '../../../theme'
 
 interface Props {
     metadata: ContentMetadata
@@ -122,17 +123,7 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, readingTime
     }
 
     return (
-        <Paper
-            elevation={0}
-            sx={{
-                p: 3,
-                mb: 2.5,
-                border: `1px solid ${colors.border}`,
-                borderRadius: '14px',
-                backgroundColor: colors.surface,
-                boxShadow: colors.cardShadow,
-            }}
-        >
+        <Paper elevation={0} sx={{ p: 3, mb: 2.5, border: 1, borderColor: 'divider' }}>
             <Box
                 sx={{
                     display: 'flex',
@@ -242,20 +233,20 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, readingTime
                                 style={{
                                     maxWidth: '100%',
                                     maxHeight: 200,
-                                    borderRadius: 10,
+                                    borderRadius: RADIUS.md,
                                     objectFit: 'cover',
                                 }}
                             />
                             <IconButton
                                 size="small"
                                 onClick={handleCoverRemove}
-                                sx={{
+                                sx={(theme) => ({
                                     position: 'absolute',
                                     top: 8,
                                     right: 8,
-                                    bgcolor: 'rgba(255,255,255,0.9)',
-                                    '&:hover': { bgcolor: 'rgba(255,255,255,1)' },
-                                }}
+                                    bgcolor: alpha(theme.palette.background.paper, 0.9),
+                                    '&:hover': { bgcolor: theme.palette.background.paper },
+                                })}
                             >
                                 <Delete fontSize="small" />
                             </IconButton>

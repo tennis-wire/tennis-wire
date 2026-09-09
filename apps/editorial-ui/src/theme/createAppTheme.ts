@@ -1,6 +1,8 @@
 import { createTheme } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import type { PaletteColors } from './palettes'
 import type { FontPair } from './fonts'
+import { RADIUS, TINT } from './tokens'
 
 export function createAppTheme(colors: PaletteColors, fontPair: FontPair, isDark: boolean) {
     return createTheme({
@@ -38,7 +40,7 @@ export function createAppTheme(colors: PaletteColors, fontPair: FontPair, isDark
             h6: { fontFamily: fontPair.display },
         },
         shape: {
-            borderRadius: 10,
+            borderRadius: RADIUS.md,
         },
         components: {
             MuiCssBaseline: {
@@ -53,11 +55,21 @@ export function createAppTheme(colors: PaletteColors, fontPair: FontPair, isDark
             },
             MuiPaper: {
                 styleOverrides: {
+                    // The card look, so components stop restating surface,
+                    // border colour, shadow and radius on every <Paper>.
                     root: {
                         backgroundImage: 'none',
                         backgroundColor: colors.surface,
                         borderColor: colors.border,
                         boxShadow: colors.cardShadow,
+                        borderRadius: RADIUS.lg,
+                    },
+                    // Outlined papers are the small panes inside dialogs, not
+                    // cards: they were inheriting a card shadow they never
+                    // asked for.
+                    outlined: {
+                        boxShadow: 'none',
+                        borderRadius: RADIUS.md,
                     },
                 },
             },
@@ -67,7 +79,7 @@ export function createAppTheme(colors: PaletteColors, fontPair: FontPair, isDark
                         fontFamily: fontPair.body,
                         textTransform: 'none',
                         fontWeight: 600,
-                        borderRadius: 8,
+                        borderRadius: RADIUS.md,
                     },
                     contained: {
                         boxShadow: 'none',
@@ -86,11 +98,11 @@ export function createAppTheme(colors: PaletteColors, fontPair: FontPair, isDark
                         borderColor: colors.border,
                         color: colors.textSecondary,
                         '&.Mui-selected': {
-                            backgroundColor: `${colors.primary}14`,
+                            backgroundColor: alpha(colors.primary, TINT.soft),
                             color: colors.primary,
                             borderColor: colors.primary,
                             '&:hover': {
-                                backgroundColor: `${colors.primary}20`,
+                                backgroundColor: alpha(colors.primary, TINT.medium),
                             },
                         },
                     },
@@ -101,7 +113,7 @@ export function createAppTheme(colors: PaletteColors, fontPair: FontPair, isDark
                     root: {
                         color: colors.textSecondary,
                         '&:hover': {
-                            backgroundColor: `${colors.primary}0A`,
+                            backgroundColor: alpha(colors.primary, TINT.faint),
                         },
                     },
                 },
@@ -170,7 +182,7 @@ export function createAppTheme(colors: PaletteColors, fontPair: FontPair, isDark
                         backgroundColor: isDark ? colors.surface : colors.text,
                         color: isDark ? colors.text : colors.bg,
                         border: isDark ? `1px solid ${colors.border}` : 'none',
-                        borderRadius: 6,
+                        borderRadius: RADIUS.sm,
                     },
                 },
             },
@@ -178,7 +190,7 @@ export function createAppTheme(colors: PaletteColors, fontPair: FontPair, isDark
                 styleOverrides: {
                     paper: {
                         backgroundColor: colors.surface,
-                        borderRadius: 14,
+                        borderRadius: RADIUS.lg,
                         boxShadow: colors.cardShadow,
                     },
                 },
@@ -187,7 +199,7 @@ export function createAppTheme(colors: PaletteColors, fontPair: FontPair, isDark
                 styleOverrides: {
                     root: {
                         fontFamily: fontPair.body,
-                        borderRadius: 10,
+                        borderRadius: RADIUS.md,
                     },
                 },
             },

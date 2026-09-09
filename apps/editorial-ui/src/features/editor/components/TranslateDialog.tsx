@@ -249,7 +249,7 @@ export const TranslateDialog: React.FC<Props> = ({
                         minHeight: 100,
                         maxHeight: 200,
                         overflow: 'auto',
-                        backgroundColor: result ? '#fff' : '#f5f5f5',
+                        backgroundColor: result ? 'background.paper' : 'background.default',
                     }}
                 >
                     {isLoading ? (

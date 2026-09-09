@@ -31,7 +31,7 @@ const PalettePreview: React.FC<{ paletteKey: PaletteKey; isDark: boolean }> = ({
                         height: 14,
                         borderRadius: '3px',
                         backgroundColor: color,
-                        border: '1px solid rgba(0,0,0,0.1)',
+                        border: `1px solid ${c.border}`,
                     }}
                 />
             ))}

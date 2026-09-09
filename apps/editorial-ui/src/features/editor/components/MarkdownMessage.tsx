@@ -2,7 +2,7 @@ import React from 'react'
 import { Box } from '@mui/material'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { useAppTheme } from '../../../theme'
+import { RADIUS, useAppTheme } from '../../../theme'
 
 interface Props {
     content: string
@@ -17,13 +17,13 @@ interface Props {
  * node offers nothing for that flavour to carry.
  */
 export const MarkdownMessage: React.FC<Props> = ({ content }) => {
-    const { colors } = useAppTheme()
+    const { colors, fontPair } = useAppTheme()
 
     return (
         <Box
             sx={{
                 fontSize: '0.875rem',
-                color: colors.text,
+                color: 'text.primary',
                 lineHeight: 1.6,
                 // The bubble's own padding provides the gap, so the outermost
                 // blocks must not add margins of their own on top of it.
@@ -31,7 +31,7 @@ export const MarkdownMessage: React.FC<Props> = ({ content }) => {
                 '& > *:last-child': { mb: 0 },
                 '& p': { m: 0, mb: 1.5 },
                 '& h1, & h2, & h3, & h4': {
-                    fontFamily: 'var(--tw-font-display)',
+                    fontFamily: fontPair.display,
                     fontSize: '1rem',
                     fontWeight: 700,
                     mt: 2,
@@ -41,20 +41,20 @@ export const MarkdownMessage: React.FC<Props> = ({ content }) => {
                 '& li': { mb: 0.5 },
                 '& li > p': { mb: 0 },
                 '& strong': { fontWeight: 700 },
-                '& a': { color: colors.primary },
+                '& a': { color: 'primary.main' },
                 '& blockquote': {
                     m: 0,
                     mb: 1.5,
                     pl: 1.5,
                     borderLeft: `3px solid ${colors.border}`,
-                    color: colors.textMuted,
+                    color: 'text.disabled',
                 },
                 '& code': {
                     fontFamily: 'monospace',
                     fontSize: '0.8125rem',
                     backgroundColor: colors.bgAlt,
                     px: 0.5,
-                    borderRadius: '4px',
+                    borderRadius: `${RADIUS.sm}px`,
                 },
                 '& pre': {
                     m: 0,
@@ -62,7 +62,7 @@ export const MarkdownMessage: React.FC<Props> = ({ content }) => {
                     p: 1,
                     overflow: 'auto',
                     backgroundColor: colors.bgAlt,
-                    borderRadius: '8px',
+                    borderRadius: `${RADIUS.md}px`,
                 },
                 '& pre code': { backgroundColor: 'transparent', px: 0 },
                 '& table': { borderCollapse: 'collapse', mb: 1.5 },
