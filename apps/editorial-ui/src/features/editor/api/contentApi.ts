@@ -143,12 +143,15 @@ export const tagsApi = {
     /**
      * List tags
      */
-    async list(params?: {
-        type?: string
-        search?: string
-        page?: number
-        size?: number
-    }): Promise<PagedResponse<Tag>> {
+    async list(
+        params?: {
+            type?: string
+            search?: string
+            page?: number
+            size?: number
+        },
+        signal?: AbortSignal
+    ): Promise<PagedResponse<Tag>> {
         const searchParams = new URLSearchParams()
         if (params?.type) searchParams.set('type', params.type)
         if (params?.search) searchParams.set('search', params.search)
@@ -156,7 +159,7 @@ export const tagsApi = {
         if (params?.size !== undefined) searchParams.set('size', String(params.size))
 
         const url = `/api/editorial/tags${searchParams.toString() ? `?${searchParams}` : ''}`
-        const response = await apiFetch(url)
+        const response = await apiFetch(url, { signal })
         return handleResponse<PagedResponse<Tag>>(response)
     },
 

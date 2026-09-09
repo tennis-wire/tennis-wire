@@ -15,13 +15,6 @@ export interface Tag {
     type: TagType
 }
 
-// Compact tag (for lists, without id)
-export interface TagCompact {
-    name: string
-    slug: string
-    type: TagType
-}
-
 // ===== API Response types =====
 
 // Full article response (with content)
@@ -128,7 +121,7 @@ export interface ApiError {
 interface BaseMetadata {
     title: string
     slug: string
-    tags: string[] // tag IDs for editing
+    tags: Tag[]
     type: ContentType
     // optional fields
     sourceUrl?: string

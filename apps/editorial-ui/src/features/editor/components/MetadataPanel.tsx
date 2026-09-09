@@ -4,7 +4,6 @@ import {
     Select,
     MenuItem,
     Box,
-    Chip,
     Stack,
     Typography,
     FormControl,
@@ -12,10 +11,13 @@ import {
     Button,
     Paper,
     IconButton,
+    Autocomplete,
 } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import { Upload, Delete } from '@mui/icons-material'
-import type { ContentMetadata, ContentType } from '../types/content.ts'
+import type { ContentMetadata, ContentType, Tag } from '../types/content.ts'
+import { TAG_TYPE_LABELS } from '../constants/tagTypes'
+import { useTagSearch } from '../hooks/useTagSearch'
 import { RADIUS, useAppTheme } from '../../../theme'
 
 interface Props {
@@ -26,7 +28,9 @@ interface Props {
 
 export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, readingTime }) => {
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const [tagInput, setTagInput] = React.useState('')
+    const [tagQuery, setTagQuery] = React.useState('')
+    const [tagsOpen, setTagsOpen] = React.useState(false)
+    const tagSearch = useTagSearch(tagQuery, tagsOpen)
     const { colors } = useAppTheme()
 
     const isArticle = metadata.type === 'article'
@@ -73,24 +77,6 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, readingTime
             onChange({ ...metadata, slug: newSlug })
         }
     }, [metadata.title, metadata.slug, metadata, onChange])
-
-    const handleAddTag = () => {
-        if (tagInput.trim() && !metadata.tags.includes(tagInput.trim())) {
-            onChange({ ...metadata, tags: [...metadata.tags, tagInput.trim()] })
-            setTagInput('')
-        }
-    }
-
-    const handleRemoveTag = (tagToRemove: string) => {
-        onChange({ ...metadata, tags: metadata.tags.filter((tag) => tag !== tagToRemove) })
-    }
-
-    const handleTagKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            e.preventDefault()
-            handleAddTag()
-        }
-    }
 
     const handleCoverUpload = () => {
         fileInputRef.current?.click()
@@ -282,38 +268,46 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, readingTime
                 sx={{ mb: 2 }}
             />
 
+            {/* Tags can only be picked, never typed in: the server takes ids.
+                Creating one is a separate screen — see issue #TODO. */}
             <Box sx={{ mb: 2 }}>
-                <TextField
-                    label="Добавить тег"
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={handleTagKeyDown}
-                    fullWidth
-                    size="small"
-                    helperText="Введите тег и нажмите Enter"
+                <Autocomplete
+                    multiple
+                    open={tagsOpen}
+                    onOpen={() => setTagsOpen(true)}
+                    onClose={() => setTagsOpen(false)}
+                    options={tagSearch.options}
+                    value={metadata.tags}
+                    loading={tagSearch.loading}
+                    loadingText="Загрузка…"
+                    // The server already filtered by `search`; filtering again
+                    // here would drop matches made on fields we never receive.
+                    filterOptions={(options) => options}
+                    onInputChange={(_, value) => setTagQuery(value)}
+                    onChange={(_, value: Tag[]) => onChange({ ...metadata, tags: value })}
+                    getOptionLabel={(option) => option.name}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    noOptionsText={tagQuery ? 'Ничего не найдено' : 'Начните вводить название'}
+                    renderOption={(props, option) => (
+                        <Box component="li" {...props} key={option.id}>
+                            <Stack spacing={0}>
+                                <Typography variant="body2">{option.name}</Typography>
+                                <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                                    {TAG_TYPE_LABELS[option.type]}
+                                </Typography>
+                            </Stack>
+                        </Box>
+                    )}
+                    renderInput={(params) => (
+                        <TextField
+                            {...params}
+                            label="Теги"
+                            size="small"
+                            error={Boolean(tagSearch.error)}
+                            helperText={tagSearch.error ?? 'Выберите из существующих тегов'}
+                        />
+                    )}
                 />
-                {metadata.tags.length > 0 && (
-                    <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap', gap: 0.5 }}>
-                        {metadata.tags.map((tag) => (
-                            <Chip
-                                key={tag}
-                                label={tag}
-                                size="small"
-                                onDelete={() => handleRemoveTag(tag)}
-                                sx={{
-                                    backgroundColor: colors.tag,
-                                    color: colors.primary,
-                                    fontWeight: 600,
-                                    fontSize: '0.75rem',
-                                    '& .MuiChip-deleteIcon': {
-                                        color: colors.textMuted,
-                                        '&:hover': { color: colors.live },
-                                    },
-                                }}
-                            />
-                        ))}
-                    </Stack>
-                )}
             </Box>
 
             <Box

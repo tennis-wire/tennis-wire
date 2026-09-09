@@ -58,7 +58,7 @@ export function useEditorActions({
             type: metadata.type,
             title: metadata.title,
             content: editor?.getHTML() || '',
-            tagIds: metadata.tags,
+            tagIds: metadata.tags.map((tag) => tag.id),
             sourceUrl: metadata.sourceUrl || null,
             sourceName: metadata.sourceName || null,
         }
@@ -74,7 +74,7 @@ export function useEditorActions({
         const update: UpdateArticleRequest = {
             title: metadata.title,
             content: editor?.getHTML() || '',
-            tagIds: metadata.tags,
+            tagIds: metadata.tags.map((tag) => tag.id),
             sourceUrl: metadata.sourceUrl || null,
             sourceName: metadata.sourceName || null,
         }
