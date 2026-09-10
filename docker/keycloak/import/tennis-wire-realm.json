@@ -283,7 +283,7 @@
             "firstName": "Dev",
             "lastName": "Reader",
             "credentials": [{ "type": "password", "value": "reader", "temporary": false }],
-            "realmRoles": ["user"]
+            "realmRoles": ["user", "offline_access"]
         },
         {
             "username": "service-account-moderation-bot",

@@ -163,9 +163,21 @@ there is no separate username field, because the public display name lives in
 `user-service`, not here. A new account must confirm its address before it can
 log in, and lands in the default group `readers`, which carries the `user` role.
 
-Default groups apply to accounts created at runtime — registration and identity
-brokering — and not to accounts declared in the realm file. That is why the
-service accounts above hold only the roles listed for them and never `user`.
+Default groups apply to accounts created outside the realm file — by
+registration, identity brokering, the admin console or the admin API — and not
+to accounts declared in it. A staff account created by an admin therefore lands
+in `readers` and picks up `user` as well, which is intended: someone on the team
+who comments on an article is a reader like anyone else.
+
+The other half of that rule is easy to trip over. An account declared in the
+realm file gets exactly the roles listed for it and nothing besides — Keycloak
+skips both default roles and default groups on import. That is what keeps the
+service accounts above free of `user`, and it is also why `reader` carries
+`offline_access` explicitly: the client scope of that name is gated on the realm
+role of the same name, and a user without the role does not get an error. The
+scope is dropped from the request and an ordinary refresh token comes back in
+place of an offline one. Whatever a fixture is meant to exercise has to be
+spelled out on the fixture.
 
 To register locally, open <http://localhost:8180/realms/tennis-wire/account>,
 follow the sign-in link and choose Register. Keycloak sends the confirmation
