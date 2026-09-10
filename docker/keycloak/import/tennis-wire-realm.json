@@ -5,13 +5,40 @@
     "sslRequired": "external",
     "loginWithEmailAllowed": true,
     "duplicateEmailsAllowed": false,
-    "registrationAllowed": false,
+    "registrationAllowed": true,
+    "registrationEmailAsUsername": true,
     "resetPasswordAllowed": true,
-    "verifyEmail": false,
+    "verifyEmail": true,
 
     "accessTokenLifespan": 300,
     "ssoSessionIdleTimeout": 1800,
     "ssoSessionMaxLifespan": 28800,
+
+    "offlineSessionIdleTimeout": 2592000,
+    "offlineSessionMaxLifespanEnabled": true,
+    "offlineSessionMaxLifespan": 15552000,
+
+    "eventsEnabled": true,
+    "eventsExpiration": 2592000,
+
+    "smtpServer": {
+        "host": "mailpit",
+        "port": "1025",
+        "from": "no-reply@tennis-wire.local",
+        "fromDisplayName": "Tennis Wire",
+        "auth": "false",
+        "ssl": "false",
+        "starttls": "false"
+    },
+
+    "groups": [
+        {
+            "name": "readers",
+            "path": "/readers",
+            "realmRoles": ["user"]
+        }
+    ],
+    "defaultGroups": ["/readers"],
 
     "clients": [
         {
@@ -28,6 +55,8 @@
                 "http://localhost:5173/popup-callback.html"
             ],
             "webOrigins": ["http://localhost:5173"],
+            "defaultClientScopes": ["acr", "basic", "email", "profile", "roles", "web-origins"],
+            "optionalClientScopes": ["address", "microprofile-jwt", "organization", "phone"],
             "attributes": {
                 "pkce.code.challenge.method": "S256",
                 "post.logout.redirect.uris": "http://localhost:5173/logged-out"
@@ -59,6 +88,8 @@
             "serviceAccountsEnabled": false,
             "redirectUris": ["http://localhost:3000/api/auth/callback/*"],
             "webOrigins": ["http://localhost:3000"],
+            "defaultClientScopes": ["acr", "basic", "email", "profile", "roles", "web-origins"],
+            "optionalClientScopes": ["address", "microprofile-jwt", "offline_access", "organization", "phone"],
             "attributes": {
                 "post.logout.redirect.uris": "http://localhost:3000/*"
             },
@@ -88,9 +119,67 @@
             "serviceAccountsEnabled": false,
             "redirectUris": ["tenniswire://*", "exp://127.0.0.1:8081/*"],
             "webOrigins": [],
+            "defaultClientScopes": ["acr", "basic", "email", "profile", "roles", "web-origins"],
+            "optionalClientScopes": ["address", "microprofile-jwt", "offline_access", "organization", "phone"],
             "attributes": {
                 "pkce.code.challenge.method": "S256"
             },
+            "protocolMappers": [
+                {
+                    "name": "tennis-wire-api-audience",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-audience-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "included.custom.audience": "tennis-wire-api",
+                        "access.token.claim": "true",
+                        "id.token.claim": "false",
+                        "introspection.token.claim": "true"
+                    }
+                }
+            ]
+        },
+        {
+            "clientId": "user-service",
+            "name": "User Service",
+            "description": "Service account for calls into /internal/** and the Keycloak admin REST API (account deletion, realm token lifespan).",
+            "enabled": true,
+            "publicClient": false,
+            "secret": "dev-user-service-secret",
+            "standardFlowEnabled": false,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": false,
+            "serviceAccountsEnabled": true,
+            "defaultClientScopes": ["acr", "basic", "email", "profile", "roles", "web-origins"],
+            "optionalClientScopes": ["address", "microprofile-jwt", "organization", "phone"],
+            "protocolMappers": [
+                {
+                    "name": "tennis-wire-api-audience",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-audience-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "included.custom.audience": "tennis-wire-api",
+                        "access.token.claim": "true",
+                        "id.token.claim": "false",
+                        "introspection.token.claim": "true"
+                    }
+                }
+            ]
+        },
+        {
+            "clientId": "discussion-service",
+            "name": "Discussion Service",
+            "description": "Service account for calls into user-service /internal/users.",
+            "enabled": true,
+            "publicClient": false,
+            "secret": "dev-discussion-service-secret",
+            "standardFlowEnabled": false,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": false,
+            "serviceAccountsEnabled": true,
+            "defaultClientScopes": ["acr", "basic", "email", "profile", "roles", "web-origins"],
+            "optionalClientScopes": ["address", "microprofile-jwt", "organization", "phone"],
             "protocolMappers": [
                 {
                     "name": "tennis-wire-api-audience",
@@ -116,6 +205,8 @@
             "implicitFlowEnabled": false,
             "directAccessGrantsEnabled": false,
             "serviceAccountsEnabled": true,
+            "defaultClientScopes": ["acr", "basic", "email", "profile", "roles", "web-origins"],
+            "optionalClientScopes": ["address", "microprofile-jwt", "organization", "phone"],
             "protocolMappers": [
                 {
                     "name": "tennis-wire-api-audience",
@@ -140,7 +231,9 @@
             "standardFlowEnabled": false,
             "implicitFlowEnabled": false,
             "directAccessGrantsEnabled": true,
-            "serviceAccountsEnabled": false
+            "serviceAccountsEnabled": false,
+            "defaultClientScopes": ["acr", "basic", "email", "profile", "roles", "web-origins"],
+            "optionalClientScopes": ["address", "microprofile-jwt", "organization", "phone"]
         },
         {
             "clientId": "dev-cli",
@@ -152,6 +245,8 @@
             "implicitFlowEnabled": false,
             "directAccessGrantsEnabled": true,
             "serviceAccountsEnabled": false,
+            "defaultClientScopes": ["acr", "basic", "email", "profile", "roles", "web-origins"],
+            "optionalClientScopes": ["address", "microprofile-jwt", "organization", "phone"],
             "protocolMappers": [
                 {
                     "name": "tennis-wire-api-audience",
@@ -195,6 +290,21 @@
             "enabled": true,
             "serviceAccountClientId": "moderation-bot",
             "realmRoles": ["moderator-bot"]
+        },
+        {
+            "username": "service-account-user-service",
+            "enabled": true,
+            "serviceAccountClientId": "user-service",
+            "realmRoles": ["service"],
+            "clientRoles": {
+                "realm-management": ["manage-users", "view-realm"]
+            }
+        },
+        {
+            "username": "service-account-discussion-service",
+            "enabled": true,
+            "serviceAccountClientId": "discussion-service",
+            "realmRoles": ["service"]
         }
     ],
 
@@ -204,6 +314,7 @@
             { "name": "author", "description": "Staff: editorial contour" },
             { "name": "moderator", "description": "Staff: comment moderation" },
             { "name": "moderator-bot", "description": "Service account of the automatic moderator" },
+            { "name": "service", "description": "Service account: calls into /internal/**" },
             {
                 "name": "admin",
                 "description": "Administrator",
