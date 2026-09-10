@@ -54,6 +54,7 @@ superuser.
 |---|---|---|---|
 | content-service | `tennis_content` | `content` | `content` |
 | discussion-service | `tennis_discussion` | `discussion` | `discussion` |
+| user-service | `tennis_users` | `users` | `users` |
 
 To add a service, append a `create_service_db` line to the init script, then
 either recreate the volume:
@@ -259,6 +260,7 @@ intended behaviour, not a misconfiguration.
 | editorial-bff | 8080 | AI chat and translation |
 | content-service | 8091 | requires PostgreSQL |
 | discussion-service | 8093 | requires PostgreSQL |
+| user-service | 8092 | requires PostgreSQL |
 | transcription-service | 8001 | requires Redis + MinIO |
 | editorial-ui (Vite) | 5173 | |
 | public-web (Next.js) | 3000 | |
@@ -269,6 +271,7 @@ intended behaviour, not a misconfiguration.
 ```bash
 ./gradlew :content-service:bootRun
 ./gradlew :discussion-service:bootRun
+./gradlew :user-service:bootRun
 ./gradlew :editorial-bff:bootRun
 ./gradlew :api-gateway:bootRun
 ```
