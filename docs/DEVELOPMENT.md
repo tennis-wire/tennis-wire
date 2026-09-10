@@ -190,11 +190,15 @@ curl -s -d grant_type=password -d client_id=dev-cli -d scope=offline_access \
 # {"error":"invalid_scope","error_description":"Invalid scopes: offline_access"}
 ```
 
-This is the per-client `optionalClientScopes` list, which names scopes — not the
-realm-level `clientScopes` array described above, which defines them and must be
-left alone. Naming them per client **replaces** the inherited set instead of
-adding to it, so all five built-in optional scopes are spelled out on every
-client even though only one of them is in question.
+This is per-client scope assignment, not the realm-level `clientScopes` array
+described above, which defines the scopes themselves and must be left alone. The
+trap here is the same shape one level down: naming either list on a client makes
+that client manage **both**. The moment `optionalClientScopes` appears, the
+inherited defaults are dropped as well, `roles` goes with them, and tokens come
+back without `realm_access.roles` — valid, correctly audienced, and authorised
+for nothing. So both lists are written out in full on every client and both
+match what Keycloak assigns by default, apart from the one scope actually in
+question.
 
 Keycloak's own clients (`account`, `admin-cli`, `security-admin-console` and the
 rest) are not described in the realm file and keep `offline_access`. None of
