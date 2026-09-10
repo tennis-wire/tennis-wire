@@ -127,6 +127,58 @@
             ]
         },
         {
+            "clientId": "user-service",
+            "name": "User Service",
+            "description": "Service account for calls into /internal/** and the Keycloak admin REST API (account deletion, realm token lifespan).",
+            "enabled": true,
+            "publicClient": false,
+            "secret": "dev-user-service-secret",
+            "standardFlowEnabled": false,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": false,
+            "serviceAccountsEnabled": true,
+            "protocolMappers": [
+                {
+                    "name": "tennis-wire-api-audience",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-audience-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "included.custom.audience": "tennis-wire-api",
+                        "access.token.claim": "true",
+                        "id.token.claim": "false",
+                        "introspection.token.claim": "true"
+                    }
+                }
+            ]
+        },
+        {
+            "clientId": "discussion-service",
+            "name": "Discussion Service",
+            "description": "Service account for calls into user-service /internal/users.",
+            "enabled": true,
+            "publicClient": false,
+            "secret": "dev-discussion-service-secret",
+            "standardFlowEnabled": false,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": false,
+            "serviceAccountsEnabled": true,
+            "protocolMappers": [
+                {
+                    "name": "tennis-wire-api-audience",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-audience-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "included.custom.audience": "tennis-wire-api",
+                        "access.token.claim": "true",
+                        "id.token.claim": "false",
+                        "introspection.token.claim": "true"
+                    }
+                }
+            ]
+        },
+        {
             "clientId": "moderation-bot",
             "name": "Moderation Bot",
             "enabled": true,
@@ -215,6 +267,21 @@
             "enabled": true,
             "serviceAccountClientId": "moderation-bot",
             "realmRoles": ["moderator-bot"]
+        },
+        {
+            "username": "service-account-user-service",
+            "enabled": true,
+            "serviceAccountClientId": "user-service",
+            "realmRoles": ["service"],
+            "clientRoles": {
+                "realm-management": ["manage-users", "view-realm"]
+            }
+        },
+        {
+            "username": "service-account-discussion-service",
+            "enabled": true,
+            "serviceAccountClientId": "discussion-service",
+            "realmRoles": ["service"]
         }
     ],
 
@@ -224,6 +291,7 @@
             { "name": "author", "description": "Staff: editorial contour" },
             { "name": "moderator", "description": "Staff: comment moderation" },
             { "name": "moderator-bot", "description": "Service account of the automatic moderator" },
+            { "name": "service", "description": "Service account: calls into /internal/**" },
             {
                 "name": "admin",
                 "description": "Administrator",
