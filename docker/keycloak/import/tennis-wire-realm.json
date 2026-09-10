@@ -5,13 +5,33 @@
     "sslRequired": "external",
     "loginWithEmailAllowed": true,
     "duplicateEmailsAllowed": false,
-    "registrationAllowed": false,
+    "registrationAllowed": true,
+    "registrationEmailAsUsername": true,
     "resetPasswordAllowed": true,
-    "verifyEmail": false,
+    "verifyEmail": true,
 
     "accessTokenLifespan": 300,
     "ssoSessionIdleTimeout": 1800,
     "ssoSessionMaxLifespan": 28800,
+
+    "smtpServer": {
+        "host": "mailpit",
+        "port": "1025",
+        "from": "no-reply@tennis-wire.local",
+        "fromDisplayName": "Tennis Wire",
+        "auth": "false",
+        "ssl": "false",
+        "starttls": "false"
+    },
+
+    "groups": [
+        {
+            "name": "readers",
+            "path": "/readers",
+            "realmRoles": ["user"]
+        }
+    ],
+    "defaultGroups": ["/readers"],
 
     "clients": [
         {
