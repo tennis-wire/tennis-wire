@@ -18,10 +18,6 @@ import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import reactor.core.publisher.Mono;
 
-/**
- * <p>The gateway is not the only line of defence: the services behind it validate the same token
- * against the same issuer, with the same role mapping from auth-support.
- */
 @Configuration
 @EnableWebFluxSecurity
 public class SecurityConfig {
@@ -50,6 +46,11 @@ public class SecurityConfig {
                         .pathMatchers("/api/discussion/moderation/**")
                         .hasAnyRole(Roles.MODERATOR, Roles.MODERATOR_BOT)
                         .pathMatchers("/api/discussion/**")
+                        .hasRole(Roles.USER)
+                        // Users (readers.md §2): a reader may only ever address themselves. Scoped
+                        // to /me rather than /api/users/** so that DELETE /api/users/{id}, which is
+                        // admin-only, has to declare itself rather than inherit this rule.
+                        .pathMatchers("/api/users/me/**")
                         .hasRole(Roles.USER)
                         // Fail closed: a route without a rule is unreachable, not merely
                         // reachable by anyone who happens to be logged in.
