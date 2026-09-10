@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,7 +18,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/internal")
-@Validated
 public class InternalUserController {
 
     private final CurrentUser currentUser;
@@ -35,6 +33,7 @@ public class InternalUserController {
         return new ResolvedIdentityResponse(currentUser.id(jwt));
     }
 
+    // No @Validated on the class, deliberately. Spring MVC validates constraint
     @GetMapping("/users")
     public List<PublicProfileResponse> lookup(
             @RequestParam("ids") @NotEmpty @Size(max = ProfileService.MAX_LOOKUP_IDS) List<UUID> ids) {
