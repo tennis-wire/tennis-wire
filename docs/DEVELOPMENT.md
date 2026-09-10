@@ -22,8 +22,8 @@ docker compose down -v    # stop and wipe all volumes
 Individual components, when the full stack is not needed:
 
 ```bash
-docker compose up -d postgres keycloak         # java services only
-docker compose up -d redis minio minio-init    # transcription only
+docker compose up -d postgres keycloak mailpit   # java services only
+docker compose up -d redis minio minio-init      # transcription only
 ```
 
 Application services are not containerised yet and are expected to run from the
@@ -37,6 +37,8 @@ Docker Desktop or machine restart the containers stay down until `up -d`.
 | MinIO (S3 API) | `minio/minio` pinned | 9000 | `minioadmin` / `minioadmin` |
 | MinIO console | — | 9001 | `minioadmin` / `minioadmin` |
 | Keycloak | `quay.io/keycloak/keycloak` pinned | 8180 | `admin` / `admin` |
+| Mailpit (SMTP) | `axllent/mailpit` pinned | 1025 | — |
+| Mailpit (web UI) | — | 8025 | — |
 
 These credentials are local development defaults and are intentionally in the
 repository. They must never be reused anywhere else.
@@ -138,6 +140,8 @@ Local principals:
 | `dev` | `dev` / `dev` | `author`, `admin` (so also `moderator` and `user`) |
 | `reader` | `reader` / `reader` | `user` |
 | `moderation-bot` | client secret `dev-moderation-bot-secret` | `moderator-bot` |
+| `user-service` | client secret `dev-user-service-secret` | `service`, plus `realm-management`: `manage-users`, `view-realm` |
+| `discussion-service` | client secret `dev-discussion-service-secret` | `service` |
 
 `dev-cli` is a password-grant client that exists only for `curl` and for the
 gateway integration test. ROPC is deprecated in OAuth 2.1; this client must
@@ -151,6 +155,55 @@ TOKEN=$(curl -s -d grant_type=password -d client_id=dev-cli \
 
 echo "$TOKEN" | jq -R 'split(".")[1] | @base64d | fromjson | {aud, azp, realm_access}'
 ```
+
+#### Readers
+
+The realm allows self-registration. The username **is** the email address:
+there is no separate username field, because the public display name lives in
+`user-service`, not here. A new account must confirm its address before it can
+log in, and lands in the default group `readers`, which carries the `user` role.
+
+Default groups apply to accounts created at runtime — registration and identity
+brokering — and not to accounts declared in the realm file. That is why the
+service accounts above hold only the roles listed for them and never `user`.
+
+To register locally, open <http://localhost:8180/realms/tennis-wire/account>,
+follow the sign-in link and choose Register. Keycloak sends the confirmation
+mail to Mailpit; read it at <http://localhost:8025> and follow the link.
+
+Mailpit accepts everything and delivers nothing. It has no volume, so the
+mailbox is empty again after `down -v` — as is the realm itself.
+
+#### Session lengths
+
+Staff and readers get different session lengths out of the same realm. The SSO
+session is short for everyone: 30 minutes idle, 8 hours absolute. `public-web`
+and `mobile` additionally request the `offline_access` scope, which yields a
+refresh token detached from the SSO session and good for 30 days of inactivity.
+Every other client, `editorial-ui` included, has `offline_access` removed from
+its optional scopes and cannot ask for one:
+
+```bash
+curl -s -d grant_type=password -d client_id=dev-cli -d scope=offline_access \
+  -d username=reader -d password=reader \
+  http://localhost:8180/realms/tennis-wire/protocol/openid-connect/token
+# {"error":"invalid_scope","error_description":"Invalid scopes: offline_access"}
+```
+
+This is the per-client `optionalClientScopes` list, which names scopes — not the
+realm-level `clientScopes` array described above, which defines them and must be
+left alone. Naming them per client **replaces** the inherited set instead of
+adding to it, so all five built-in optional scopes are spelled out on every
+client even though only one of them is in question.
+
+Keycloak's own clients (`account`, `admin-cli`, `security-admin-console` and the
+rest) are not described in the realm file and keep `offline_access`. None of
+them carries the `tennis-wire-api` audience mapper, so our services reject their
+tokens anyway.
+
+Login events are kept for 30 days: admin console → Events → User events. Worth
+checking first when a registration mail does not arrive or a login fails for no
+visible reason.
 
 The gateway validates tokens against this realm, so it needs Keycloak running
 before it can serve anything that is not anonymous. It does start without it —
@@ -171,7 +224,9 @@ Production is a separate problem, deliberately unsolved: `--import-realm` only
 creates a realm that does not exist yet and never updates one, so it is not a
 configuration-management mechanism. What must not drift between local and
 production are the role, client and scope names, and those are fixed in
-`architecture/auth.md`, not here.
+`architecture/auth.md`, not here. The reverse holds too: the SMTP host and
+every client secret in the file are local values that a deployed realm has to
+override.
 
 ## Services
 

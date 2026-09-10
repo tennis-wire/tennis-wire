@@ -121,6 +121,9 @@ services:
       mc mb --ignore-existing local/transcription
       "
 
+  # SMTP sink for Keycloak: registration, email verification, password reset.
+  # No volume by design: messages are as ephemeral as the Keycloak H2 store.
+  # The image ships its own healthcheck; nothing here depends on this service.
   mailpit:
     image: axllent/mailpit:v1.31.1
     container_name: tw-mailpit
