@@ -14,6 +14,13 @@
     "ssoSessionIdleTimeout": 1800,
     "ssoSessionMaxLifespan": 28800,
 
+    "offlineSessionIdleTimeout": 2592000,
+    "offlineSessionMaxLifespanEnabled": true,
+    "offlineSessionMaxLifespan": 15552000,
+
+    "eventsEnabled": true,
+    "eventsExpiration": 2592000,
+
     "smtpServer": {
         "host": "mailpit",
         "port": "1025",
@@ -48,6 +55,7 @@
                 "http://localhost:5173/popup-callback.html"
             ],
             "webOrigins": ["http://localhost:5173"],
+            "optionalClientScopes": ["address", "microprofile-jwt", "organization", "phone"],
             "attributes": {
                 "pkce.code.challenge.method": "S256",
                 "post.logout.redirect.uris": "http://localhost:5173/logged-out"
@@ -79,6 +87,7 @@
             "serviceAccountsEnabled": false,
             "redirectUris": ["http://localhost:3000/api/auth/callback/*"],
             "webOrigins": ["http://localhost:3000"],
+            "optionalClientScopes": ["address", "microprofile-jwt", "offline_access", "organization", "phone"],
             "attributes": {
                 "post.logout.redirect.uris": "http://localhost:3000/*"
             },
@@ -108,6 +117,7 @@
             "serviceAccountsEnabled": false,
             "redirectUris": ["tenniswire://*", "exp://127.0.0.1:8081/*"],
             "webOrigins": [],
+            "optionalClientScopes": ["address", "microprofile-jwt", "offline_access", "organization", "phone"],
             "attributes": {
                 "pkce.code.challenge.method": "S256"
             },
@@ -137,6 +147,7 @@
             "implicitFlowEnabled": false,
             "directAccessGrantsEnabled": false,
             "serviceAccountsEnabled": true,
+            "optionalClientScopes": ["address", "microprofile-jwt", "organization", "phone"],
             "protocolMappers": [
                 {
                     "name": "tennis-wire-api-audience",
@@ -163,6 +174,7 @@
             "implicitFlowEnabled": false,
             "directAccessGrantsEnabled": false,
             "serviceAccountsEnabled": true,
+            "optionalClientScopes": ["address", "microprofile-jwt", "organization", "phone"],
             "protocolMappers": [
                 {
                     "name": "tennis-wire-api-audience",
@@ -188,6 +200,7 @@
             "implicitFlowEnabled": false,
             "directAccessGrantsEnabled": false,
             "serviceAccountsEnabled": true,
+            "optionalClientScopes": ["address", "microprofile-jwt", "organization", "phone"],
             "protocolMappers": [
                 {
                     "name": "tennis-wire-api-audience",
@@ -212,7 +225,8 @@
             "standardFlowEnabled": false,
             "implicitFlowEnabled": false,
             "directAccessGrantsEnabled": true,
-            "serviceAccountsEnabled": false
+            "serviceAccountsEnabled": false,
+            "optionalClientScopes": ["address", "microprofile-jwt", "organization", "phone"]
         },
         {
             "clientId": "dev-cli",
@@ -224,6 +238,7 @@
             "implicitFlowEnabled": false,
             "directAccessGrantsEnabled": true,
             "serviceAccountsEnabled": false,
+            "optionalClientScopes": ["address", "microprofile-jwt", "organization", "phone"],
             "protocolMappers": [
                 {
                     "name": "tennis-wire-api-audience",
