@@ -40,7 +40,6 @@ public class Profile {
     private boolean displayNameChosen;
 
     // Timestamps: DB-owned (defaults + trigger_profile_updated_at)
-
     @Generated(event = EventType.INSERT)
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
