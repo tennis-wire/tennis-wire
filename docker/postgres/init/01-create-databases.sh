@@ -19,5 +19,6 @@ EOSQL
 # service databases: <database> <role> <password>
 create_service_db tennis_content content content
 create_service_db tennis_discussion discussion discussion
+create_service_db tennis_users users users
 
 echo "service databases ready"

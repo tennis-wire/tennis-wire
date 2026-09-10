@@ -10,7 +10,7 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/tennis-wire}
-          # aud comes from the per-client audience mapper (auth.md §4). Boot builds
+          # aud comes from the per-client audience mapper. Boot builds
           # the validator from this property, so there is no code for it.
           audiences:
             - tennis-wire-api
@@ -63,12 +63,17 @@ spring:
               predicates:
                 - Path=/api/discussion/**
 
-            # ===== Other services (TODO) =====
+            # ===== User Service =====
 
-            # - id: user-service
-            #   uri: http://localhost:8092
-            #   predicates:
-            #     - Path=/api/users/**, /api/auth/**
+            # /api/users/** only. /internal/** is deliberately absent and must stay that way:
+            # resolve and the batch lookup are reached over cluster DNS, never through the public
+            # ingress
+            - id: user-service
+              uri: http://localhost:8092
+              predicates:
+                - Path=/api/users/**
+
+            # ===== Other services (TODO) =====
 
             # - id: search-service
             #   uri: http://localhost:8094

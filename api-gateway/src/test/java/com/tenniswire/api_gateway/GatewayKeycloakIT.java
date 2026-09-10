@@ -34,17 +34,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-/**
- * The one slow test: a real Keycloak importing the same realm file docker-compose uses, and a stub
- * standing in for the downstream service.
- *
- * <p>This is what proves the parts the fast tests take on trust: that the realm file is valid, that
- * the audience mapper fires, that realm_access.roles survives into an authority, and that the
- * Authorization header reaches the service behind the gateway.
- *
- * <p>Tokens are fetched over plain HTTP rather than with the container's helper methods, whose
- * signatures move between versions of the Keycloak testcontainer.
- */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Testcontainers
@@ -53,6 +42,7 @@ class GatewayKeycloakIT {
     private static final String REALM = "tennis-wire";
     private static final String CLI = "dev-cli";
     private static final String EDITORIAL = "/api/editorial/articles";
+    private static final String USERS_ME = "/api/users/me";
 
     // Keep the tag in step with docker-compose.yml: the point of this test is that both
     // read the same realm file on the same server version.
@@ -106,6 +96,18 @@ class GatewayKeycloakIT {
 
         DOWNSTREAM.verify(getRequestedFor(urlPathEqualTo(EDITORIAL))
                 .withHeader(HttpHeaders.AUTHORIZATION, matching("Bearer .+")));
+    }
+
+    @Test
+    void aServiceAccountHasNoReaderRole() {
+        client.get()
+                .uri(USERS_ME)
+                .header(
+                        HttpHeaders.AUTHORIZATION,
+                        bearer(clientCredentialsToken("discussion-service", "dev-discussion-service-secret")))
+                .exchange()
+                .expectStatus()
+                .isForbidden();
     }
 
     @Test
@@ -175,10 +177,14 @@ class GatewayKeycloakIT {
     }
 
     private static String clientCredentialsToken() {
+        return clientCredentialsToken("moderation-bot", "dev-moderation-bot-secret");
+    }
+
+    private static String clientCredentialsToken(String clientId, String secret) {
         return accessToken(Map.of(
                 "grant_type", "client_credentials",
-                "client_id", "moderation-bot",
-                "client_secret", "dev-moderation-bot-secret"));
+                "client_id", clientId,
+                "client_secret", secret));
     }
 
     private static String accessToken(Map<String, String> form) {

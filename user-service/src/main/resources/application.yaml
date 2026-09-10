@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: user-service
+
+  datasource:
+    # No stringtype=unspecified here, unlike content-service and discussion-service:
+    # this schema uses no native PostgreSQL enum types and no ltree.
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:tennis_users}
+    username: ${DB_USERNAME:users}
+    password: ${DB_PASSWORD:users}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        # No explicit dialect: Hibernate picks PostgreSQLDialect from the connection and
+        # warns (HHH90000025) when it is spelled out anyway.
+        format_sql: true
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Same issuer and audience as the gateway (auth.md §7): the service
+          # validates the token itself rather than trusting whoever forwarded it.
+          # This holds for /internal/** too, which the gateway never routes.
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/tennis-wire}
+          audiences:
+            - tennis-wire-api
+
+server:
+  port: 8092
+
+logging:
+  level:
+    com.tenniswire.user_service: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+
+springdoc:
+  # Off by default: the docs are not routed through the gateway and describe the
+  # whole API to anyone who reaches the service port. The local profile turns them on.
+  api-docs:
+    enabled: false
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: false
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
