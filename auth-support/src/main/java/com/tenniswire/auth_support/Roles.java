@@ -8,5 +8,7 @@ public final class Roles {
     public static final String MODERATOR_BOT = "moderator-bot";
     public static final String ADMIN = "admin";
 
+    public static final String SERVICE = "service";
+
     private Roles() {}
 }
