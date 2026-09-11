@@ -279,6 +279,12 @@ intended behaviour, not a misconfiguration.
 Datasource settings are overridable via `DB_HOST`, `DB_PORT`, `DB_NAME`,
 `DB_USERNAME` and `DB_PASSWORD`.
 
+discussion-service calls user-service directly, over `USER_SERVICE_URL`
+(`http://localhost:8092` by default) and never through the gateway. Without it
+running, an authenticated read, any write and `scripts/smoke.sh` answer 503:
+comments carry the reader's platform id and their author's display name, and
+both of those live in user-service. Anonymous reads are unaffected.
+
 ### Transcription service
 
 ```bash
