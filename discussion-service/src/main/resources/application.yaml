@@ -31,9 +31,32 @@ spring:
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/tennis-wire}
           audiences:
             - tennis-wire-api
+      client:
+        registration:
+          # Calls made as this service rather than as the reader: GET /internal/users. The id is
+          # UserServiceClientConfig.REGISTRATION_ID.
+          user-service:
+            provider: keycloak
+            client-id: discussion-service
+            client-secret: ${DISCUSSION_SERVICE_CLIENT_SECRET:dev-discussion-service-secret}
+            authorization-grant-type: client_credentials
+        provider:
+          keycloak:
+            # token-uri, not issuer-uri: an issuer is looked up while the context starts, and then
+            # neither the service nor any @SpringBootTest comes up without Keycloak.
+            token-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/tennis-wire}/protocol/openid-connect/token
 
 server:
   port: 8093
+
+discussion:
+  user-service:
+    # Called directly, never through the gateway: /internal/** is not routed there.
+    base-url: ${USER_SERVICE_URL:http://localhost:8092}
+    connect-timeout: 1s
+    # No retry on this side. The client already retries once after 3 s (discussion-rules §3.19);
+    # a second layer here would only double the wait before the 503 and add nothing.
+    read-timeout: 2s
 
 logging:
   level:
