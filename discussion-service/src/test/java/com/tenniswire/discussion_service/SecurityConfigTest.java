@@ -12,8 +12,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.tenniswire.discussion_service.client.AuthorProfile;
+import com.tenniswire.discussion_service.client.AuthorProfileClient;
 import com.tenniswire.discussion_service.exception.UserServiceUnavailableException;
 import com.tenniswire.discussion_service.security.UserIdResolver;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +41,9 @@ class SecurityConfigTest {
 
     @MockitoBean
     private UserIdResolver resolver;
+
+    @MockitoBean
+    private AuthorProfileClient profiles;
 
     private MockMvc mvc;
 
@@ -72,16 +78,17 @@ class SecurityConfigTest {
     }
 
     @Test
-    void authorIdComesFromTheResolverNotFromTheSub() throws Exception {
+    void theAuthorComesFromTheResolverNotFromTheSub() throws Exception {
         var me = UUID.randomUUID();
         when(resolver.resolve(any())).thenReturn(me);
+        when(profiles.profiles(any())).thenReturn(Map.of(me, new AuthorProfile(me, "reader-me", null)));
 
         mvc.perform(post(COMMENTS)
                         .with(tokenWith("ROLE_user"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body()))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.comment.authorId").value(me.toString()))
+                .andExpect(jsonPath("$.comment.author.id").value(me.toString()))
                 .andExpect(jsonPath("$.comment.visibility").value("visible"))
                 .andExpect(jsonPath("$.mutedByRecipient").value(false));
     }
