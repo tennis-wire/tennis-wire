@@ -20,6 +20,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-liquibase")
+    implementation("org.springframework.boot:spring-boot-starter-restclient")
+    implementation("com.github.ben-manes.caffeine:caffeine")
     implementation(libs.springdoc.openapi.webmvc.ui)
 
     runtimeOnly("org.postgresql:postgresql")
@@ -30,5 +32,6 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-security-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:testcontainers-postgresql")
+    testImplementation(libs.wiremock.standalone)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

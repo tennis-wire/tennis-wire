@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# End-to-end smoke against the local stack: Keycloak (dev realm) + discussion-service.
-# Needs: docker compose up -d postgres keycloak; the tennis_discussion database (docs/DEVELOPMENT.md);
-# discussion-service running on 8093 (or via the gateway with BASE=http://localhost:8090); jq, curl.
-#
-# Walks the spec's write path (§9), the three read endpoints (§10), a gravestone block (§7)
-# and the restriction gate (§8). Exits non-zero on the first unexpected status.
+# End-to-end smoke against the local stack: Keycloak (dev realm), user-service and discussion-service.
+# Needs: docker compose up -d postgres keycloak; the tennis_discussion and tennis_users databases
+# (docs/DEVELOPMENT.md); user-service running on 8092, since discussion-service resolves every reader
+# token through it; discussion-service on 8093 (or via the gateway with BASE=http://localhost:8090);
+# jq, curl.
 #
 # Portable between macOS and Linux: no /proc, and the two date dialects are both tried.
 set -euo pipefail
@@ -52,16 +51,23 @@ expect() {
 
 READER=$(token reader)   # role user
 DEV=$(token dev)         # admin -> user + author + moderator
-READER_ID=$(sub "$READER"); DEV_ID=$(sub "$DEV")
 json='Content-Type: application/json'
 
+# User ids are issued by user-service, so they are read off the comments each account creates.
 echo "# reader posts a top-level comment"
-ROOT=$(expect 201 -X POST "$API/comments" -H "Authorization: Bearer $READER" -H "$json" \
-  -d "{\"subjectType\":\"article\",\"subjectId\":\"$SUBJECT\",\"body\":\"first\"}" | jq -r .comment.id)
+CREATED=$(expect 201 -X POST "$API/comments" -H "Authorization: Bearer $READER" -H "$json" \
+  -d "{\"subjectType\":\"article\",\"subjectId\":\"$SUBJECT\",\"body\":\"first\"}")
+ROOT=$(jq -r .comment.id <<< "$CREATED"); READER_ID=$(jq -r .comment.authorId <<< "$CREATED")
+
+echo "# the author id is the user-service id, not the Keycloak subject"
+if [ "$READER_ID" = "$(sub "$READER")" ]; then
+  echo "FAIL: authorId equals the token sub" >&2; exit 1
+fi
 
 echo "# dev replies; not muted yet"
-REPLY=$(expect 201 -X POST "$API/comments/$ROOT/replies" -H "Authorization: Bearer $DEV" -H "$json" \
-  -d '{"body":"reply"}' | jq -r .comment.id)
+CREATED=$(expect 201 -X POST "$API/comments/$ROOT/replies" -H "Authorization: Bearer $DEV" -H "$json" \
+  -d '{"body":"reply"}')
+REPLY=$(jq -r .comment.id <<< "$CREATED"); DEV_ID=$(jq -r .comment.authorId <<< "$CREATED")
 
 echo "# anonymous read: 1 top-level with replyCount=1"
 expect 200 "$API/comments?subjectType=article&subjectId=$SUBJECT" | jq -e '.items | length == 1 and .[0].replyCount == 1' > /dev/null

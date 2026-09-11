@@ -35,6 +35,15 @@ spring:
 server:
   port: 8093
 
+discussion:
+  user-service:
+    # Called directly, never through the gateway: /internal/** is not routed there.
+    base-url: ${USER_SERVICE_URL:http://localhost:8092}
+    connect-timeout: 1s
+    # No retry on this side. The client already retries once after 3 s (discussion-rules §3.19);
+    # a second layer here would only double the wait before the 503 and add nothing.
+    read-timeout: 2s
+
 logging:
   level:
     com.tenniswire.discussion_service: DEBUG

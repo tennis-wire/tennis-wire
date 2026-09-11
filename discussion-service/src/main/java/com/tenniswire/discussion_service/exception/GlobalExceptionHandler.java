@@ -33,6 +33,13 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse("COMMENTING_RESTRICTED", ex.getMessage(), null, details, Instant.now()));
     }
 
+    @ExceptionHandler(UserServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleUserServiceUnavailable(UserServiceUnavailableException ex) {
+        // Not ex.getMessage(): which dependency failed, and how, belongs in the log at the throw site.
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ErrorResponse.of("SERVICE_UNAVAILABLE", "Temporarily unavailable"));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
         var violations = ex.getBindingResult().getFieldErrors().stream()
