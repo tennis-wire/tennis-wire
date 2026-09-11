@@ -9,7 +9,7 @@ testcontainers-keycloak = "4.2.0"
 wiremock = "3.13.2"
 
 [libraries]
-anthropic-java = { module = "com.anthropic:anthropic-java", version = "2.61.0" }
+anthropic-java = { module = "com.anthropic:anthropic-java", version = "2.62.0" }
 deepl-java = { module = "com.deepl.api:deepl-java", version = "1.17.0" }
 springdoc-openapi-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version = "3.1.1" }
 spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", version.ref = "spotbugs" }
