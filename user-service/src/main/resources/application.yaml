@@ -36,6 +36,10 @@ spring:
 
 server:
   port: 8092
+  # GET /internal/users carries up to 200 ids in its query string, about 7.4 KB. Tomcat counts the
+  # request line against the header buffer, so with the caller's bearer token on top the default
+  # 8 KB overflows and Tomcat answers 400 before the application ever sees the request.
+  max-http-request-header-size: 16KB
 
 logging:
   level:
