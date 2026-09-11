@@ -21,6 +21,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-liquibase")
     implementation("org.springframework.boot:spring-boot-starter-restclient")
+    implementation("org.springframework.boot:spring-boot-starter-security-oauth2-client")
     implementation("com.github.ben-manes.caffeine:caffeine")
     implementation(libs.springdoc.openapi.webmvc.ui)
 
