@@ -1,10 +1,10 @@
-package com.tenniswire.discussion_service.controller;
+package com.tenniswire.discussion_service.controller.moderation;
 
-import com.tenniswire.discussion_service.dto.BotReportRequest;
-import com.tenniswire.discussion_service.dto.CreateRestrictionRequest;
-import com.tenniswire.discussion_service.dto.ModerationQueueResponse;
-import com.tenniswire.discussion_service.dto.ResolveReportsRequest;
-import com.tenniswire.discussion_service.dto.RestrictionResponse;
+import com.tenniswire.discussion_service.dto.moderation.BotReportRequest;
+import com.tenniswire.discussion_service.dto.moderation.CreateRestrictionRequest;
+import com.tenniswire.discussion_service.dto.moderation.ModerationQueueResponse;
+import com.tenniswire.discussion_service.dto.moderation.ResolveReportsRequest;
+import com.tenniswire.discussion_service.dto.moderation.RestrictionResponse;
 import com.tenniswire.discussion_service.entity.ReportResolution;
 import com.tenniswire.discussion_service.security.CurrentUser;
 import com.tenniswire.discussion_service.service.CommentService;

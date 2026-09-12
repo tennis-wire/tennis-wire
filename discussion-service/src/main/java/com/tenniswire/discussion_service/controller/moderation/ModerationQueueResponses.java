@@ -1,12 +1,12 @@
-package com.tenniswire.discussion_service.controller;
+package com.tenniswire.discussion_service.controller.moderation;
 
 import com.tenniswire.discussion_service.client.AuthorProfile;
 import com.tenniswire.discussion_service.client.AuthorProfileClient;
-import com.tenniswire.discussion_service.dto.ModerationQueueResponse;
-import com.tenniswire.discussion_service.dto.QueueEntryResponse;
-import com.tenniswire.discussion_service.dto.QueueEntryResponse.ActiveRestriction;
-import com.tenniswire.discussion_service.dto.QueueEntryResponse.QueueAuthor;
-import com.tenniswire.discussion_service.dto.QueueEntryResponse.RemovalCounts;
+import com.tenniswire.discussion_service.dto.moderation.ModerationQueueResponse;
+import com.tenniswire.discussion_service.dto.moderation.QueueEntryResponse;
+import com.tenniswire.discussion_service.dto.moderation.QueueEntryResponse.ActiveRestriction;
+import com.tenniswire.discussion_service.dto.moderation.QueueEntryResponse.QueueAuthor;
+import com.tenniswire.discussion_service.dto.moderation.QueueEntryResponse.RemovalCounts;
 import com.tenniswire.discussion_service.entity.Comment;
 import com.tenniswire.discussion_service.entity.UserRestriction;
 import com.tenniswire.discussion_service.exception.UserServiceUnavailableException;

@@ -1,4 +1,4 @@
-package com.tenniswire.discussion_service.dto;
+package com.tenniswire.discussion_service.dto.moderation;
 
 import java.time.Instant;
 import java.util.Map;

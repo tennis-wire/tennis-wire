@@ -1,12 +1,12 @@
-package com.tenniswire.discussion_service.controller;
+package com.tenniswire.discussion_service.controller.reader;
 
-import com.tenniswire.discussion_service.dto.AncestryResponse;
-import com.tenniswire.discussion_service.dto.BranchResponse;
-import com.tenniswire.discussion_service.dto.CommentCreatedResponse;
-import com.tenniswire.discussion_service.dto.CommentPageResponse;
-import com.tenniswire.discussion_service.dto.CreateCommentRequest;
-import com.tenniswire.discussion_service.dto.CreateReplyRequest;
-import com.tenniswire.discussion_service.dto.CreateReportRequest;
+import com.tenniswire.discussion_service.dto.reader.AncestryResponse;
+import com.tenniswire.discussion_service.dto.reader.BranchResponse;
+import com.tenniswire.discussion_service.dto.reader.CommentCreatedResponse;
+import com.tenniswire.discussion_service.dto.reader.CommentPageResponse;
+import com.tenniswire.discussion_service.dto.reader.CreateCommentRequest;
+import com.tenniswire.discussion_service.dto.reader.CreateReplyRequest;
+import com.tenniswire.discussion_service.dto.reader.CreateReportRequest;
 import com.tenniswire.discussion_service.security.CurrentUser;
 import com.tenniswire.discussion_service.service.CommentService;
 import com.tenniswire.discussion_service.service.ReportService;

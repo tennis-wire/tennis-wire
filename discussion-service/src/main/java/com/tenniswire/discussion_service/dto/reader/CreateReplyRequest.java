@@ -1,4 +1,4 @@
-package com.tenniswire.discussion_service.dto;
+package com.tenniswire.discussion_service.dto.reader;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

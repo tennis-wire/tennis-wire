@@ -1,4 +1,4 @@
-package com.tenniswire.discussion_service.dto;
+package com.tenniswire.discussion_service.dto.reader;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.tenniswire.discussion_service.service.CommentView;
