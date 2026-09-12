@@ -33,6 +33,29 @@ spring:
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/tennis-wire}
           audiences:
             - tennis-wire-api
+      client:
+        registration:
+          # Calls made as this service rather than as a reader: Keycloak's admin API. The id is
+          # KeycloakAdminConfig.REGISTRATION_ID.
+          keycloak-admin:
+            provider: keycloak
+            client-id: user-service
+            client-secret: ${USER_SERVICE_CLIENT_SECRET:dev-user-service-secret}
+            authorization-grant-type: client_credentials
+        provider:
+          keycloak:
+            # token-uri, not issuer-uri: an issuer is looked up while the context starts, and then
+            # neither the service nor any @SpringBootTest comes up without Keycloak.
+            token-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/tennis-wire}/protocol/openid-connect/token
+
+user:
+  keycloak:
+    # The server root, not the issuer: the admin API sits above the realm, and the issuer URI has
+    # the realm in it already.
+    base-url: ${KEYCLOAK_BASE_URL:http://localhost:8180}
+    realm: ${KEYCLOAK_REALM:tennis-wire}
+    connect-timeout: 2s
+    read-timeout: 5s
 
 server:
   port: 8092
