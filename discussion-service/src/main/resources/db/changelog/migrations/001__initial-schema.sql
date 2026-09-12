@@ -1,8 +1,13 @@
 -- liquibase formatted sql
 
 -- =============================================
--- Discussion DB — Initial Schema
+-- Discussion DB — Schema
 -- Tennis Wire
+--
+-- Append-only. A new changeset goes at the end under the next id; editing one that
+-- has already run changes its checksum, and Liquibase then refuses to start against
+-- every database that ran it. The file name stays as it is for the same reason — it
+-- is part of the identity of all the changesets already recorded.
 -- =============================================
 
 -- changeset andrei:1
@@ -16,31 +21,31 @@ CREATE TYPE block_mode AS ENUM ('soft', 'gravestone', 'subtree_removal');
 -- changeset andrei:3
 -- comment: Create comment table — adjacency list (in_reply_to_id) is the source of truth, ltree path is derived
 CREATE TABLE comment (
-    id              UUID PRIMARY KEY DEFAULT uuidv7(),
+                         id              UUID PRIMARY KEY DEFAULT uuidv7(),
 
     -- ltree label source: internal, monotonic, never exposed via the API
-    path_key        BIGINT GENERATED ALWAYS AS IDENTITY,
+                         path_key        BIGINT GENERATED ALWAYS AS IDENTITY,
 
     -- Generic subject anchor — no FK, subject lives in another service
-    subject_type    TEXT NOT NULL,            -- 'article' | 'forum_topic' | ... (open set, intentionally not an enum)
-    subject_id      UUID NOT NULL,
+                         subject_type    TEXT NOT NULL,            -- 'article' | 'forum_topic' | ... (open set, intentionally not an enum)
+                         subject_id      UUID NOT NULL,
 
     -- Tree structure
-    in_reply_to_id  UUID REFERENCES comment(id),   -- direct parent; SOURCE OF TRUTH
-    root_id         UUID NOT NULL REFERENCES comment(id),
-    path            LTREE NOT NULL,                -- DERIVED from in_reply_to_id via trigger
+                         in_reply_to_id  UUID REFERENCES comment(id),   -- direct parent; SOURCE OF TRUTH
+                         root_id         UUID NOT NULL REFERENCES comment(id),
+                         path            LTREE NOT NULL,                -- DERIVED from in_reply_to_id via trigger
 
     -- Content
-    author_id       UUID NOT NULL,            -- references user in another service, no FK
-    body            TEXT NOT NULL,
-    reply_count     INTEGER NOT NULL DEFAULT 0,    -- raw direct-reply count, maintained in app layer (not viewer-relative)
+                         author_id       UUID NOT NULL,            -- references user in another service, no FK
+                         body            TEXT NOT NULL,
+                         reply_count     INTEGER NOT NULL DEFAULT 0,    -- raw direct-reply count, maintained in app layer (not viewer-relative)
 
-    deleted_at      TIMESTAMPTZ,              -- soft delete; body suppressed but node kept so children survive
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                         deleted_at      TIMESTAMPTZ,              -- soft delete; body suppressed but node kept so children survive
+                         created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                         updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT chk_comment_body_len CHECK (char_length(body) BETWEEN 1 AND 10000),
-    CONSTRAINT chk_comment_no_self_parent CHECK (in_reply_to_id <> id)
+                         CONSTRAINT chk_comment_body_len CHECK (char_length(body) BETWEEN 1 AND 10000),
+                         CONSTRAINT chk_comment_no_self_parent CHECK (in_reply_to_id <> id)
 );
 
 -- changeset andrei:4
@@ -53,12 +58,12 @@ CREATE INDEX idx_comment_in_reply_to ON comment (in_reply_to_id);
 -- changeset andrei:5
 -- comment: Create block table — peer-level, one-directional, mode chosen at block time (no DB default)
 CREATE TABLE block (
-    blocker_id  UUID NOT NULL,
-    blocked_id  UUID NOT NULL,
-    mode        block_mode NOT NULL,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (blocker_id, blocked_id),
-    CONSTRAINT chk_block_no_self CHECK (blocker_id <> blocked_id)
+                       blocker_id  UUID NOT NULL,
+                       blocked_id  UUID NOT NULL,
+                       mode        block_mode NOT NULL,
+                       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                       PRIMARY KEY (blocker_id, blocked_id),
+                       CONSTRAINT chk_block_no_self CHECK (blocker_id <> blocked_id)
 );
 
 CREATE INDEX idx_block_blocked_id ON block (blocked_id);
@@ -69,26 +74,26 @@ CREATE INDEX idx_block_blocked_id ON block (blocked_id);
 CREATE OR REPLACE FUNCTION comment_set_path()
 RETURNS TRIGGER AS $$
 DECLARE
-    parent_path  LTREE;
+parent_path  LTREE;
     parent_root  UUID;
 BEGIN
     IF NEW.in_reply_to_id IS NULL THEN
         -- root comment: path is its own label, root_id points to itself
         NEW.path    = NEW.path_key::text::ltree;
         NEW.root_id = NEW.id;
-    ELSE
-        SELECT path, root_id INTO parent_path, parent_root
-        FROM comment
-        WHERE id = NEW.in_reply_to_id;
+ELSE
+SELECT path, root_id INTO parent_path, parent_root
+FROM comment
+WHERE id = NEW.in_reply_to_id;
 
-        IF parent_path IS NULL THEN
+IF parent_path IS NULL THEN
             RAISE EXCEPTION 'parent comment % not found', NEW.in_reply_to_id;
-        END IF;
+END IF;
 
         NEW.path    = parent_path || NEW.path_key::text;
         NEW.root_id = parent_root;
-    END IF;
-    RETURN NEW;
+END IF;
+RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -105,7 +110,7 @@ CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
-    RETURN NEW;
+RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -118,13 +123,86 @@ CREATE TRIGGER trigger_comment_updated_at
 -- changeset andrei:8
 -- comment: Moderator-issued temporary restrictions on user capabilities (scoped for future extension)
 CREATE TABLE user_restriction (
-    id           UUID PRIMARY KEY DEFAULT uuidv7(),
-    user_id      UUID NOT NULL,
-    capability   TEXT NOT NULL DEFAULT 'comment',   -- open set; today always 'comment'
-    expires_at   TIMESTAMPTZ,                        -- NULL = indefinite (still capability-scoped, not account-level)
-    issued_by    UUID NOT NULL,                      -- moderator user id
-    reason       TEXT,
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                                  id           UUID PRIMARY KEY DEFAULT uuidv7(),
+                                  user_id      UUID NOT NULL,
+                                  capability   TEXT NOT NULL DEFAULT 'comment',   -- open set; today always 'comment'
+                                  expires_at   TIMESTAMPTZ,                        -- NULL = indefinite (still capability-scoped, not account-level)
+                                  issued_by    UUID NOT NULL,                      -- moderator user id
+                                  reason       TEXT,
+                                  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_user_restriction_active ON user_restriction (user_id, capability, expires_at);
+
+-- changeset andrei:9
+-- comment: Complaints about a comment, one row each. The moderator's queue groups them by comment:
+-- comment: the rules give him a card per comment, not per complaint.
+-- comment: reporter_hash is an HMAC of (reporter, comment) under a server-side key, not a user id —
+-- comment: it deduplicates without recording who complained. A plain digest would not: author ids are
+-- comment: public on every comment, so the set to try is known.
+-- comment: The hash is erased once the report is resolved, which is why chk_report_reporter only
+-- comment: speaks about open rows.
+CREATE TABLE report (
+                        id             UUID PRIMARY KEY DEFAULT uuidv7(),
+
+    -- Cascade because the erase flow deletes a departed author's childless comments outright;
+    -- the surviving ones keep their reports and have them voided instead.
+                        comment_id     UUID NOT NULL REFERENCES comment(id) ON DELETE CASCADE,
+
+                        reporter_hash  BYTEA,                            -- NULL for the bot, and once resolved
+                        source         TEXT NOT NULL DEFAULT 'user',     -- 'user' | 'bot'
+                        reason         TEXT NOT NULL,                    -- open set, checked against a configured allowlist
+                        created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+                        resolved_at    TIMESTAMPTZ,
+                        resolved_by    UUID,                             -- NULL for 'voided': no moderator decides it
+                        resolution     TEXT,                             -- 'hidden' | 'dismissed' | 'counted' | 'voided'
+
+                        CONSTRAINT chk_report_source CHECK (source IN ('user', 'bot')),
+                        CONSTRAINT chk_report_resolution CHECK (
+                            resolution IS NULL OR resolution IN ('hidden', 'dismissed', 'counted', 'voided')),
+                        CONSTRAINT chk_report_resolved CHECK ((resolved_at IS NULL) = (resolution IS NULL)),
+                        CONSTRAINT chk_report_reporter CHECK (
+                            resolved_at IS NOT NULL OR (source = 'bot') = (reporter_hash IS NULL))
+);
+
+-- changeset andrei:10
+-- comment: One open report per reporter and comment, and one open report per comment from the bot.
+-- comment: Both scoped to open rows: a resolved report has no hash left to deduplicate on, and a
+-- comment: comment edited after a moderator let it stand has to be reportable again.
+-- comment: idx_report_open serves the queue itself — group the open rows by comment, oldest first.
+CREATE UNIQUE INDEX uq_report_open_user ON report (comment_id, reporter_hash)
+    WHERE source = 'user' AND resolved_at IS NULL;
+
+CREATE UNIQUE INDEX uq_report_open_bot ON report (comment_id)
+    WHERE source = 'bot' AND resolved_at IS NULL;
+
+CREATE INDEX idx_report_open ON report (comment_id, created_at)
+    WHERE resolved_at IS NULL;
+
+-- changeset andrei:11
+-- comment: How a comment left the thread, and when moderation last looked at it without removing it.
+-- comment: deleted_at cannot carry either: the author's own delete and a removal by moderation write
+-- comment: the same thing, while the rules keep them apart — a report is accepted on the first and
+-- comment: refused on the second, and only the second counts against the author.
+-- comment: reports_closed_at is compared against updated_at to decide whether a comment a moderator
+-- comment: let stand has been edited since. That comparison holds because of changeset 7: the
+-- comment: updated_at trigger fires on a body change only, so nothing written here can pass for an edit.
+ALTER TABLE comment
+    ADD COLUMN hidden_at         TIMESTAMPTZ,
+    ADD COLUMN hidden_by         UUID,            -- NULL when the bot removed it: it has no profile
+    ADD COLUMN hidden_source     TEXT,            -- 'moderator' | 'bot'
+    ADD COLUMN reports_closed_at TIMESTAMPTZ,
+
+    ADD CONSTRAINT chk_comment_hidden_source CHECK (
+        hidden_source IS NULL OR hidden_source IN ('moderator', 'bot')),
+    ADD CONSTRAINT chk_comment_hidden CHECK (
+        (hidden_at IS NULL) = (hidden_source IS NULL)
+        AND (hidden_source IS NULL OR (hidden_source = 'bot') = (hidden_by IS NULL)));
+
+-- changeset andrei:12
+-- comment: The queue card shows how many of the author's comments moderation has removed — over the
+-- comment: last 30 days and in total, the bot's removals counted apart. Partial: removals are rare
+-- comment: next to the comments themselves.
+CREATE INDEX idx_comment_hidden_author ON comment (author_id, hidden_at)
+    WHERE hidden_at IS NOT NULL;
