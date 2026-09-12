@@ -6,8 +6,10 @@ import com.tenniswire.discussion_service.dto.CommentCreatedResponse;
 import com.tenniswire.discussion_service.dto.CommentPageResponse;
 import com.tenniswire.discussion_service.dto.CreateCommentRequest;
 import com.tenniswire.discussion_service.dto.CreateReplyRequest;
+import com.tenniswire.discussion_service.dto.CreateReportRequest;
 import com.tenniswire.discussion_service.security.CurrentUser;
 import com.tenniswire.discussion_service.service.CommentService;
+import com.tenniswire.discussion_service.service.ReportService;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -32,11 +34,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class CommentController {
 
     private final CommentService commentService;
+    private final ReportService reportService;
     private final CurrentUser currentUser;
     private final CommentResponses responses;
 
-    public CommentController(CommentService commentService, CurrentUser currentUser, CommentResponses responses) {
+    public CommentController(
+            CommentService commentService,
+            ReportService reportService,
+            CurrentUser currentUser,
+            CommentResponses responses) {
         this.commentService = commentService;
+        this.reportService = reportService;
         this.currentUser = currentUser;
         this.responses = responses;
     }
@@ -80,6 +88,17 @@ public class CommentController {
     public AncestryResponse ancestry(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
         var chain = commentService.ancestry(id, currentUser.idOrNull(jwt));
         return new AncestryResponse(responses.of(chain));
+    }
+
+    /**
+     * Filing a report. Always empty, always the same: written down, already filed and taken but
+     * not queued are three answers the reader must not be able to tell apart.
+     */
+    @PostMapping("/{id}/reports")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void report(
+            @PathVariable UUID id, @Valid @RequestBody CreateReportRequest request, @AuthenticationPrincipal Jwt jwt) {
+        reportService.report(currentUser.id(jwt), id, request.reason());
     }
 
     /** Author's own soft delete. */

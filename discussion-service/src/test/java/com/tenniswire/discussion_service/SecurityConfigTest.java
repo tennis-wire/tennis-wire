@@ -37,6 +37,7 @@ class SecurityConfigTest {
 
     private static final String COMMENTS = "/api/discussion/comments";
     private static final String RESTRICTIONS = "/api/discussion/moderation/restrictions";
+    private static final String REPORTS = COMMENTS + "/" + UUID.randomUUID() + "/reports";
     private static final UUID SUBJECT = UUID.randomUUID();
 
     @MockitoBean
@@ -133,6 +134,30 @@ class SecurityConfigTest {
     }
 
     @Test
+    void reportingRejectsAnonymous() throws Exception {
+        mvc.perform(post(REPORTS).contentType(MediaType.APPLICATION_JSON).content(reason()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void reportingIsForReadersAndNotForTheBot() throws Exception {
+        when(resolver.resolve(any())).thenReturn(UUID.randomUUID());
+
+        mvc.perform(post(REPORTS)
+                        .with(tokenWith("ROLE_moderator-bot"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(reason()))
+                .andExpect(status().isForbidden());
+
+        // 404, not 403: the reader is through the chain and into the handler, where the id is made up.
+        mvc.perform(post(REPORTS)
+                        .with(tokenWith("ROLE_user"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(reason()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void anUnavailableUserServiceIsA503() throws Exception {
         when(resolver.resolve(any())).thenThrow(new UserServiceUnavailableException("down"));
 
@@ -169,6 +194,10 @@ class SecurityConfigTest {
 
     private static JwtRequestPostProcessor tokenWith(String role) {
         return jwt().jwt(j -> j.subject(UUID.randomUUID().toString())).authorities(new SimpleGrantedAuthority(role));
+    }
+
+    private static String reason() {
+        return "{\"reason\":\"spam\"}";
     }
 
     private static String body() {

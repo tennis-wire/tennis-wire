@@ -58,6 +58,15 @@ discussion:
     # a second layer here would only double the wait before the 503 and add nothing.
     read-timeout: 2s
 
+  report:
+    # Open set on purpose (discussion-rules.md §10.5): anything outside it is a 400, and adding
+    # a code is a config change rather than a migration.
+    reasons: [spam, insult, hate, illegal, personal_data, other]
+    # The key the reporter hash is taken under. It must be set outside development: without a
+    # secret, the hash of (reader, comment) can be recomputed for every known reader, and author
+    # ids are public. Rotating it only lets everyone report once more.
+    hash-key: ${REPORT_HASH_KEY:dev-report-hash-key}
+
 logging:
   level:
     com.tenniswire.discussion_service: DEBUG

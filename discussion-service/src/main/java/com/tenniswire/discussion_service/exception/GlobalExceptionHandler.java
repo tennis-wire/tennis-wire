@@ -33,6 +33,14 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse("COMMENTING_RESTRICTED", ex.getMessage(), null, details, Instant.now()));
     }
 
+    @ExceptionHandler(CommentAlreadyRemovedException.class)
+    public ResponseEntity<ErrorResponse> handleAlreadyRemoved(CommentAlreadyRemovedException ex) {
+        // 409 rather than 404: the comment is still there as a placeholder, it is its removal that
+        // the request conflicts with. The client turns this code into its own wording.
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of("COMMENT_ALREADY_REMOVED", ex.getMessage()));
+    }
+
     @ExceptionHandler(UserServiceUnavailableException.class)
     public ResponseEntity<ErrorResponse> handleUserServiceUnavailable(UserServiceUnavailableException ex) {
         // Not ex.getMessage(): which dependency failed, and how, belongs in the log at the throw site.
