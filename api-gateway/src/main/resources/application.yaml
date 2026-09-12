@@ -58,6 +58,8 @@ spring:
 
             # ===== Discussion Service =====
 
+            # /api/discussion/** only. /internal/** is deliberately absent and must stay that way,
+            # as for user-service below: the erase endpoint is reached over cluster DNS
             - id: discussion-service
               uri: http://localhost:8093
               predicates:

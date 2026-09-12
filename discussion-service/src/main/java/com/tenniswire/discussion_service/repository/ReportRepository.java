@@ -84,4 +84,18 @@ public interface ReportRepository extends JpaRepository<Report, UUID> {
             @Param("commentId") UUID commentId,
             @Param("resolution") ReportResolution resolution,
             @Param("resolvedBy") @Nullable UUID resolvedBy);
+
+    // The batch twin of closeOpen, for a whole reader's worth of comments. Nobody decided these —
+    // an erase did — so there is no resolvedBy to record. By the time it runs, the comments nothing
+    // stood on are gone and their reports with them; what this closes is what survived (§13.16).
+    @Modifying
+    @Query("""
+        update Report r
+        set r.resolvedAt = current_timestamp,
+            r.resolution = :resolution,
+            r.resolvedBy = null,
+            r.reporterHash = null
+        where r.commentId in :commentIds and r.resolvedAt is null
+        """)
+    int closeOpenOn(@Param("commentIds") Collection<UUID> commentIds, @Param("resolution") ReportResolution resolution);
 }

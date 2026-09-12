@@ -18,6 +18,11 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
 
     List<Comment> findByRootIdOrderByCreatedAtAscIdAsc(UUID rootId);
 
+    // Ids only: the erase anonymises them in one statement and never needs the rows themselves
+    // until the collapse reads them back.
+    @Query("select c.id from Comment c where c.authorId = :authorId")
+    List<UUID> findIdsByAuthor(@Param("authorId") UUID authorId);
+
     @Query(
             value = "select * from comment where path <@ cast(:path as ltree) order by created_at, id",
             nativeQuery = true)
