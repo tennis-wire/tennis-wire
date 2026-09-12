@@ -81,7 +81,8 @@ public class CommentService {
         var saved = comments.saveAndFlush(comment);
         comments.incrementReplyCount(parent.id());
 
-        var muted = blocks.existsById(new BlockId(parent.authorId(), authorId));
+        // Nobody is left to have blocked him once the parent's author has erased his account.
+        var muted = !parent.hasNoAuthor() && blocks.existsById(new BlockId(parent.authorId(), authorId));
         events.publish(toEvent(saved));
         return new CreatedComment(saved, muted);
     }
@@ -93,7 +94,8 @@ public class CommentService {
      */
     public void deleteOwn(UUID actorId, UUID commentId) {
         var comment = findOrThrow(commentId);
-        if (!comment.authorId().equals(actorId)) {
+        // actorId first: a comment left behind by an erased account answers to nobody.
+        if (!actorId.equals(comment.authorId())) {
             throw new ForbiddenException("Not the author of comment " + commentId);
         }
         if (comment.isDeleted()) {
@@ -203,6 +205,8 @@ public class CommentService {
                 && !reported.contains(node.id())
                 && children.getOrDefault(node.id(), 0L) == 0L;
     }
+
+    // Helpers
 
     private void assertMayComment(UUID authorId) {
         var active = restrictions.findActive(authorId, UserRestriction.CAPABILITY_COMMENT, Instant.now());

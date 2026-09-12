@@ -46,15 +46,11 @@ public class Comment {
     @Column(name = "path_key", insertable = false, updatable = false)
     private Long pathKey;
 
-    // -- Subject anchor --
-
     @Column(name = "subject_type", nullable = false, updatable = false)
     private String subjectType;
 
     @Column(name = "subject_id", nullable = false, updatable = false)
     private UUID subjectId;
-
-    // -- Tree --
 
     @Column(name = "in_reply_to_id", updatable = false)
     private UUID inReplyToId;
@@ -68,12 +64,15 @@ public class Comment {
     @Column(name = "path", insertable = false, updatable = false, columnDefinition = "ltree")
     private String path;
 
-    // -- Content --
+    // Both are empty on a comment whose author erased his account and that had to be kept because
+    // something still stands on it. Nothing writes that through the entity: the columns stay
+    // non-updatable and unwritable here, and the erase clears them in one statement of its own.
+    // A comment still standing always has both — the chk_comment_whole_while_standing constraint.
 
-    @Column(name = "author_id", nullable = false, updatable = false)
+    @Column(name = "author_id", updatable = false)
     private UUID authorId;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String body;
 
     // Maintained only through CommentRepository.incrementReplyCount so that an entity
@@ -84,8 +83,6 @@ public class Comment {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
-    // -- Moderation state --
-    //
     // deletedAt cannot carry this on its own: the author's own delete and a removal by moderation
     // write the same thing, while the rules keep them apart. A report is accepted on a comment its
     // author deleted and refused on one moderation removed, and only the second counts against the
@@ -131,5 +128,10 @@ public class Comment {
 
     public boolean isHiddenByModeration() {
         return hiddenAt != null;
+    }
+
+    // True once the author erased his account: no name to show and no text left to read
+    public boolean hasNoAuthor() {
+        return authorId == null;
     }
 }

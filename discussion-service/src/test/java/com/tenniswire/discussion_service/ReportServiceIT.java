@@ -16,6 +16,7 @@ import com.tenniswire.discussion_service.service.ReportService;
 import com.tenniswire.discussion_service.service.RestrictionService;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,6 +85,17 @@ class ReportServiceIT {
         commentService.deleteOwn(alice, comment);
 
         // the reader who still had it on screen gets a 404, not a report on a row that no longer exists
+        assertThatThrownBy(() -> reportService.report(bob, comment, "spam"))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void aCommentWhoseAuthorIsGoneIsNoLongerReportable() {
+        var comment = commentOf(alice);
+        commentService.reply(bob, comment, "keeps the node");
+        comments.anonymize(List.of(comment));
+
+        // the node is only still there to carry the reply: no text to judge, nobody to count against
         assertThatThrownBy(() -> reportService.report(bob, comment, "spam"))
                 .isInstanceOf(ResourceNotFoundException.class);
     }

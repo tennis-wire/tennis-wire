@@ -72,6 +72,12 @@ public class ReportService {
         if (comment.isHiddenByModeration()) {
             throw new CommentAlreadyRemovedException(comment.id());
         }
+        if (comment.hasNoAuthor()) {
+            // Erased along with its author: no text to judge and no one for a violation to count
+            // against. The node is only still there to carry the replies under it, so whoever is
+            // filing is told what a reader sees — that the comment is gone.
+            throw new ResourceNotFoundException("Comment", commentId);
+        }
         // A comment its own author deleted stays reportable: the text is still there to be judged,
         // and the violation can still be counted against him.
         return comment;

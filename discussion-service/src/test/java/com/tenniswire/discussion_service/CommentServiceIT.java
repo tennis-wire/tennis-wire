@@ -16,6 +16,7 @@ import com.tenniswire.discussion_service.service.RestrictionService;
 import com.tenniswire.discussion_service.service.Visibility;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -268,5 +269,33 @@ class CommentServiceIT {
         blockService.unblock(alice, bob);
         blockService.unblock(alice, bob);
         assertThat(blockService.list(alice)).isEmpty();
+    }
+
+    @Test
+    void aCommentWhoseAuthorIsGoneStillCarriesItsRepliesAndAnswersToNobody() {
+        var a = commentService.create(alice, "article", subjectId, "A").comment();
+        var b = commentService.reply(bob, a.id(), "B").comment();
+        commentRepository.anonymize(List.of(a.id()));
+
+        // an anonymous viewer: an immutable empty block map, the one that throws on a null key
+        var listed = commentService.listTopLevel("article", subjectId, null);
+        assertThat(listed).hasSize(1);
+        assertThat(listed.getFirst().visibility()).isEqualTo(Visibility.DELETED);
+        assertThat(commentService.branch(a.id(), null).replies())
+                .extracting(v -> v.comment().id())
+                .containsExactly(b.id());
+        // and a viewer who has blocks, which is the other side of the render policy
+        assertThat(commentService.listTopLevel("article", subjectId, bob)).hasSize(1);
+
+        assertThatThrownBy(() -> commentService.deleteOwn(alice, a.id())).isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void aReplyUnderAnAuthorlessCommentIsNotMuted() {
+        var a = commentService.create(alice, "article", subjectId, "A").comment();
+        blockService.block(alice, bob, BlockMode.GRAVESTONE);
+        commentRepository.anonymize(List.of(a.id()));
+
+        assertThat(commentService.reply(bob, a.id(), "B").mutedByRecipient()).isFalse();
     }
 }
