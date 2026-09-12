@@ -42,7 +42,7 @@ services:
   # Consequence: `docker compose restart keycloak` keeps the container
   # filesystem and does NOT reimport. Use --force-recreate after editing.
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.0
+    image: quay.io/keycloak/keycloak:26.7.3
     container_name: tw-keycloak
     ports:
       - "127.0.0.1:8180:8080"
