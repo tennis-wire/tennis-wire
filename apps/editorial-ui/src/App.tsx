@@ -4,9 +4,12 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 
 import Editor from './features/editor/components/Editor.tsx'
 import CuratorPage from './features/curator/CuratorPage.tsx'
+import ModerationPage from './features/moderation/ModerationPage.tsx'
 import { ThemeProvider, useAppTheme, createAppTheme } from './theme'
 
 import RequireAuth from './auth/RequireAuth.tsx'
+import RequireRole from './auth/RequireRole.tsx'
+import { MODERATOR } from './auth/realmRoles.ts'
 import CallbackPage from './auth/CallbackPage.tsx'
 import LoggedOutPage from './auth/LoggedOutPage.tsx'
 
@@ -35,6 +38,14 @@ function AppRoutes() {
                             <RequireAuth>
                                 <CuratorPage />
                             </RequireAuth>
+                        }
+                    />
+                    <Route
+                        path="/moderation"
+                        element={
+                            <RequireRole role={MODERATOR}>
+                                <ModerationPage />
+                            </RequireRole>
                         }
                     />
                     <Route

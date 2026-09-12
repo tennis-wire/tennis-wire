@@ -187,6 +187,15 @@ scope is dropped from the request and an ordinary refresh token comes back in
 place of an offline one. Whatever a fixture is meant to exercise has to be
 spelled out on the fixture.
 
+`editorial-ui` carries one more mapper of its own: realm roles into the **id**
+token. The built-in `roles` scope puts them in the access token, which is
+addressed to the services — a browser app reading it would be opening a token
+written for someone else. The id token is the one issued to the client, so that
+is where a screen decides whether to offer a moderator-only page. Composites are
+expanded on the way in, so `dev` arrives carrying `moderator`. Hiding a page is
+a convenience and never a control: the gateway and the service each check the
+role again, and neither trusts that the browser did.
+
 To register locally, open <http://localhost:8180/realms/tennis-wire/account>,
 follow the sign-in link and choose Register. Keycloak sends the confirmation
 mail to Mailpit; read it at <http://localhost:8025> and follow the link.
