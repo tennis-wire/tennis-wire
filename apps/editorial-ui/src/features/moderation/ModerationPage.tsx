@@ -12,21 +12,27 @@ import {
     Typography,
 } from '@mui/material'
 
+import UserMenu from '../../auth/UserMenu'
 import { moderationApi, ModerationApiError } from './api/moderationApi'
 import { REASON_LABELS, type QueueEntry, type Resolution } from './types/moderation'
 
 const PAGE_SIZE = 50
+// discussion-service caps a page here, so this screen cannot show more than that
+const MAX_SIZE = 200
 
-// Fetches nothing but data: state belongs to whoever asked, so a stale answer can be dropped
-async function loadPages(upTo: number): Promise<{ entries: QueueEntry[]; more: boolean }> {
-    const entries: QueueEntry[] = []
-    let more = false
-    for (let i = 0; i <= upTo; i++) {
-        const page = await moderationApi.queue(i, PAGE_SIZE)
-        entries.push(...page.items)
-        more = page.items.length === PAGE_SIZE
-    }
-    return { entries, more }
+interface Loaded {
+    entries: QueueEntry[]
+    full: boolean
+    capped: boolean
+}
+
+// One request, not one per page: the sort key is a count that changes under the reader, and two
+// requests would disagree about the order between them. Returns data only, so a stale answer can
+// be dropped by whoever asked
+async function loadUpTo(page: number): Promise<Loaded> {
+    const size = Math.min((page + 1) * PAGE_SIZE, MAX_SIZE)
+    const queue = await moderationApi.queue(0, size)
+    return { entries: queue.items, full: queue.items.length === size, capped: size >= MAX_SIZE }
 }
 
 // The queue, deliberately plain: a flat list, no layout work. What it does have
@@ -35,23 +41,23 @@ async function loadPages(upTo: number): Promise<{ entries: QueueEntry[]; more: b
 export default function ModerationPage() {
     const [entries, setEntries] = useState<QueueEntry[]>([])
     const [page, setPage] = useState(0)
-    const [more, setMore] = useState(false)
+    const [full, setFull] = useState(false)
+    const [capped, setCapped] = useState(false)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [busy, setBusy] = useState<string | null>(null)
     const [reloads, setReloads] = useState(0)
 
-    // Every page from the first, on every load. The order is by how many reports
-    // a comment has collected, and that changes under the reader — patching one
-    // card out of the list would leave the rest in an order the server disagrees
-    // with. An answer that arrives after the next request started is dropped
+    // Always from the top, never patched in place: a decision changes the counts everything is
+    // ordered by. An answer that arrives after the next request started is dropped
     useEffect(() => {
         let live = true
-        loadPages(page)
+        loadUpTo(page)
             .then((loaded) => {
                 if (!live) return
                 setEntries(loaded.entries)
-                setMore(loaded.more)
+                setFull(loaded.full)
+                setCapped(loaded.capped)
                 setError(null)
             })
             .catch((failure: unknown) => {
@@ -78,6 +84,14 @@ export default function ModerationPage() {
             setReloads((n) => n + 1)
         } catch (failure) {
             setError(messageFor(failure))
+            // 404 and 409 both mean someone else moved this card while it was on screen.
+            if (
+                failure instanceof ModerationApiError &&
+                (failure.status === 404 || failure.status === 409)
+            ) {
+                setLoading(true)
+                setReloads((n) => n + 1)
+            }
         } finally {
             setBusy(null)
         }
@@ -85,9 +99,15 @@ export default function ModerationPage() {
 
     return (
         <Container maxWidth="md" sx={{ py: 4 }}>
-            <Typography variant="h4" component="h1" sx={{ mb: 3 }}>
-                Жалобы
-            </Typography>
+            <Stack
+                direction="row"
+                sx={{ mb: 3, alignItems: 'center', justifyContent: 'space-between' }}
+            >
+                <Typography variant="h4" component="h1">
+                    Жалобы
+                </Typography>
+                <UserMenu />
+            </Stack>
 
             {error !== null && (
                 <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
@@ -112,12 +132,18 @@ export default function ModerationPage() {
                 ))}
             </Stack>
 
-            {more && (
+            {full && !capped && (
                 <Box sx={{ mt: 3 }}>
                     <Button onClick={showMore} disabled={loading}>
                         Показать ещё
                     </Button>
                 </Box>
+            )}
+
+            {full && capped && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
+                    Показаны первые {MAX_SIZE} карточек. Разберите их, чтобы увидеть следующие.
+                </Typography>
             )}
         </Container>
     )
