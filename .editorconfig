@@ -37,3 +37,6 @@ indent_size = 2
 [*.{ts,tsx,js,jsx,json,css,html}]
 indent_size = 4
 max_line_length = 100
+
+[*.sql]
+ij_formatter_tags_enabled = true
