@@ -113,7 +113,7 @@ class CommentServiceIT {
         var root = commentService.create(alice, "article", subjectId, "root").comment();
 
         assertThatThrownBy(() -> commentService.deleteOwn(bob, root.id())).isInstanceOf(ForbiddenException.class);
-        commentService.hide(root.id());
+        commentService.hideByModerator(root.id(), moderator);
         assertThat(commentRepository.findById(root.id()).orElseThrow().isDeleted())
                 .isTrue();
     }

@@ -41,6 +41,12 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("COMMENT_ALREADY_REMOVED", ex.getMessage()));
     }
 
+    @ExceptionHandler(ResolutionNotApplicableException.class)
+    public ResponseEntity<ErrorResponse> handleResolution(ResolutionNotApplicableException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of("RESOLUTION_NOT_APPLICABLE", ex.getMessage()));
+    }
+
     @ExceptionHandler(UserServiceUnavailableException.class)
     public ResponseEntity<ErrorResponse> handleUserServiceUnavailable(UserServiceUnavailableException ex) {
         // Not ex.getMessage(): which dependency failed, and how, belongs in the log at the throw site.

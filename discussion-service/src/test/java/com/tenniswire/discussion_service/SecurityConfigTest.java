@@ -8,6 +8,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -38,6 +39,7 @@ class SecurityConfigTest {
     private static final String COMMENTS = "/api/discussion/comments";
     private static final String RESTRICTIONS = "/api/discussion/moderation/restrictions";
     private static final String REPORTS = COMMENTS + "/" + UUID.randomUUID() + "/reports";
+    private static final String QUEUE = "/api/discussion/moderation/reports";
     private static final UUID SUBJECT = UUID.randomUUID();
 
     @MockitoBean
@@ -177,6 +179,34 @@ class SecurityConfigTest {
                 .andExpect(status().isForbidden());
         mvc.perform(get(RESTRICTIONS).param("userId", SUBJECT.toString()).with(tokenWith("ROLE_moderator")))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void theQueueIsForModeratorsAndNotForTheBotThatFillsIt() throws Exception {
+        mvc.perform(get(QUEUE).with(tokenWith("ROLE_user"))).andExpect(status().isForbidden());
+        mvc.perform(get(QUEUE).with(tokenWith("ROLE_moderator-bot"))).andExpect(status().isForbidden());
+        mvc.perform(get(QUEUE).with(tokenWith("ROLE_moderator")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isArray());
+
+        mvc.perform(patch(QUEUE + "/" + UUID.randomUUID())
+                        .with(tokenWith("ROLE_moderator-bot"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"resolution\":\"dismissed\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void aModeratorWithoutTheUserRoleCannotResolveAReport() throws Exception {
+        // Same coupling as a restriction: the decision is signed, and the signature is a user_id.
+        mvc.perform(patch(QUEUE + "/" + UUID.randomUUID())
+                        .with(tokenWith("ROLE_moderator"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"resolution\":\"dismissed\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("FORBIDDEN"));
+
+        verifyNoInteractions(resolver);
     }
 
     @Test

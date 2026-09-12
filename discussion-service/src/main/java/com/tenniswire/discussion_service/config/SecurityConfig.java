@@ -12,14 +12,6 @@ import org.springframework.security.config.annotation.web.configurers.CsrfConfig
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
-/**
- * Resource server configuration, the same shape as content-service: the gateway's rules for these
- * paths (auth.md §6), enforced again here so that reaching the service port directly buys nothing.
- *
- * <p>Reads are anonymous, but a token on a read is still validated: that is how the viewer's own
- * blocks get applied. Writes need {@code user}; moderation needs {@code moderator}, with the bot
- * allowed to hide comments but not to issue restrictions.
- */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -38,6 +30,15 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/discussion/comments/**")
                         .permitAll()
                         .requestMatchers("/api/discussion/moderation/restrictions/**")
+                        .hasRole(Roles.MODERATOR)
+                        // The bot files reports; reading the queue and deciding on one are a
+                        // person's job, so POST falls through to the rule below and these do not.
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/discussion/moderation/reports",
+                                "/api/discussion/moderation/reports/**")
+                        .hasRole(Roles.MODERATOR)
+                        .requestMatchers(HttpMethod.PATCH, "/api/discussion/moderation/reports/**")
                         .hasRole(Roles.MODERATOR)
                         .requestMatchers("/api/discussion/moderation/**")
                         .hasAnyRole(Roles.MODERATOR, Roles.MODERATOR_BOT)

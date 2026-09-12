@@ -22,6 +22,20 @@ public interface UserRestrictionRepository extends JpaRepository<UserRestriction
     List<UserRestriction> findActive(
             @Param("userId") UUID userId, @Param("capability") String capability, @Param("now") Instant now);
 
+    // The active restrictions of a whole page of users, ordered so that the first row for each is
+    // the binding one. Unlike findRestrictedAmong this keeps the expiry: the moderation queue shows
+    // the ban itself, not merely that there is one
+    @Query("""
+        select r from UserRestriction r
+        where r.userId in :userIds and r.capability = :capability
+          and (r.expiresAt is null or r.expiresAt > :now)
+        order by r.expiresAt desc nulls first
+        """)
+    List<UserRestriction> findActiveAmong(
+            @Param("userIds") Collection<UUID> userIds,
+            @Param("capability") String capability,
+            @Param("now") Instant now);
+
     /** Which of the given users have an active restriction for a capability: one query for a whole page. */
     @Query("""
             select distinct r.userId from UserRestriction r
