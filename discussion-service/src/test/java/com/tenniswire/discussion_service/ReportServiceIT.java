@@ -138,6 +138,37 @@ class ReportServiceIT {
     }
 
     @Test
+    void theBotFilesOncePerCommentAndCountsApartFromReaders() {
+        var comment = commentOf(alice);
+
+        reportService.reportAsBot(comment, "hate");
+        reportService.reportAsBot(comment, "spam");
+        reportService.report(bob, comment, "spam");
+
+        assertThat(openReportsOn(comment)).isEqualTo(2);
+    }
+
+    @Test
+    void theBotIsTurnedAwayFromACommentModerationAlreadyRemoved() {
+        var comment = commentOf(alice);
+        removeByModeration(comment);
+
+        assertThatThrownBy(() -> reportService.reportAsBot(comment, "spam"))
+                .isInstanceOf(CommentAlreadyRemovedException.class);
+    }
+
+    @Test
+    void theBotDoesNotReopenACommentAModeratorLeftStanding() {
+        var comment = commentOf(alice);
+        var stored = comments.findById(comment).orElseThrow();
+        comments.saveAndFlush(stored.reportsClosedAt(stored.updatedAt()));
+
+        reportService.reportAsBot(comment, "spam");
+
+        assertThat(openReportsOn(comment)).isZero();
+    }
+
+    @Test
     void reportingSomethingThatIsNotThere() {
         assertThatThrownBy(() -> reportService.report(bob, UUID.randomUUID(), "spam"))
                 .isInstanceOf(ResourceNotFoundException.class);

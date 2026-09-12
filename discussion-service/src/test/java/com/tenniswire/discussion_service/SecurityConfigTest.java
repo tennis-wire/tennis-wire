@@ -197,6 +197,28 @@ class SecurityConfigTest {
     }
 
     @Test
+    void filingThroughModerationIsTheBotsAloneNotAModeratorsToo() throws Exception {
+        var filing = "{\"commentId\":\"" + UUID.randomUUID() + "\",\"reason\":\"spam\"}";
+
+        mvc.perform(post(QUEUE)
+                        .with(tokenWith("ROLE_user"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(filing))
+                .andExpect(status().isForbidden());
+        mvc.perform(post(QUEUE)
+                        .with(tokenWith("ROLE_moderator"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(filing))
+                .andExpect(status().isForbidden());
+        // 404: through the chain and into the handler, where the comment does not exist.
+        mvc.perform(post(QUEUE)
+                        .with(tokenWith("ROLE_moderator-bot"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(filing))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void aModeratorWithoutTheUserRoleCannotResolveAReport() throws Exception {
         // Same coupling as a restriction: the decision is signed, and the signature is a user_id.
         mvc.perform(patch(QUEUE + "/" + UUID.randomUUID())

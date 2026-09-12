@@ -25,6 +25,19 @@ public interface ReportRepository extends JpaRepository<Report, UUID> {
             @Param("reporterHash") byte[] reporterHash,
             @Param("reason") String reason);
 
+    // The same conflict handling for the classifier, which carries no hash: the partial unique
+    // index keeps it to one open report per comment until that one is decided
+    @Modifying
+    @Query(value = """
+            insert into report (comment_id, source, reason)
+            values (:commentId, 'bot', :reason)
+            on conflict do nothing
+            """, nativeQuery = true)
+    int insertBotReport(@Param("commentId") UUID commentId, @Param("reason") String reason);
+
+    // The queue's backbone: one row per comment with open reports, heaviest first and, at equal
+    // weight, whoever has been waiting longest. Paged here rather than by cursor - the sort key is
+    // a count that changes under the reader, and a cursor over it would skip and repeat entries.
     @Query("""
         select new com.tenniswire.discussion_service.repository.OpenReportGroup(
             r.commentId, count(r), min(r.createdAt), max(r.createdAt))
@@ -47,6 +60,9 @@ public interface ReportRepository extends JpaRepository<Report, UUID> {
 
     long countByCommentIdAndResolvedAtIsNull(UUID commentId);
 
+    // Closes every open report on a comment at once and erases the hashes with them: once a
+    // decision is taken there is nothing left to deduplicate, and the reporter was only ever kept
+    // for that. The timestamp comes from the database so that one decision carries one time
     @Modifying
     @Query("""
         update Report r

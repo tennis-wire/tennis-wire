@@ -40,12 +40,8 @@ public class ReportService {
     }
 
     public void report(UUID reporterId, UUID commentId, String reason) {
-        if (!reasons.contains(reason)) {
-            throw new IllegalArgumentException("Unknown report reason; expected one of " + reasons);
-        }
-        var comment =
-                comments.findById(commentId).orElseThrow(() -> new ResourceNotFoundException("Comment", commentId));
-        assertReportable(reporterId, comment);
+        var comment = reportable(commentId, reason);
+        assertTheReaderMay(reporterId, comment);
 
         if (settledAndUnedited(comment)) {
             // A moderator has read this comment and left it standing. Until its text changes there
@@ -55,16 +51,36 @@ public class ReportService {
         reports.insertReaderReport(commentId, hash.of(reporterId, commentId), reason);
     }
 
-    private void assertReportable(UUID reporterId, Comment comment) {
-        if (comment.authorId().equals(reporterId)) {
-            throw new ForbiddenException("A comment cannot be reported by its own author");
+    // The classifier's own filing. No reader stands behind it, so there is no hash to store and no
+    // ignore list to consult: only the state of the comment decides. A moderator does not file
+    // here — someone who can act on a comment has no use for putting it in his own queue.
+    public void reportAsBot(UUID commentId, String reason) {
+        var comment = reportable(commentId, reason);
+        if (settledAndUnedited(comment)) {
+            return;
         }
+        reports.insertBotReport(commentId, reason);
+    }
+
+    // What holds whoever is filing: a reason that exists, a comment that exists and still stands
+    private Comment reportable(UUID commentId, String reason) {
+        if (!reasons.contains(reason)) {
+            throw new IllegalArgumentException("Unknown report reason; expected one of " + reasons);
+        }
+        var comment =
+                comments.findById(commentId).orElseThrow(() -> new ResourceNotFoundException("Comment", commentId));
         if (comment.isHiddenByModeration()) {
             throw new CommentAlreadyRemovedException(comment.id());
         }
         // A comment its own author deleted stays reportable: the text is still there to be judged,
         // and the violation can still be counted against him.
+        return comment;
+    }
 
+    private void assertTheReaderMay(UUID reporterId, Comment comment) {
+        if (comment.authorId().equals(reporterId)) {
+            throw new ForbiddenException("A comment cannot be reported by its own author");
+        }
         // The only place in this service where the viewer's blocks are read outside rendering.
         // Collapsing leaves the comment reachable once expanded; the other two modes do not.
         var mode = blocks.findById(new BlockId(reporterId, comment.authorId()))

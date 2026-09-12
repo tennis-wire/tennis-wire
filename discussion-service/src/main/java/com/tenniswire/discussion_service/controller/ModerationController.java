@@ -1,5 +1,6 @@
 package com.tenniswire.discussion_service.controller;
 
+import com.tenniswire.discussion_service.dto.BotReportRequest;
 import com.tenniswire.discussion_service.dto.CreateRestrictionRequest;
 import com.tenniswire.discussion_service.dto.ModerationQueueResponse;
 import com.tenniswire.discussion_service.dto.ResolveReportsRequest;
@@ -8,6 +9,7 @@ import com.tenniswire.discussion_service.entity.ReportResolution;
 import com.tenniswire.discussion_service.security.CurrentUser;
 import com.tenniswire.discussion_service.service.CommentService;
 import com.tenniswire.discussion_service.service.ModerationQueueService;
+import com.tenniswire.discussion_service.service.ReportService;
 import com.tenniswire.discussion_service.service.RestrictionService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -36,6 +38,7 @@ public class ModerationController {
     private final RestrictionService restrictionService;
     private final ModerationQueueService queueService;
     private final ModerationQueueResponses queueResponses;
+    private final ReportService reportService;
     private final CurrentUser currentUser;
 
     public ModerationController(
@@ -43,11 +46,13 @@ public class ModerationController {
             RestrictionService restrictionService,
             ModerationQueueService queueService,
             ModerationQueueResponses queueResponses,
+            ReportService reportService,
             CurrentUser currentUser) {
         this.commentService = commentService;
         this.restrictionService = restrictionService;
         this.queueService = queueService;
         this.queueResponses = queueResponses;
+        this.reportService = reportService;
         this.currentUser = currentUser;
     }
 
@@ -60,6 +65,15 @@ public class ModerationController {
         } else {
             commentService.hideByBot(id);
         }
+    }
+
+    // The classifier putting a comment in front of a person. Empty like a reader's own filing, and
+    // for the same reason turned around: whether this is the first report or a repeat is not
+    // something the caller acts on
+    @PostMapping("/reports")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reportAsBot(@Valid @RequestBody BotReportRequest request) {
+        reportService.reportAsBot(request.commentId(), request.reason());
     }
 
     // The queue: one card per reported comment, not one per report

@@ -31,8 +31,10 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers("/api/discussion/moderation/restrictions/**")
                         .hasRole(Roles.MODERATOR)
-                        // The bot files reports; reading the queue and deciding on one are a
-                        // person's job, so POST falls through to the rule below and these do not.
+                        // Filing is the classifier's job and reading the queue is a person's;
+                        // neither has any use for the other's half.
+                        .requestMatchers(HttpMethod.POST, "/api/discussion/moderation/reports")
+                        .hasRole(Roles.MODERATOR_BOT)
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/discussion/moderation/reports",
