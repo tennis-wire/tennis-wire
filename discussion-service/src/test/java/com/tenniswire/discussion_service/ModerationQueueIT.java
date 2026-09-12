@@ -13,6 +13,7 @@ import com.tenniswire.discussion_service.entity.Comment;
 import com.tenniswire.discussion_service.entity.Report;
 import com.tenniswire.discussion_service.entity.ReportResolution;
 import com.tenniswire.discussion_service.exception.ResolutionNotApplicableException;
+import com.tenniswire.discussion_service.exception.ResourceNotFoundException;
 import com.tenniswire.discussion_service.exception.UserServiceUnavailableException;
 import com.tenniswire.discussion_service.repository.CommentRepository;
 import com.tenniswire.discussion_service.repository.ReportRepository;
@@ -190,10 +191,21 @@ class ModerationQueueIT {
     @Test
     void moderationCannotRemoveWhatTheAuthorTookDownHimself() {
         var comment = comment();
+        // a reply keeps the gravestone standing; the case where nothing does is the test below
+        commentService.reply(UUID.randomUUID(), comment, "keeps the node");
         commentService.deleteOwn(author, comment);
 
         assertThatThrownBy(() -> commentService.hideByModerator(comment, moderator))
                 .isInstanceOf(ResolutionNotApplicableException.class);
+    }
+
+    @Test
+    void moderationFindsNothingWhereTheAuthorDeletedACommentNobodyAnswered() {
+        var comment = comment();
+        commentService.deleteOwn(author, comment);
+
+        assertThatThrownBy(() -> commentService.hideByModerator(comment, moderator))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test

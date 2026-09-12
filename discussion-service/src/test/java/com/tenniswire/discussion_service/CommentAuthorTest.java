@@ -132,6 +132,8 @@ class CommentAuthorTest {
     @Test
     void aDeletedCommentHasNoAuthor() throws Exception {
         var comment = commentService.create(alice, "article", subjectId, "gone").comment();
+        // a reply is what keeps the node: with nothing under it the comment goes away outright
+        commentService.reply(bob, comment.id(), "still here");
         commentService.deleteOwn(alice, comment.id());
 
         mvc.perform(listing())

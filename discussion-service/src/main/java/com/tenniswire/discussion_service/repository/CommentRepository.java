@@ -29,6 +29,31 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
     @Query("update Comment c set c.replyCount = c.replyCount + 1 where c.id = :id")
     int incrementReplyCount(@Param("id") UUID id);
 
+    // Guarded rather than trusted: the count is raw, maintained here alone, and a negative one
+    // would show up on the article card.
+    @Modifying
+    @Query("update Comment c set c.replyCount = c.replyCount - 1 where c.id = :id and c.replyCount > 0")
+    int decrementReplyCount(@Param("id") UUID id);
+
+    // Direct children of each of the given comments, gravestones included. Deleted, not living:
+    // in_reply_to_id refuses to let a parent go while any row still hangs off it, and after the
+    // collapse a childless gravestone no longer exists unless moderation or a report pinned it.
+    // The whole ancestry chain is asked at once so the walk upward costs a fixed number of trips.
+    @Query("""
+        select new com.tenniswire.discussion_service.repository.ChildTally(c.inReplyToId, count(c))
+        from Comment c
+        where c.inReplyToId in :parentIds
+        group by c.inReplyToId
+        """)
+    List<ChildTally> countChildrenOf(@Param("parentIds") Collection<UUID> parentIds);
+
+    // One statement for the whole collapsed chain: the foreign key is checked once it has run, by
+    // which time child and parent have gone together. The context is cleared because what it still
+    // holds of those rows is no longer in the database.
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from Comment c where c.id in :ids")
+    int deleteByIdIn(@Param("ids") Collection<UUID> ids);
+
     // Removals and hand-counted violations land in one total. A counted one has no source of its
     // own — only a person counts one — hence the coalesce. The two columns exclude each other.
     @Query("""

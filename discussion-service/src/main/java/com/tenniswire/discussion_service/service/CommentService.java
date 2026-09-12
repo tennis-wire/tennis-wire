@@ -13,13 +13,16 @@ import com.tenniswire.discussion_service.exception.ForbiddenException;
 import com.tenniswire.discussion_service.exception.ResolutionNotApplicableException;
 import com.tenniswire.discussion_service.exception.ResourceNotFoundException;
 import com.tenniswire.discussion_service.repository.BlockRepository;
+import com.tenniswire.discussion_service.repository.ChildTally;
 import com.tenniswire.discussion_service.repository.CommentRepository;
 import com.tenniswire.discussion_service.repository.ReportRepository;
 import com.tenniswire.discussion_service.repository.UserRestrictionRepository;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
@@ -48,8 +51,6 @@ public class CommentService {
         this.reports = reports;
         this.events = events;
     }
-
-    // -- Write path (spec §9) --
 
     public CreatedComment create(UUID authorId, String subjectType, UUID subjectId, String body) {
         assertMayComment(authorId);
@@ -85,13 +86,23 @@ public class CommentService {
         return new CreatedComment(saved, muted);
     }
 
-    /** Soft delete by the author. Idempotent. */
+    /**
+     * Deletion by the author. The node is marked deleted and then, if nothing stands on it, taken
+     * away outright along with every gravestone above it that it was the last thing holding up
+     * (discussion-rules §8.5, §8.7). Idempotent.
+     */
     public void deleteOwn(UUID actorId, UUID commentId) {
         var comment = findOrThrow(commentId);
         if (!comment.authorId().equals(actorId)) {
             throw new ForbiddenException("Not the author of comment " + commentId);
         }
-        softDelete(comment);
+        if (comment.isDeleted()) {
+            return;
+        }
+        comment.deletedAt(Instant.now());
+        // before the ancestry query: it is native, and the mark decides the walk
+        comments.flush();
+        collapse(comment);
     }
 
     /**
@@ -106,8 +117,6 @@ public class CommentService {
     public void hideByBot(UUID commentId) {
         hide(findOrThrow(commentId), Comment.HIDDEN_BY_BOT, null);
     }
-
-    // -- Read path (spec §10): dumb queries, tree in memory, block modes applied per viewer --
 
     @Transactional(readOnly = true)
     public List<CommentView> listTopLevel(String subjectType, UUID subjectId, @Nullable UUID viewerId) {
@@ -149,19 +158,57 @@ public class CommentService {
         return flat;
     }
 
-    // -- Helpers --
+    /**
+     * Walks up from a freshly deleted comment, taking away every node that has nothing left under
+     * it. Moderation is not involved: a comment it removed keeps its row, and so the parent that
+     * row hangs off keeps its own.
+     */
+    private void collapse(Comment from) {
+        var chain = comments.findAncestry(from.path()); // root first, `from` last
+        var ids = chain.stream().map(Comment::id).toList();
+        var children = comments.countChildrenOf(ids).stream()
+                .collect(Collectors.toMap(ChildTally::parentId, ChildTally::children, (a, b) -> a, HashMap::new));
+        var reported = reports.findReportedAmong(ids);
+
+        var doomed = new ArrayList<UUID>();
+        UUID survivor = null;
+        for (var i = chain.size() - 1; i >= 0; i--) {
+            var node = chain.get(i);
+            if (!collapsible(node, children, reported)) {
+                break;
+            }
+            doomed.add(node.id());
+            survivor = node.inReplyToId();
+            if (survivor != null) {
+                children.merge(survivor, -1L, Long::sum);
+            }
+        }
+        if (doomed.isEmpty()) {
+            return;
+        }
+        comments.deleteByIdIn(doomed);
+        // One decrement, not one per node: the parents of everything else in the chain went with it.
+        if (survivor != null) {
+            comments.decrementReplyCount(survivor);
+        }
+    }
+
+    private static boolean collapsible(Comment node, Map<UUID, Long> children, Set<UUID> reported) {
+        // hiddenAt: the author still sees his removed comment and the counter reads that column.
+        // countedAt: same, for a violation counted by hand.
+        // reported: the queue card outlives the author deleting his own comment (§10.22).
+        return node.isDeleted()
+                && !node.isHiddenByModeration()
+                && node.countedAt() == null
+                && !reported.contains(node.id())
+                && children.getOrDefault(node.id(), 0L) == 0L;
+    }
 
     private void assertMayComment(UUID authorId) {
         var active = restrictions.findActive(authorId, UserRestriction.CAPABILITY_COMMENT, Instant.now());
         if (!active.isEmpty()) {
             // ordered indefinite-first, then latest expiry: the first row is the binding one
             throw new CommentingRestrictedException(active.getFirst().expiresAt());
-        }
-    }
-
-    private void softDelete(Comment comment) {
-        if (!comment.isDeleted()) {
-            comment.deletedAt(Instant.now());
         }
     }
 
@@ -175,6 +222,8 @@ public class CommentService {
         }
         var now = Instant.now();
         comment.deletedAt(now).hiddenAt(now).hiddenSource(source).hiddenBy(moderatorId);
+        // No collapse here: the row stays, so everything above it keeps a child and stays too.
+        // What the reader should see instead is a render rule, and it comes with B3 (§11.7, §11.12).
         // However the comment came down, the queue is done with it — including when it was taken
         // down straight from the comment endpoint, with no card ever opened.
         reports.closeOpen(comment.id(), ReportResolution.HIDDEN, moderatorId);

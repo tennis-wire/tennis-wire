@@ -4,6 +4,7 @@ import com.tenniswire.discussion_service.entity.Report;
 import com.tenniswire.discussion_service.entity.ReportResolution;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 import org.springframework.data.domain.Pageable;
@@ -59,6 +60,13 @@ public interface ReportRepository extends JpaRepository<Report, UUID> {
     List<ReasonTally> findOpenTallies(@Param("commentIds") Collection<UUID> commentIds);
 
     long countByCommentIdAndResolvedAtIsNull(UUID commentId);
+
+    // Which of these comments carry a report at all, decided or not. Such a comment is never taken
+    // away outright when its author deletes it: the queue keeps the card with a "deleted by its
+    // author" mark (discussion-rules §10.22), and the decided rows are the moderation journal
+    // (§10.24), which the comment_id foreign key would cascade away with the comment.
+    @Query("select distinct r.commentId from Report r where r.commentId in :commentIds")
+    Set<UUID> findReportedAmong(@Param("commentIds") Collection<UUID> commentIds);
 
     // Closes every open report on a comment at once and erases the hashes with them: once a
     // decision is taken there is nothing left to deduplicate, and the reporter was only ever kept

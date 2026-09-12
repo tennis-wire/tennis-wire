@@ -68,13 +68,24 @@ class ReportServiceIT {
     }
 
     @Test
-    void aCommentItsAuthorDeletedIsStillReportable() {
+    void aCommentItsAuthorDeletedIsStillReportableWhileSomethingStandsOnIt() {
         var comment = commentOf(alice);
+        commentService.reply(bob, comment, "keeps the node");
         commentService.deleteOwn(alice, comment);
 
         reportService.report(bob, comment, "spam");
 
         assertThat(openReportsOn(comment)).isEqualTo(1);
+    }
+
+    @Test
+    void aCommentItsAuthorDeletedWithNothingUnderItIsGoneRatherThanReportable() {
+        var comment = commentOf(alice);
+        commentService.deleteOwn(alice, comment);
+
+        // the reader who still had it on screen gets a 404, not a report on a row that no longer exists
+        assertThatThrownBy(() -> reportService.report(bob, comment, "spam"))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
