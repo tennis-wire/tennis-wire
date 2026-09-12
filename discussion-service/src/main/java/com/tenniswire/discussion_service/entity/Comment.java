@@ -31,6 +31,9 @@ import org.hibernate.generator.EventType;
 @NoArgsConstructor
 public class Comment {
 
+    public static final String HIDDEN_BY_MODERATOR = "moderator";
+    public static final String HIDDEN_BY_BOT = "bot";
+
     // UUIDv7 generated on the JVM so the id is known before the flush; the column keeps
     // DEFAULT uuidv7() for rows inserted outside Hibernate.
     @Id
@@ -81,6 +84,29 @@ public class Comment {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    // -- Moderation state --
+    //
+    // deletedAt cannot carry this on its own: the author's own delete and a removal by moderation
+    // write the same thing, while the rules keep them apart. A report is accepted on a comment its
+    // author deleted and refused on one moderation removed, and only the second counts against the
+    // author.
+
+    @Column(name = "hidden_at")
+    private Instant hiddenAt;
+
+    // null when the bot removed it: a service account has no reader profile to name
+    @Column(name = "hidden_by")
+    private UUID hiddenBy;
+
+    @Column(name = "hidden_source")
+    private String hiddenSource;
+
+    // When moderation last closed the reports on this comment without removing it. The comment
+    // becomes reportable again once edited, and updatedAt is what proves an edit happened: its
+    // trigger fires on a body change only, so no moderation write can pass for one.
+    @Column(name = "reports_closed_at")
+    private Instant reportsClosedAt;
+
     // -- Timestamps: DB-owned (defaults + trigger) --
 
     @Generated(event = EventType.INSERT)
@@ -97,5 +123,9 @@ public class Comment {
 
     public boolean isDeleted() {
         return deletedAt != null;
+    }
+
+    public boolean isHiddenByModeration() {
+        return hiddenAt != null;
     }
 }

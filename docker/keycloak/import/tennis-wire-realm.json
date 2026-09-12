@@ -63,6 +63,21 @@
             },
             "protocolMappers": [
                 {
+                    "name": "realm-roles-in-id-token",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-realm-role-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "claim.name": "realm_access.roles",
+                        "jsonType.label": "String",
+                        "multivalued": "true",
+                        "id.token.claim": "true",
+                        "access.token.claim": "false",
+                        "introspection.token.claim": "false",
+                        "userinfo.token.claim": "false"
+                    }
+                },
+                {
                     "name": "tennis-wire-api-audience",
                     "protocol": "openid-connect",
                     "protocolMapper": "oidc-audience-mapper",
@@ -284,6 +299,16 @@
             "lastName": "Reader",
             "credentials": [{ "type": "password", "value": "reader", "temporary": false }],
             "realmRoles": ["user", "offline_access"]
+        },
+        {
+            "username": "moderator",
+            "enabled": true,
+            "emailVerified": true,
+            "email": "moderator@tennis-wire.local",
+            "firstName": "Dev",
+            "lastName": "Moderator",
+            "credentials": [{ "type": "password", "value": "moderator", "temporary": false }],
+            "realmRoles": ["moderator", "user"]
         },
         {
             "username": "service-account-moderation-bot",

@@ -16,6 +16,8 @@ public class CurrentUser {
     // the two agree in production, but jwt().authorities(...) in tests sets only the authority.
     private static final String READER = "ROLE_" + Roles.USER;
 
+    private static final String MODERATOR = "ROLE_" + Roles.MODERATOR;
+
     private final UserIdResolver resolver;
 
     public CurrentUser(UserIdResolver resolver) {
@@ -36,11 +38,21 @@ public class CurrentUser {
         return jwt != null && isReader() ? resolver.resolve(jwt) : null;
     }
 
+    // hether a person is acting rather than the classifier. Only two roles reach moderation, and
+    // the bot does not carry this one — it has no reader profile to be recorded under.
+    public boolean isModerator() {
+        return hasAuthority(MODERATOR);
+    }
+
     private static boolean isReader() {
+        return hasAuthority(READER);
+    }
+
+    private static boolean hasAuthority(String authority) {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication != null
                 && authentication.getAuthorities().stream()
                         .map(GrantedAuthority::getAuthority)
-                        .anyMatch(READER::equals);
+                        .anyMatch(authority::equals);
     }
 }

@@ -43,6 +43,25 @@ Docker Desktop or machine restart the containers stay down until `up -d`.
 These credentials are local development defaults and are intentionally in the
 repository. They must never be reused anywhere else.
 
+### Which traffic goes through the gateway
+
+Client traffic only. A browser, the mobile app and `editorial-ui` know one
+backend host, the gateway; the service ports are not published outside the
+cluster, and CORS is configured on the gateway alone.
+
+Service-to-service traffic deliberately does not. `discussion-service` calls
+user-service directly over cluster DNS, because `/internal/**` is not routed
+through the gateway and must not be — those endpoints answer to a service
+token, not to a person's.
+
+Either way the service checks the token itself: issuer, audience and roles are
+verified again behind the gateway, so reaching a service port directly buys
+nothing. That is also why a direct `curl` to a service port is a legitimate way
+to localise a failure while developing — if a call fails through the gateway on
+8090 and succeeds against the service port, the gateway's rules are what to
+look at. Prefer the gateway for anything you mean as a check: it is the only
+path that exercises both sets of rules.
+
 ### Databases
 
 One PostgreSQL instance, one database and one owning role per service. They are
@@ -140,9 +159,16 @@ Local principals:
 |---|---|---|
 | `dev` | `dev` / `dev` | `author`, `admin` (so also `moderator` and `user`) |
 | `reader` | `reader` / `reader` | `user` |
+| `moderator` | `moderator` / `moderator` | `moderator`, `user` |
 | `moderation-bot` | client secret `dev-moderation-bot-secret` | `moderator-bot` |
 | `user-service` | client secret `dev-user-service-secret` | `service`, plus `realm-management`: `manage-users`, `view-realm` |
 | `discussion-service` | client secret `dev-discussion-service-secret` | `service` |
+
+`moderator` exists because `dev` is not a moderator in the shape production
+has: `admin` is composite and hands it `author` and `user` as well, so a check
+a real moderator would fail passes on `dev`. Moderation records who acted, and
+that identity is a reader profile in `user-service` — hence `user` spelled out
+on the fixture instead of assumed, per the rule under Readers below.
 
 `dev-cli` is a password-grant client that exists only for `curl` and for the
 gateway integration test. ROPC is deprecated in OAuth 2.1; this client must
@@ -179,6 +205,15 @@ role of the same name, and a user without the role does not get an error. The
 scope is dropped from the request and an ordinary refresh token comes back in
 place of an offline one. Whatever a fixture is meant to exercise has to be
 spelled out on the fixture.
+
+`editorial-ui` carries one more mapper of its own: realm roles into the **id**
+token. The built-in `roles` scope puts them in the access token, which is
+addressed to the services — a browser app reading it would be opening a token
+written for someone else. The id token is the one issued to the client, so that
+is where a screen decides whether to offer a moderator-only page. Composites are
+expanded on the way in, so `dev` arrives carrying `moderator`. Hiding a page is
+a convenience and never a control: the gateway and the service each check the
+role again, and neither trusts that the browser did.
 
 To register locally, open <http://localhost:8180/realms/tennis-wire/account>,
 follow the sign-in link and choose Register. Keycloak sends the confirmation

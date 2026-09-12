@@ -8,6 +8,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -37,6 +38,8 @@ class SecurityConfigTest {
 
     private static final String COMMENTS = "/api/discussion/comments";
     private static final String RESTRICTIONS = "/api/discussion/moderation/restrictions";
+    private static final String REPORTS = COMMENTS + "/" + UUID.randomUUID() + "/reports";
+    private static final String QUEUE = "/api/discussion/moderation/reports";
     private static final UUID SUBJECT = UUID.randomUUID();
 
     @MockitoBean
@@ -133,6 +136,30 @@ class SecurityConfigTest {
     }
 
     @Test
+    void reportingRejectsAnonymous() throws Exception {
+        mvc.perform(post(REPORTS).contentType(MediaType.APPLICATION_JSON).content(reason()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void reportingIsForReadersAndNotForTheBot() throws Exception {
+        when(resolver.resolve(any())).thenReturn(UUID.randomUUID());
+
+        mvc.perform(post(REPORTS)
+                        .with(tokenWith("ROLE_moderator-bot"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(reason()))
+                .andExpect(status().isForbidden());
+
+        // 404, not 403: the reader is through the chain and into the handler, where the id is made up.
+        mvc.perform(post(REPORTS)
+                        .with(tokenWith("ROLE_user"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(reason()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void anUnavailableUserServiceIsA503() throws Exception {
         when(resolver.resolve(any())).thenThrow(new UserServiceUnavailableException("down"));
 
@@ -155,6 +182,56 @@ class SecurityConfigTest {
     }
 
     @Test
+    void theQueueIsForModeratorsAndNotForTheBotThatFillsIt() throws Exception {
+        mvc.perform(get(QUEUE).with(tokenWith("ROLE_user"))).andExpect(status().isForbidden());
+        mvc.perform(get(QUEUE).with(tokenWith("ROLE_moderator-bot"))).andExpect(status().isForbidden());
+        mvc.perform(get(QUEUE).with(tokenWith("ROLE_moderator")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isArray());
+
+        mvc.perform(patch(QUEUE + "/" + UUID.randomUUID())
+                        .with(tokenWith("ROLE_moderator-bot"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"resolution\":\"dismissed\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void filingThroughModerationIsTheBotsAloneNotAModeratorsToo() throws Exception {
+        var filing = "{\"commentId\":\"" + UUID.randomUUID() + "\",\"reason\":\"spam\"}";
+
+        mvc.perform(post(QUEUE)
+                        .with(tokenWith("ROLE_user"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(filing))
+                .andExpect(status().isForbidden());
+        mvc.perform(post(QUEUE)
+                        .with(tokenWith("ROLE_moderator"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(filing))
+                .andExpect(status().isForbidden());
+        // 404: through the chain and into the handler, where the comment does not exist.
+        mvc.perform(post(QUEUE)
+                        .with(tokenWith("ROLE_moderator-bot"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(filing))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void aModeratorWithoutTheUserRoleCannotResolveAReport() throws Exception {
+        // Same coupling as a restriction: the decision is signed, and the signature is a user_id.
+        mvc.perform(patch(QUEUE + "/" + UUID.randomUUID())
+                        .with(tokenWith("ROLE_moderator"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"resolution\":\"dismissed\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("FORBIDDEN"));
+
+        verifyNoInteractions(resolver);
+    }
+
+    @Test
     void theBotMayHideComments() throws Exception {
         mvc.perform(delete("/api/discussion/moderation/comments/" + UUID.randomUUID())
                         .with(tokenWith("ROLE_moderator-bot")))
@@ -169,6 +246,10 @@ class SecurityConfigTest {
 
     private static JwtRequestPostProcessor tokenWith(String role) {
         return jwt().jwt(j -> j.subject(UUID.randomUUID().toString())).authorities(new SimpleGrantedAuthority(role));
+    }
+
+    private static String reason() {
+        return "{\"reason\":\"spam\"}";
     }
 
     private static String body() {

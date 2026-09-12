@@ -4,14 +4,17 @@ import com.tenniswire.discussion_service.entity.Block;
 import com.tenniswire.discussion_service.entity.BlockId;
 import com.tenniswire.discussion_service.entity.BlockMode;
 import com.tenniswire.discussion_service.entity.Comment;
+import com.tenniswire.discussion_service.entity.ReportResolution;
 import com.tenniswire.discussion_service.entity.UserRestriction;
 import com.tenniswire.discussion_service.event.CommentCreatedEvent;
 import com.tenniswire.discussion_service.event.DomainEventPublisher;
 import com.tenniswire.discussion_service.exception.CommentingRestrictedException;
 import com.tenniswire.discussion_service.exception.ForbiddenException;
+import com.tenniswire.discussion_service.exception.ResolutionNotApplicableException;
 import com.tenniswire.discussion_service.exception.ResourceNotFoundException;
 import com.tenniswire.discussion_service.repository.BlockRepository;
 import com.tenniswire.discussion_service.repository.CommentRepository;
+import com.tenniswire.discussion_service.repository.ReportRepository;
 import com.tenniswire.discussion_service.repository.UserRestrictionRepository;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -30,16 +33,19 @@ public class CommentService {
     private final CommentRepository comments;
     private final BlockRepository blocks;
     private final UserRestrictionRepository restrictions;
+    private final ReportRepository reports;
     private final DomainEventPublisher events;
 
     public CommentService(
             CommentRepository comments,
             BlockRepository blocks,
             UserRestrictionRepository restrictions,
+            ReportRepository reports,
             DomainEventPublisher events) {
         this.comments = comments;
         this.blocks = blocks;
         this.restrictions = restrictions;
+        this.reports = reports;
         this.events = events;
     }
 
@@ -88,9 +94,17 @@ public class CommentService {
         softDelete(comment);
     }
 
-    /** Soft delete by moderation. Same effect as the author's; richer mod status is deferred (spec §13). */
-    public void hide(UUID commentId) {
-        softDelete(findOrThrow(commentId));
+    /**
+     * Removal by a person. Idempotent, and refused on a comment its author already took down:
+     * moderation has nothing left to remove there, only a violation it may still count.
+     */
+    public void hideByModerator(UUID commentId, UUID moderatorId) {
+        hide(findOrThrow(commentId), Comment.HIDDEN_BY_MODERATOR, moderatorId);
+    }
+
+    /** Removal by the classifier. It has no reader profile, so the row records only that it acted. */
+    public void hideByBot(UUID commentId) {
+        hide(findOrThrow(commentId), Comment.HIDDEN_BY_BOT, null);
     }
 
     // -- Read path (spec §10): dumb queries, tree in memory, block modes applied per viewer --
@@ -149,6 +163,21 @@ public class CommentService {
         if (!comment.isDeleted()) {
             comment.deletedAt(Instant.now());
         }
+    }
+
+    private void hide(Comment comment, String source, @Nullable UUID moderatorId) {
+        if (comment.isHiddenByModeration()) {
+            return;
+        }
+        if (comment.isDeleted()) {
+            throw new ResolutionNotApplicableException(
+                    "Comment " + comment.id() + " was deleted by its author and is not moderation's to remove");
+        }
+        var now = Instant.now();
+        comment.deletedAt(now).hiddenAt(now).hiddenSource(source).hiddenBy(moderatorId);
+        // However the comment came down, the queue is done with it — including when it was taken
+        // down straight from the comment endpoint, with no card ever opened.
+        reports.closeOpen(comment.id(), ReportResolution.HIDDEN, moderatorId);
     }
 
     private Map<UUID, BlockMode> blocksOf(@Nullable UUID viewerId) {
