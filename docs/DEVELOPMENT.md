@@ -314,6 +314,14 @@ intended behaviour, not a misconfiguration.
 Datasource settings are overridable via `DB_HOST`, `DB_PORT`, `DB_NAME`,
 `DB_USERNAME` and `DB_PASSWORD`.
 
+`REPORT_HASH_KEY` is the key a reporter's identity is hashed under before it is
+stored, so that a repeat complaint can be recognised without keeping who
+complained. It has a development default and must be overridden anywhere else:
+author ids travel with every comment, so an unkeyed hash of the same pair could
+be recomputed for each known reader until one matched. Failure is silent —
+reports keep working, and only the anonymity is gone. Rotating the key resets
+deduplication (everyone may report once more) and costs no data.
+
 discussion-service calls user-service directly, over `USER_SERVICE_URL`
 (`http://localhost:8092` by default) and never through the gateway. Without it
 running, an authenticated read, any write and `scripts/smoke.sh` answer 503:

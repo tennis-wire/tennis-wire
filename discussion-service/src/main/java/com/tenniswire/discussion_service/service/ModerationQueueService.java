@@ -65,21 +65,20 @@ public class ModerationQueueService {
         }
         switch (resolution) {
             case HIDDEN -> commentService.hideByModerator(commentId, moderatorId);
-            case DISMISSED -> letStand(comment, ReportResolution.DISMISSED, moderatorId);
+            case DISMISSED -> {
+                comments.markReportsClosed(commentId);
+                reports.closeOpen(commentId, ReportResolution.DISMISSED, moderatorId);
+            }
             case COUNTED -> {
                 if (!comment.isDeleted() || comment.isHiddenByModeration()) {
                     throw new ResolutionNotApplicableException(
                             "A violation is counted by hand only on a comment its author deleted: " + commentId);
                 }
-                letStand(comment, ReportResolution.COUNTED, moderatorId);
+                comments.markCounted(commentId);
+                reports.closeOpen(commentId, ReportResolution.COUNTED, moderatorId);
             }
             case VOIDED -> throw new IllegalArgumentException("voided is not a decision a moderator takes");
         }
-    }
-
-    private void letStand(Comment comment, ReportResolution resolution, UUID moderatorId) {
-        comments.markReportsClosed(comment.id());
-        reports.closeOpen(comment.id(), resolution, moderatorId);
     }
 
     private static QueuedComment card(OpenReportGroup group, Comment comment, List<ReasonTally> tallies) {

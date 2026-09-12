@@ -1,13 +1,14 @@
 -- liquibase formatted sql
+-- @formatter:off  (the IDE's SQL formatter realigns columns and rewrites untouched changesets)
 
 -- =============================================
 -- Discussion DB — Schema
 -- Tennis Wire
 --
--- Append-only. A new changeset goes at the end under the next id; editing one that
--- has already run changes its checksum, and Liquibase then refuses to start against
--- every database that ran it. The file name stays as it is for the same reason — it
--- is part of the identity of all the changesets already recorded.
+-- New changeset at the end, next id. Editing an applied one changes its checksum, and
+-- Liquibase then refuses to start against any database that ran it — same for renaming
+-- the file. That matters from the first database nobody can drop; until then, editing
+-- in place plus `down -v` is fine. Whitespace is exempt: Liquibase normalises it.
 -- =============================================
 
 -- changeset andrei:1
@@ -206,3 +207,16 @@ ALTER TABLE comment
 -- comment: next to the comments themselves.
 CREATE INDEX idx_comment_hidden_author ON comment (author_id, hidden_at)
     WHERE hidden_at IS NOT NULL;
+
+-- changeset andrei:13
+-- comment: Violation counted by hand on a comment its author deleted: not a removal, but it counts
+-- comment: for the same total. Mutually exclusive with hidden_at — only an author-deleted comment
+-- comment: can be counted, and moderation refuses to remove one of those.
+-- comment: The index pairs with idx_comment_hidden_author: without it half the OR in the counter is
+-- comment: unindexed, and comment has no index on author_id alone.
+ALTER TABLE comment
+    ADD COLUMN counted_at TIMESTAMPTZ,
+    ADD CONSTRAINT chk_comment_counted CHECK (hidden_at IS NULL OR counted_at IS NULL);
+
+CREATE INDEX idx_comment_counted_author ON comment (author_id, counted_at)
+    WHERE counted_at IS NOT NULL;
