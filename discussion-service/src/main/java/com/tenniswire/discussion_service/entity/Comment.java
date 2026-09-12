@@ -107,6 +107,10 @@ public class Comment {
     @Column(name = "reports_closed_at")
     private Instant reportsClosedAt;
 
+    // Violation counted by hand on a comment its author had already deleted. Excludes hiddenAt.
+    @Column(name = "counted_at")
+    private Instant countedAt;
+
     // -- Timestamps: DB-owned (defaults + trigger) --
 
     @Generated(event = EventType.INSERT)

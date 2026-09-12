@@ -38,8 +38,7 @@ public class CurrentUser {
         return jwt != null && isReader() ? resolver.resolve(jwt) : null;
     }
 
-    // hether a person is acting rather than the classifier. Only two roles reach moderation, and
-    // the bot does not carry this one — it has no reader profile to be recorded under.
+    // Whether a person is acting rather than the classifier: the bot has no reader profile.
     public boolean isModerator() {
         return hasAuthority(MODERATOR);
     }

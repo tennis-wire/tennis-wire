@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.tenniswire.discussion_service.client.AuthorProfile;
 import com.tenniswire.discussion_service.client.AuthorProfileClient;
 import com.tenniswire.discussion_service.controller.moderation.ModerationQueueResponses;
+import com.tenniswire.discussion_service.dto.moderation.QueueEntryResponse;
 import com.tenniswire.discussion_service.entity.Comment;
 import com.tenniswire.discussion_service.entity.Report;
 import com.tenniswire.discussion_service.entity.ReportResolution;
@@ -167,6 +168,23 @@ class ModerationQueueIT {
 
         assertThat(mine(queue.open(0, 200), live)).isEmpty();
         assertThat(reportsOn(live)).allSatisfy(r -> assertThat(r.resolution()).isEqualTo(ReportResolution.COUNTED));
+
+        // Counted by hand lands in the same total as a removal, though nothing was removed here.
+        var counts = countsFor(author);
+        assertThat(counts.removedByModerator().total()).isEqualTo(1);
+        assertThat(counts.removedByModerator().last30Days()).isEqualTo(1);
+        assertThat(counts.removedByBot().total()).isZero();
+    }
+
+    private QueueEntryResponse.QueueAuthor countsFor(UUID authorId) {
+        var carrier = comment();
+        reportService.report(UUID.randomUUID(), carrier, "spam");
+        when(profiles.profiles(any())).thenReturn(Map.of(authorId, new AuthorProfile(authorId, "counted-one", null)));
+        return queueResponses
+                .of(mine(queue.open(0, 200), carrier), 0, 200)
+                .items()
+                .getFirst()
+                .author();
     }
 
     @Test

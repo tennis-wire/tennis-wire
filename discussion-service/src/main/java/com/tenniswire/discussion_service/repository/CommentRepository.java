@@ -29,19 +29,31 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
     @Query("update Comment c set c.replyCount = c.replyCount + 1 where c.id = :id")
     int incrementReplyCount(@Param("id") UUID id);
 
-    // How many comments moderation has taken down from each of these authors, all time and since a date
+    // Removals and hand-counted violations land in one total. A counted one has no source of its
+    // own — only a person counts one — hence the coalesce. The two columns exclude each other.
     @Query("""
         select new com.tenniswire.discussion_service.repository.RemovalTally(
-            c.authorId, c.hiddenSource, count(c),
-            sum(case when c.hiddenAt > :since then 1 else 0 end))
+            c.authorId,
+            coalesce(c.hiddenSource, 'moderator'),
+            count(c),
+            sum(case when coalesce(c.hiddenAt, c.countedAt) > :since then 1 else 0 end))
         from Comment c
-        where c.authorId in :authorIds and c.hiddenAt is not null
-        group by c.authorId, c.hiddenSource
+        where c.authorId in :authorIds and (c.hiddenAt is not null or c.countedAt is not null)
+        group by c.authorId, coalesce(c.hiddenSource, 'moderator')
         """)
     List<RemovalTally> countRemovalsAmong(
             @Param("authorIds") Collection<UUID> authorIds, @Param("since") Instant since);
 
+    // current_timestamp, not the JVM clock: compared against updated_at, which a trigger writes.
     @Modifying
     @Query("update Comment c set c.reportsClosedAt = current_timestamp where c.id = :id")
     int markReportsClosed(@Param("id") UUID id);
+
+    @Modifying
+    @Query("""
+        update Comment c
+        set c.reportsClosedAt = current_timestamp, c.countedAt = current_timestamp
+        where c.id = :id
+        """)
+    int markCounted(@Param("id") UUID id);
 }
