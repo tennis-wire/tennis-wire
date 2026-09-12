@@ -43,6 +43,25 @@ Docker Desktop or machine restart the containers stay down until `up -d`.
 These credentials are local development defaults and are intentionally in the
 repository. They must never be reused anywhere else.
 
+### Which traffic goes through the gateway
+
+Client traffic only. A browser, the mobile app and `editorial-ui` know one
+backend host, the gateway; the service ports are not published outside the
+cluster, and CORS is configured on the gateway alone.
+
+Service-to-service traffic deliberately does not. `discussion-service` calls
+user-service directly over cluster DNS, because `/internal/**` is not routed
+through the gateway and must not be — those endpoints answer to a service
+token, not to a person's.
+
+Either way the service checks the token itself: issuer, audience and roles are
+verified again behind the gateway, so reaching a service port directly buys
+nothing. That is also why a direct `curl` to a service port is a legitimate way
+to localise a failure while developing — if a call fails through the gateway on
+8090 and succeeds against the service port, the gateway's rules are what to
+look at. Prefer the gateway for anything you mean as a check: it is the only
+path that exercises both sets of rules.
+
 ### Databases
 
 One PostgreSQL instance, one database and one owning role per service. They are

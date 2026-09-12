@@ -24,6 +24,8 @@ Realm-роли (client-роли не используем — проще мап�
 
 `author` и `moderator` независимы: у одного человека могут быть обе.
 
+**Человеку-модератору нужна и роль `user`.** Модерация подписывает свои решения читательским `user_id` (`issued_by` у ограничения, `resolved_by` у жалобы, `hidden_by` у скрытия), а взять его можно только через resolve, который требует `user`. В проде это приезжает само: учётку заводит администратор через консоль, и default-группа `readers` выдаёт `user`. Учётки из realm-файла default-групп не получают — поэтому фикстура `moderator` выписывает `['moderator', 'user']` руками. Бот роли `user` не имеет и не должен: его действия записываются без подписи.
+
 Отзыв доступа сотруднику: снять роль или выключить пользователя (Enabled = off) в admin-консоли. Новые токены и refresh перестают выдаваться мгновенно; уже выданные access-токены доживают до истечения TTL (§4), поэтому TTL короткий.
 
 ## 3. Клиенты
@@ -112,7 +114,7 @@ Realm-роли (client-роли не используем — проще мап�
 | `/api/aggregator/**` | `author` | planned |
 | `/api/discussion/comments/**` GET | анонимно | токен, если есть, всё равно валидируется — по нему применяются блокировки зрителя |
 | `/api/discussion/comments/**` POST/DELETE, `/api/discussion/blocks/**` | `user` | |
-| `/api/discussion/moderation/**` | `moderator` или `moderator-bot` | сервис сужает: `/moderation/restrictions/**` — только `moderator` |
+| `/api/discussion/moderation/**` | `moderator` или `moderator-bot` | сервис сужает: `/moderation/restrictions/**` и `GET`/`PATCH /moderation/reports/**` — только `moderator`; `POST /moderation/reports` — только `moderator-bot` |
 | `/api/users/me/**` | `user` | planned |
 | `/api/users/**` (прочее) | `admin` | planned |
 
