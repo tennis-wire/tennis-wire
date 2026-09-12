@@ -1,7 +1,7 @@
-package com.tenniswire.discussion_service.controller;
+package com.tenniswire.discussion_service.controller.reader;
 
-import com.tenniswire.discussion_service.dto.BlockRequest;
-import com.tenniswire.discussion_service.dto.BlockResponse;
+import com.tenniswire.discussion_service.dto.reader.BlockRequest;
+import com.tenniswire.discussion_service.dto.reader.BlockResponse;
 import com.tenniswire.discussion_service.entity.BlockMode;
 import com.tenniswire.discussion_service.security.CurrentUser;
 import com.tenniswire.discussion_service.service.BlockService;

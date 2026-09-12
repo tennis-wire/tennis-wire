@@ -7,7 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.tenniswire.discussion_service.client.AuthorProfile;
 import com.tenniswire.discussion_service.client.AuthorProfileClient;
-import com.tenniswire.discussion_service.controller.ModerationQueueResponses;
+import com.tenniswire.discussion_service.controller.moderation.ModerationQueueResponses;
 import com.tenniswire.discussion_service.entity.Comment;
 import com.tenniswire.discussion_service.entity.Report;
 import com.tenniswire.discussion_service.entity.ReportResolution;

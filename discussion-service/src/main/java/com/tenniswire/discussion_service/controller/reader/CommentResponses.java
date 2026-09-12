@@ -1,10 +1,10 @@
-package com.tenniswire.discussion_service.controller;
+package com.tenniswire.discussion_service.controller.reader;
 
 import com.tenniswire.discussion_service.client.AuthorProfile;
 import com.tenniswire.discussion_service.client.AuthorProfileClient;
-import com.tenniswire.discussion_service.dto.AuthorResponse;
-import com.tenniswire.discussion_service.dto.CommentCreatedResponse;
-import com.tenniswire.discussion_service.dto.CommentResponse;
+import com.tenniswire.discussion_service.dto.reader.AuthorResponse;
+import com.tenniswire.discussion_service.dto.reader.CommentCreatedResponse;
+import com.tenniswire.discussion_service.dto.reader.CommentResponse;
 import com.tenniswire.discussion_service.entity.UserRestriction;
 import com.tenniswire.discussion_service.repository.UserRestrictionRepository;
 import com.tenniswire.discussion_service.service.CommentView;
