@@ -298,4 +298,31 @@ class CommentServiceIT {
 
         assertThat(commentService.reply(bob, a.id(), "B").mutedByRecipient()).isFalse();
     }
+
+    @Test
+    void anAuthorlessGravestoneGoesWhenTheLastReplyUnderItDoes() {
+        var a = commentService.create(alice, "article", subjectId, "A").comment();
+        var b = commentService.reply(bob, a.id(), "B").comment();
+        commentRepository.anonymize(List.of(a.id()));
+
+        commentService.deleteOwn(bob, b.id());
+
+        // nothing pins a node whose author is gone: no violation to count, no queue card to keep
+        assertThat(commentRepository.findById(b.id())).isEmpty();
+        assertThat(commentRepository.findById(a.id())).isEmpty();
+    }
+
+    @Test
+    void aSurvivingParentLosesOneFromTheCountPerChildTakenAway() {
+        var a = commentService.create(alice, "article", subjectId, "A").comment();
+        var b = commentService.reply(bob, a.id(), "B").comment();
+        var c = commentService.reply(bob, a.id(), "C").comment();
+        commentService.reply(alice, a.id(), "D");
+
+        commentService.deleteOwn(bob, b.id());
+        commentService.deleteOwn(bob, c.id());
+
+        assertThat(commentRepository.findById(a.id()).orElseThrow().replyCount())
+                .isEqualTo(1);
+    }
 }

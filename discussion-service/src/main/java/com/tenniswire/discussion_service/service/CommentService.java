@@ -13,16 +13,13 @@ import com.tenniswire.discussion_service.exception.ForbiddenException;
 import com.tenniswire.discussion_service.exception.ResolutionNotApplicableException;
 import com.tenniswire.discussion_service.exception.ResourceNotFoundException;
 import com.tenniswire.discussion_service.repository.BlockRepository;
-import com.tenniswire.discussion_service.repository.ChildTally;
 import com.tenniswire.discussion_service.repository.CommentRepository;
 import com.tenniswire.discussion_service.repository.ReportRepository;
 import com.tenniswire.discussion_service.repository.UserRestrictionRepository;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
@@ -34,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CommentService {
 
     private final CommentRepository comments;
+    private final CommentCollapse collapse;
     private final BlockRepository blocks;
     private final UserRestrictionRepository restrictions;
     private final ReportRepository reports;
@@ -41,11 +39,13 @@ public class CommentService {
 
     public CommentService(
             CommentRepository comments,
+            CommentCollapse collapse,
             BlockRepository blocks,
             UserRestrictionRepository restrictions,
             ReportRepository reports,
             DomainEventPublisher events) {
         this.comments = comments;
+        this.collapse = collapse;
         this.blocks = blocks;
         this.restrictions = restrictions;
         this.reports = reports;
@@ -102,9 +102,9 @@ public class CommentService {
             return;
         }
         comment.deletedAt(Instant.now());
-        // before the ancestry query: it is native, and the mark decides the walk
+        // before the collapse reads it back: the mark is what decides the walk
         comments.flush();
-        collapse(comment);
+        collapse.of(List.of(comment));
     }
 
     /**
@@ -158,52 +158,6 @@ public class CommentService {
             throw new ResourceNotFoundException("Comment", commentId);
         }
         return flat;
-    }
-
-    /**
-     * Walks up from a freshly deleted comment, taking away every node that has nothing left under
-     * it. Moderation is not involved: a comment it removed keeps its row, and so the parent that
-     * row hangs off keeps its own.
-     */
-    private void collapse(Comment from) {
-        var chain = comments.findAncestry(from.path()); // root first, `from` last
-        var ids = chain.stream().map(Comment::id).toList();
-        var children = comments.countChildrenOf(ids).stream()
-                .collect(Collectors.toMap(ChildTally::parentId, ChildTally::children, (a, b) -> a, HashMap::new));
-        var reported = reports.findReportedAmong(ids);
-
-        var doomed = new ArrayList<UUID>();
-        UUID survivor = null;
-        for (var i = chain.size() - 1; i >= 0; i--) {
-            var node = chain.get(i);
-            if (!collapsible(node, children, reported)) {
-                break;
-            }
-            doomed.add(node.id());
-            survivor = node.inReplyToId();
-            if (survivor != null) {
-                children.merge(survivor, -1L, Long::sum);
-            }
-        }
-        if (doomed.isEmpty()) {
-            return;
-        }
-        comments.deleteByIdIn(doomed);
-        // One decrement, not one per node: the parents of everything else in the chain went with it.
-        if (survivor != null) {
-            comments.decrementReplyCount(survivor);
-        }
-    }
-
-    private static boolean collapsible(Comment node, Map<UUID, Long> children, Set<UUID> reported) {
-        // hiddenAt: the author still sees his removed comment and the counter reads that column.
-        // countedAt: same, for a violation counted by hand.
-        // reported: the queue card outlives the author deleting his own comment (§10.22).
-        return node.isDeleted()
-                && !node.isHiddenByModeration()
-                && node.countedAt() == null
-                && !reported.contains(node.id())
-                && children.getOrDefault(node.id(), 0L) == 0L;
     }
 
     // Helpers

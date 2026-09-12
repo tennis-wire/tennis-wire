@@ -30,16 +30,17 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
     @Query("update Comment c set c.replyCount = c.replyCount + 1 where c.id = :id")
     int incrementReplyCount(@Param("id") UUID id);
 
-    // Guarded rather than trusted: the count is raw, maintained here alone, and a negative one
-    // would show up on the article card.
+    // By an amount rather than by one: a collapse can take several children of the same surviving
+    // parent. Guarded rather than trusted — the count is raw, maintained here alone, and a negative
+    // one would show up on the article card.
     @Modifying
-    @Query("update Comment c set c.replyCount = c.replyCount - 1 where c.id = :id and c.replyCount > 0")
-    int decrementReplyCount(@Param("id") UUID id);
+    @Query("update Comment c set c.replyCount = c.replyCount - :by where c.id = :id and c.replyCount >= :by")
+    int decrementReplyCount(@Param("id") UUID id, @Param("by") int by);
 
     // Direct children of each of the given comments, gravestones included. Deleted, not living:
     // in_reply_to_id refuses to let a parent go while any row still hangs off it, and after the
     // collapse a childless gravestone no longer exists unless moderation or a report pinned it.
-    // The whole ancestry chain is asked at once so the walk upward costs a fixed number of trips.
+    // The whole set is asked at once so the walk upward costs a fixed number of trips.
     @Query("""
         select new com.tenniswire.discussion_service.repository.ChildTally(c.inReplyToId, count(c))
         from Comment c
@@ -48,7 +49,7 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
         """)
     List<ChildTally> countChildrenOf(@Param("parentIds") Collection<UUID> parentIds);
 
-    // One statement for the whole collapsed chain: the foreign key is checked once it has run, by
+    // One statement for the whole collapsed set: the foreign key is checked once it has run, by
     // which time child and parent have gone together. The context is cleared because what it still
     // holds of those rows is no longer in the database.
     @Modifying(flushAutomatically = true, clearAutomatically = true)
