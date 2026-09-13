@@ -58,7 +58,8 @@ class CommentServiceIT {
 
     @Test
     void pathAndRootAreDerivedDownTheTree() {
-        var root = commentService.create(alice, "article", subjectId, "root").comment();
+        var root =
+                commentService.create(alice, "publication", subjectId, "root").comment();
         var reply = commentService.reply(bob, root.id(), "reply").comment();
         var nested = commentService.reply(alice, reply.id(), "nested").comment();
 
@@ -73,7 +74,8 @@ class CommentServiceIT {
 
     @Test
     void replyCountIsMaintainedOnTheDirectParentOnly() {
-        var root = commentService.create(alice, "article", subjectId, "root").comment();
+        var root =
+                commentService.create(alice, "publication", subjectId, "root").comment();
         var reply = commentService.reply(bob, root.id(), "reply").comment();
         commentService.reply(alice, reply.id(), "nested");
         commentService.reply(alice, reply.id(), "nested again");
@@ -86,7 +88,8 @@ class CommentServiceIT {
 
     @Test
     void branchAndAncestryComeBackViaLtree() {
-        var root = commentService.create(alice, "article", subjectId, "root").comment();
+        var root =
+                commentService.create(alice, "publication", subjectId, "root").comment();
         var reply = commentService.reply(bob, root.id(), "reply").comment();
         var nested = commentService.reply(alice, reply.id(), "nested").comment();
         commentService.reply(bob, root.id(), "sibling");
@@ -101,7 +104,8 @@ class CommentServiceIT {
 
     @Test
     void softDeleteKeepsTheChildrenAndWithholdsTheBody() {
-        var root = commentService.create(alice, "article", subjectId, "root").comment();
+        var root =
+                commentService.create(alice, "publication", subjectId, "root").comment();
         var reply = commentService.reply(bob, root.id(), "reply").comment();
         var nested = commentService.reply(alice, reply.id(), "nested").comment();
 
@@ -118,7 +122,8 @@ class CommentServiceIT {
 
     @Test
     void onlyTheAuthorMayDeleteAndTheModeratorPathHasNoOwnerCheck() {
-        var root = commentService.create(alice, "article", subjectId, "root").comment();
+        var root =
+                commentService.create(alice, "publication", subjectId, "root").comment();
 
         assertThatThrownBy(() -> commentService.deleteOwn(bob, root.id())).isInstanceOf(ForbiddenException.class);
         commentService.hideByModerator(root.id(), moderator);
@@ -128,7 +133,8 @@ class CommentServiceIT {
 
     @Test
     void aCommentNothingHangsOffGoesAwayOutright() {
-        var root = commentService.create(alice, "article", subjectId, "root").comment();
+        var root =
+                commentService.create(alice, "publication", subjectId, "root").comment();
 
         commentService.deleteOwn(alice, root.id());
 
@@ -137,7 +143,7 @@ class CommentServiceIT {
 
     @Test
     void theLastLivingLeafTakesTheGravestonesAboveItAlong() {
-        var a = commentService.create(alice, "article", subjectId, "A").comment();
+        var a = commentService.create(alice, "publication", subjectId, "A").comment();
         var b = commentService.reply(bob, a.id(), "B").comment();
         var c = commentService.reply(alice, b.id(), "C").comment();
 
@@ -155,7 +161,7 @@ class CommentServiceIT {
 
     @Test
     void aGravestoneWithAnotherChildStaysAndLosesOneFromTheCount() {
-        var a = commentService.create(alice, "article", subjectId, "A").comment();
+        var a = commentService.create(alice, "publication", subjectId, "A").comment();
         var b = commentService.reply(bob, a.id(), "B").comment();
         var c = commentService.reply(alice, b.id(), "C").comment();
         commentService.reply(alice, b.id(), "D");
@@ -170,7 +176,8 @@ class CommentServiceIT {
 
     @Test
     void aReportedCommentIsKeptSoTheQueueCardSurvivesItsAuthorDeletingIt() {
-        var root = commentService.create(alice, "article", subjectId, "root").comment();
+        var root =
+                commentService.create(alice, "publication", subjectId, "root").comment();
         reportService.report(bob, root.id(), "spam");
 
         commentService.deleteOwn(alice, root.id());
@@ -183,7 +190,7 @@ class CommentServiceIT {
 
     @Test
     void aCommentRemovedByModerationPinsTheGravestoneAboveIt() {
-        var a = commentService.create(alice, "article", subjectId, "A").comment();
+        var a = commentService.create(alice, "publication", subjectId, "A").comment();
         var b = commentService.reply(bob, a.id(), "B").comment();
         var c = commentService.reply(alice, b.id(), "C").comment();
 
@@ -199,12 +206,12 @@ class CommentServiceIT {
     void activeRestrictionRejectsTheWriteBeforeInsert() {
         restrictionService.restrictCommenting(bob, moderator, Instant.now().plus(Duration.ofHours(1)), "flood");
 
-        assertThatThrownBy(() -> commentService.create(bob, "article", subjectId, "nope"))
+        assertThatThrownBy(() -> commentService.create(bob, "publication", subjectId, "nope"))
                 .isInstanceOf(CommentingRestrictedException.class)
                 .satisfies(e -> assertThat(((CommentingRestrictedException) e).restrictedUntil())
                         .isNotNull());
         assertThat(commentRepository.findBySubjectTypeAndSubjectIdAndInReplyToIdIsNullOrderByCreatedAtAscIdAsc(
-                        "article", subjectId))
+                        "publication", subjectId))
                 .isEmpty();
     }
 
@@ -214,7 +221,7 @@ class CommentServiceIT {
         restrictionService.lift(lifted.id());
 
         assertThat(commentService
-                        .create(bob, "article", subjectId, "ok")
+                        .create(bob, "publication", subjectId, "ok")
                         .comment()
                         .id())
                 .isNotNull();
@@ -224,7 +231,8 @@ class CommentServiceIT {
     @Test
     void mutedFlagIsSetWhenTheParentAuthorBlockedTheReplier() {
         blockService.block(alice, bob, BlockMode.GRAVESTONE);
-        var root = commentService.create(alice, "article", subjectId, "root").comment();
+        var root =
+                commentService.create(alice, "publication", subjectId, "root").comment();
 
         var bobReply = commentService.reply(bob, root.id(), "still stored");
         assertThat(bobReply.mutedByRecipient()).isTrue();
@@ -240,12 +248,13 @@ class CommentServiceIT {
 
     @Test
     void subtreeRemovalHidesTheBranchAndTheAncestryForTheBlockerOnly() {
-        var root = commentService.create(alice, "article", subjectId, "root").comment();
+        var root =
+                commentService.create(alice, "publication", subjectId, "root").comment();
         var bobReply = commentService.reply(bob, root.id(), "reply").comment();
         var nested = commentService.reply(alice, bobReply.id(), "nested").comment();
         blockService.block(alice, bob, BlockMode.SUBTREE_REMOVAL);
 
-        assertThat(commentService.listTopLevel("article", subjectId, alice)).hasSize(1);
+        assertThat(commentService.listTopLevel("publication", subjectId, alice)).hasSize(1);
         assertThat(commentService.branch(root.id(), alice).replies()).isEmpty();
         assertThatThrownBy(() -> commentService.branch(bobReply.id(), alice))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -271,26 +280,26 @@ class CommentServiceIT {
 
     @Test
     void aCommentWhoseAuthorIsGoneStillCarriesItsRepliesAndAnswersToNobody() {
-        var a = commentService.create(alice, "article", subjectId, "A").comment();
+        var a = commentService.create(alice, "publication", subjectId, "A").comment();
         var b = commentService.reply(bob, a.id(), "B").comment();
         commentRepository.anonymize(List.of(a.id()));
 
         // an anonymous viewer: an immutable empty block map, the one that throws on a null key
-        var listed = commentService.listTopLevel("article", subjectId, null);
+        var listed = commentService.listTopLevel("publication", subjectId, null);
         assertThat(listed).hasSize(1);
         assertThat(listed.getFirst().visibility()).isEqualTo(Visibility.DELETED);
         assertThat(commentService.branch(a.id(), null).replies())
                 .extracting(v -> v.comment().id())
                 .containsExactly(b.id());
         // and a viewer who has blocks, which is the other side of the render policy
-        assertThat(commentService.listTopLevel("article", subjectId, bob)).hasSize(1);
+        assertThat(commentService.listTopLevel("publication", subjectId, bob)).hasSize(1);
 
         assertThatThrownBy(() -> commentService.deleteOwn(alice, a.id())).isInstanceOf(ForbiddenException.class);
     }
 
     @Test
     void aCommentWhoseAuthorIsGoneTakesNoReplies() {
-        var a = commentService.create(alice, "article", subjectId, "A").comment();
+        var a = commentService.create(alice, "publication", subjectId, "A").comment();
         commentRepository.anonymize(List.of(a.id()));
 
         // the same refusal as any gravestone: nothing marks this one out to whoever is replying
@@ -299,7 +308,7 @@ class CommentServiceIT {
 
     @Test
     void anAuthorlessGravestoneGoesWhenTheLastReplyUnderItDoes() {
-        var a = commentService.create(alice, "article", subjectId, "A").comment();
+        var a = commentService.create(alice, "publication", subjectId, "A").comment();
         var b = commentService.reply(bob, a.id(), "B").comment();
         commentRepository.anonymize(List.of(a.id()));
 
@@ -312,7 +321,7 @@ class CommentServiceIT {
 
     @Test
     void aSurvivingParentLosesOneFromTheCountPerChildTakenAway() {
-        var a = commentService.create(alice, "article", subjectId, "A").comment();
+        var a = commentService.create(alice, "publication", subjectId, "A").comment();
         var b = commentService.reply(bob, a.id(), "B").comment();
         var c = commentService.reply(bob, a.id(), "C").comment();
         commentService.reply(alice, a.id(), "D");

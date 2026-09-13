@@ -37,6 +37,7 @@ public class CommentService {
     private final UserRestrictionRepository restrictions;
     private final ReportRepository reports;
     private final DomainEventPublisher events;
+    private final SubjectTypes subjects;
 
     public CommentService(
             CommentRepository comments,
@@ -44,16 +45,21 @@ public class CommentService {
             BlockRepository blocks,
             UserRestrictionRepository restrictions,
             ReportRepository reports,
-            DomainEventPublisher events) {
+            DomainEventPublisher events,
+            SubjectTypes subjects) {
         this.comments = comments;
         this.collapse = collapse;
         this.blocks = blocks;
         this.restrictions = restrictions;
         this.reports = reports;
         this.events = events;
+        this.subjects = subjects;
     }
 
     public CreatedComment create(UUID authorId, String subjectType, UUID subjectId, String body) {
+        // Only here and on the listing: a reply takes its subject from the parent, so a kind
+        // dropped from the list stops taking new threads without cutting the ones already standing
+        subjects.assertKnown(subjectType);
         assertMayComment(authorId);
 
         var comment = new Comment()
@@ -95,11 +101,6 @@ public class CommentService {
         return new CreatedComment(saved, muted);
     }
 
-    /**
-     * Deletion by the author. The node is marked deleted and then, if nothing stands on it, taken
-     * away outright along with every gravestone above it that it was the last thing holding up
-     * (discussion-rules §8.5, §8.7). Idempotent.
-     */
     public void deleteOwn(UUID actorId, UUID commentId) {
         var comment = findOrThrow(commentId);
         // actorId first: a comment left behind by an erased account answers to nobody.
@@ -130,6 +131,9 @@ public class CommentService {
 
     @Transactional(readOnly = true)
     public List<CommentView> listTopLevel(String subjectType, UUID subjectId, @Nullable UUID viewerId) {
+        // On the read path too: an unknown type matches nothing, and an empty list is what a page
+        // with no comments yet looks like. A misspelt client would look like a quiet article.
+        subjects.assertKnown(subjectType);
         var rows = comments.findBySubjectTypeAndSubjectIdAndInReplyToIdIsNullOrderByCreatedAtAscIdAsc(
                 subjectType, subjectId);
         return BlockRenderPolicy.apply(CommentTree.forest(rows), blocksOf(viewerId));

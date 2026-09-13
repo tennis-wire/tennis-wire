@@ -199,7 +199,7 @@ class ReportServiceIT {
 
     private UUID commentOf(UUID author) {
         return commentService
-                .create(author, "article", subjectId, "reported")
+                .create(author, "publication", subjectId, "reported")
                 .comment()
                 .id();
     }

@@ -95,7 +95,7 @@ class BlockRenderPolicyTest {
     private static Comment comment(UUID author, UUID parent, int seq) {
         return new Comment()
                 .id(UUID.randomUUID())
-                .subjectType("article")
+                .subjectType("publication")
                 .subjectId(UUID.randomUUID())
                 .inReplyToId(parent)
                 .authorId(author)

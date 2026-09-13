@@ -59,7 +59,7 @@ class SecurityConfigTest {
 
     @Test
     void readingIsAnonymous() throws Exception {
-        mvc.perform(get(COMMENTS).param("subjectType", "article").param("subjectId", SUBJECT.toString()))
+        mvc.perform(get(COMMENTS).param("subjectType", "publication").param("subjectId", SUBJECT.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items").isArray())
                 .andExpect(jsonPath("$.nextCursor").isEmpty());
@@ -101,7 +101,7 @@ class SecurityConfigTest {
         when(resolver.resolve(any())).thenReturn(UUID.randomUUID());
 
         mvc.perform(get(COMMENTS)
-                        .param("subjectType", "article")
+                        .param("subjectType", "publication")
                         .param("subjectId", SUBJECT.toString())
                         .with(tokenWith("ROLE_user")))
                 .andExpect(status().isOk());
@@ -113,7 +113,7 @@ class SecurityConfigTest {
     void aTokenWithoutTheUserRoleReadsAsAnonymous() throws Exception {
         // A service account has no user_id: user-service would answer 403 and fail the read.
         mvc.perform(get(COMMENTS)
-                        .param("subjectType", "article")
+                        .param("subjectType", "publication")
                         .param("subjectId", SUBJECT.toString())
                         .with(tokenWith("ROLE_moderator-bot")))
                 .andExpect(status().isOk());
@@ -253,6 +253,6 @@ class SecurityConfigTest {
     }
 
     private static String body() {
-        return "{\"subjectType\":\"article\",\"subjectId\":\"" + SUBJECT + "\",\"body\":\"hello\"}";
+        return "{\"subjectType\":\"publication\",\"subjectId\":\"" + SUBJECT + "\",\"body\":\"hello\"}";
     }
 }
