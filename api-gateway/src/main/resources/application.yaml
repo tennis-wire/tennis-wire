@@ -166,6 +166,12 @@ management:
     web:
       exposure:
         include: health, info
+  health:
+    redis:
+      # Off deliberately. The rate limiter fails open — a request the limiter cannot count goes
+      # through — so Redis being unreachable costs the counting and nothing else. Left on, it would
+      # turn the gateway DOWN and take the whole site out of rotation over a degraded guardrail.
+      enabled: false
   endpoint:
     health:
       # Anonymous probes get a bare UP; details need a token with the admin role.
