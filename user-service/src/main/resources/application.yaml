@@ -76,6 +76,10 @@ user:
     # Nothing tells this service when a ban is lifted, so an address a ban is holding is asked about
     # again on this cadence rather than believed indefinitely.
     recheck: 5m
+    # An account that keeps failing is looked at less and less often, up to the cap. Without this a
+    # row that can never be finished is retried every minute for as long as the service runs.
+    retry-backoff: 1m
+    retry-cap: 1h
     # How long a departed reader's display name stays out of circulation (discussion-rules §13.17).
     name-held: 30d
     lifespan-cache: 10m

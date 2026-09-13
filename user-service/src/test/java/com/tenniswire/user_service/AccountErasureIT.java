@@ -43,7 +43,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
  */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
-@TestPropertySource(properties = {"user.erasure.grace-margin=2m", "user.erasure.recheck=5m"})
+@TestPropertySource(
+        properties = {
+            "user.erasure.grace-margin=2m",
+            "user.erasure.recheck=5m",
+            "user.erasure.retry-backoff=1m",
+            "user.erasure.retry-cap=1h"
+        })
 class AccountErasureIT {
 
     private static final Duration LIFESPAN = Duration.ofMinutes(5);
@@ -233,6 +239,35 @@ class AccountErasureIT {
 
         var someoneElse = identities.resolve("keycloak", UUID.randomUUID().toString());
         assertThat(profileService.rename(someoneElse, name).displayName()).isEqualTo(name);
+    }
+
+    @Test
+    void anAccountThatKeepsFailingIsLookedAtLessAndLessOften() {
+        var userId = askedToLeave();
+        pauseIsOver(userId);
+        doThrow(new IdentityProviderUnavailableException("down")).when(keycloak).delete(any());
+
+        job.pass();
+        job.pass();
+
+        // the second pass left it alone: one failure already buys a minute
+        assertThat(pending.findById(userId).orElseThrow().attempts()).isEqualTo(1);
+    }
+
+    @Test
+    void oneAccountThatCannotBeAdvancedDoesNotTakeTheRestOfThePassWithIt() {
+        var doomed = askedToLeave();
+        var other = askedToLeave();
+        pauseIsOver(doomed);
+        pauseIsOver(other);
+        doThrow(new IllegalStateException("something nobody expected"))
+                .when(traces)
+                .erase(doomed);
+
+        job.pass();
+
+        assertThat(pending.findById(doomed)).isPresent();
+        assertThat(pending.findById(other)).isEmpty();
     }
 
     private UUID askedToLeave() {

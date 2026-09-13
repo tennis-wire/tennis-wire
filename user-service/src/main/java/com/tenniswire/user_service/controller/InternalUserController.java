@@ -33,7 +33,10 @@ public class InternalUserController {
         return new ResolvedIdentityResponse(currentUser.id(jwt));
     }
 
-    // No @Validated on the class, deliberately. Spring MVC validates constraint
+    // No @Validated on the class, deliberately. Spring MVC validates constraints on handler
+    // parameters of a controller by itself, and adding @Validated would wrap this bean in a proxy
+    // to say the same thing twice — and raise ConstraintViolationException instead of the
+    // MethodArgumentNotValidException the exception handler answers with.
     @GetMapping("/users")
     public List<PublicProfileResponse> lookup(
             @RequestParam("ids") @NotEmpty @Size(max = ProfileService.MAX_LOOKUP_IDS) List<UUID> ids) {

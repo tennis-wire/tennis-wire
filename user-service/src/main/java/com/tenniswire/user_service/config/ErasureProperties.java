@@ -5,4 +5,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("user.erasure")
 public record ErasureProperties(
-        Duration graceMargin, Duration recheck, Duration nameHeld, Duration lifespanCache, int batchSize) {}
+        Duration graceMargin,
+        Duration recheck,
+        Duration retryBackoff,
+        Duration retryCap,
+        Duration nameHeld,
+        Duration lifespanCache,
+        int batchSize) {}

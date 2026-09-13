@@ -77,7 +77,17 @@ public class AccountErasure {
             step(record, grace);
         } catch (RuntimeException e) {
             record.attempts(record.attempts() + 1).lastAttemptAt(Instant.now()).lastError(shorten(e));
-            log.warn("erasing account {} did not get further this pass: {}", userId, e.getMessage());
+            if (backoff(record.attempts()).compareTo(properties.retryCap()) >= 0) {
+                // Slowed all the way down and still failing. Nothing here will fix it, so say so
+                // where it will be seen rather than go on warning once a minute for ever.
+                log.error(
+                        "erasing account {} has failed {} times and is now retried at the slowest rate: {}",
+                        userId,
+                        record.attempts(),
+                        e.getMessage());
+            } else {
+                log.warn("erasing account {} did not get further this pass: {}", userId, e.getMessage());
+            }
         }
     }
 
@@ -94,7 +104,7 @@ public class AccountErasure {
         if (now.isBefore(record.identityClosedAt().plus(grace))) {
             return;
         }
-        if (heldAndAskedRecently(record, now)) {
+        if (tooSoonToLookAgain(record, now)) {
             return;
         }
 
@@ -133,10 +143,21 @@ public class AccountErasure {
         names.release(Instant.now());
     }
 
-    private boolean heldAndAskedRecently(PendingIdentityDelete record, Instant now) {
-        return record.addressHeld()
-                && record.lastAttemptAt() != null
-                && now.isBefore(record.lastAttemptAt().plus(properties.recheck()));
+    // Two reasons to leave an account alone for a while, and they want different waits. An address a
+    // ban is holding is asked about on a steady cadence, because only the answer can say whether the
+    // ban is still there. An account that keeps failing is asked about less and less, because
+    // whatever is wrong is not going to be fixed by asking sooner
+    private boolean tooSoonToLookAgain(PendingIdentityDelete record, Instant now) {
+        if (record.lastAttemptAt() == null) {
+            return false;
+        }
+        var wait = record.addressHeld() ? properties.recheck() : backoff(record.attempts());
+        return now.isBefore(record.lastAttemptAt().plus(wait));
+    }
+
+    private Duration backoff(int attempts) {
+        var wait = properties.retryBackoff().multipliedBy(attempts);
+        return wait.compareTo(properties.retryCap()) > 0 ? properties.retryCap() : wait;
     }
 
     private static String shorten(RuntimeException e) {

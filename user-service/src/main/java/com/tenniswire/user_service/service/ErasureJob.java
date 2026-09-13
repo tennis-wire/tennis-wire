@@ -48,7 +48,15 @@ public class ErasureJob {
             return;
         }
         for (var userId : erasure.due()) {
-            erasure.advance(userId, grace);
+            try {
+                erasure.advance(userId, grace);
+            } catch (RuntimeException e) {
+                // advance records what went wrong on the row itself, but a failure at commit time
+                // escapes even that: the transaction is already marked rollback-only, and the write
+                // meant to record the failure rolls back with it. One account is not allowed to
+                // take the rest of the pass with it.
+                log.warn("account {} could not be advanced this pass: {}", userId, e.getMessage());
+            }
         }
     }
 
