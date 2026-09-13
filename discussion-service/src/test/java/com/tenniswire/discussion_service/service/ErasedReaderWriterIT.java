@@ -2,6 +2,7 @@ package com.tenniswire.discussion_service.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.tenniswire.discussion_service.TestcontainersConfiguration;
 import com.tenniswire.discussion_service.repository.CommentRepository;
 import java.util.List;
 import java.util.UUID;
@@ -9,7 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.testcontainers.utility.TestcontainersConfiguration;
 
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
