@@ -76,6 +76,8 @@ user:
     # Nothing tells this service when a ban is lifted, so an address a ban is holding is asked about
     # again on this cadence rather than believed indefinitely.
     recheck: 5m
+    # How long a departed reader's display name stays out of circulation (discussion-rules §13.17).
+    name-held: 30d
     lifespan-cache: 10m
     batch-size: 50
 

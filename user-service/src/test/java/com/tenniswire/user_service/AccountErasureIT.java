@@ -1,6 +1,7 @@
 package com.tenniswire.user_service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
@@ -13,15 +14,19 @@ import com.tenniswire.user_service.client.ErasedReader;
 import com.tenniswire.user_service.client.KeycloakAdmin;
 import com.tenniswire.user_service.client.ReaderTraceClient;
 import com.tenniswire.user_service.config.ErasureProperties;
+import com.tenniswire.user_service.exception.DisplayNameTakenException;
 import com.tenniswire.user_service.exception.IdentityProviderUnavailableException;
+import com.tenniswire.user_service.repository.DisplayNameReservationRepository;
 import com.tenniswire.user_service.repository.PendingIdentityDeleteRepository;
 import com.tenniswire.user_service.repository.ProfileRepository;
 import com.tenniswire.user_service.service.AccountDeletionService;
 import com.tenniswire.user_service.service.AccountErasure;
 import com.tenniswire.user_service.service.ErasureJob;
 import com.tenniswire.user_service.service.IdentityService;
+import com.tenniswire.user_service.service.ProfileService;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,6 +72,12 @@ class AccountErasureIT {
 
     @Autowired
     private ProfileRepository profiles;
+
+    @Autowired
+    private ProfileService profileService;
+
+    @Autowired
+    private DisplayNameReservationRepository names;
 
     private ErasureJob job;
 
@@ -195,6 +206,35 @@ class AccountErasureIT {
         assertThat(profiles.findById(userId)).isEmpty();
     }
 
+    @Test
+    void theNameHeGaveUpDoesNotGoStraightBackIntoCirculation() {
+        var userId = askedToLeave();
+        var name = profiles.findById(userId).orElseThrow().displayName();
+        pauseIsOver(userId);
+
+        job.pass();
+
+        // his profile is gone, so nothing but the reservation is standing in the way
+        assertThat(profiles.findById(userId)).isEmpty();
+        var someoneElse = identities.resolve("keycloak", UUID.randomUUID().toString());
+        assertThatThrownBy(() -> profileService.rename(someoneElse, name))
+                .isInstanceOf(DisplayNameTakenException.class);
+    }
+
+    @Test
+    void aNameHeldLongEnoughComesBack() {
+        var userId = askedToLeave();
+        var name = profiles.findById(userId).orElseThrow().displayName();
+        pauseIsOver(userId);
+        job.pass();
+        heldLongEnoughAgo(name);
+
+        job.pass();
+
+        var someoneElse = identities.resolve("keycloak", UUID.randomUUID().toString());
+        assertThat(profileService.rename(someoneElse, name).displayName()).isEqualTo(name);
+    }
+
     private UUID askedToLeave() {
         var userId = identities.resolve("keycloak", UUID.randomUUID().toString());
         deletions.request(userId);
@@ -204,6 +244,11 @@ class AccountErasureIT {
     private void pauseIsOver(UUID userId) {
         var record = pending.findById(userId).orElseThrow();
         pending.saveAndFlush(record.identityClosedAt(Instant.now().minus(LONG_ENOUGH)));
+    }
+
+    private void heldLongEnoughAgo(String name) {
+        var reservation = names.findById(name.toLowerCase(Locale.ROOT)).orElseThrow();
+        names.saveAndFlush(reservation.reservedUntil(Instant.now().minus(LONG_ENOUGH)));
     }
 
     private void askedLongEnoughAgo(UUID userId) {

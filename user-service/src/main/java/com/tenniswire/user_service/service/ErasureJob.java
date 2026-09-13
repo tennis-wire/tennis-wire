@@ -34,6 +34,10 @@ public class ErasureJob {
 
     @Scheduled(fixedDelayString = "${user.erasure.interval}")
     public void pass() {
+        // Before anything that might cut the pass short: a name whose month is up is free whether
+        // or not Keycloak is answering today.
+        erasure.releaseNamesHeldLongEnough();
+
         Duration grace;
         try {
             grace = accessTokenLifespan().plus(properties.graceMargin());

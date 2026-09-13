@@ -4,6 +4,7 @@ import com.tenniswire.user_service.client.KeycloakAdmin;
 import com.tenniswire.user_service.client.ReaderTraceClient;
 import com.tenniswire.user_service.config.ErasureProperties;
 import com.tenniswire.user_service.entity.PendingIdentityDelete;
+import com.tenniswire.user_service.repository.DisplayNameReservationRepository;
 import com.tenniswire.user_service.repository.PendingIdentityDeleteRepository;
 import com.tenniswire.user_service.repository.ProfileRepository;
 import java.time.Duration;
@@ -32,6 +33,7 @@ public class AccountErasure {
 
     private final PendingIdentityDeleteRepository pending;
     private final ProfileRepository profiles;
+    private final DisplayNameReservationRepository names;
     private final ReaderTraceClient traces;
     private final KeycloakAdmin keycloak;
     private final ErasureProperties properties;
@@ -39,11 +41,13 @@ public class AccountErasure {
     public AccountErasure(
             PendingIdentityDeleteRepository pending,
             ProfileRepository profiles,
+            DisplayNameReservationRepository names,
             ReaderTraceClient traces,
             KeycloakAdmin keycloak,
             ErasureProperties properties) {
         this.pending = pending;
         this.profiles = profiles;
+        this.names = names;
         this.traces = traces;
         this.keycloak = keycloak;
         this.properties = properties;
@@ -105,6 +109,7 @@ public class AccountErasure {
 
         // Only now, and not before: resolving a subject creates a profile, so a token still good
         // would have made him a new one, with a new name, and undone the deletion by itself.
+        holdTheName(record.userId());
         profiles.deleteById(record.userId());
 
         if (erased.banned()) {
@@ -114,6 +119,18 @@ public class AccountErasure {
         }
         keycloak.delete(record.subject());
         pending.delete(record);
+    }
+
+    private void holdTheName(UUID userId) {
+        profiles.findById(userId)
+                .ifPresent(profile ->
+                        names.hold(profile.displayName(), Instant.now().plus(properties.nameHeld())));
+    }
+
+    // Names whose month is up. Swept from here because this is the only clock the service has
+    @Transactional
+    public void releaseNamesHeldLongEnough() {
+        names.release(Instant.now());
     }
 
     private boolean heldAndAskedRecently(PendingIdentityDelete record, Instant now) {
