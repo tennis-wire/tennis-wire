@@ -50,10 +50,40 @@ limit :limit
     @Query("select c.id from Comment c where c.authorId = :authorId")
     List<UUID> findIdsByAuthor(@Param("authorId") UUID authorId);
 
-    @Query(
-            value = "select * from comment where path <@ cast(:path as ltree) order by created_at, id",
-            nativeQuery = true)
-    List<Comment> findSubtree(@Param("path") String path);
+    // Depth-capped: an unbounded subtree makes the size of one response a property of how far the
+    // thread grew. Five levels below the head, and a node at the bottom opens a branch of its own
+    // from there, so nothing becomes unreachable. Width is cut afterwards, in the assembly: twenty
+    // children a node is not something one statement expresses without window functions.
+    @Query(value = """
+select * from comment
+where path <@ cast(:path as ltree)
+  and nlevel(path) <= nlevel(cast(:path as ltree)) + :depth
+order by created_at, id
+""", nativeQuery = true)
+    List<Comment> findSubtreeToDepth(@Param("path") String path, @Param("depth") int depth);
+
+    // Direct replies of one comment, paged the same way the top level is: this is what carries a
+    // reader past the twentieth reply, and it returns children only — their own subtrees would put
+    // the unbounded response back one level down.
+    @Query(value = """
+select * from comment
+where in_reply_to_id = :parentId
+order by created_at, id
+limit :limit
+""", nativeQuery = true)
+    List<Comment> findRepliesFirstPage(@Param("parentId") UUID parentId, @Param("limit") int limit);
+
+    @Query(value = """
+select * from comment
+where in_reply_to_id = :parentId and (created_at, id) > (:afterCreatedAt, :afterId)
+order by created_at, id
+limit :limit
+""", nativeQuery = true)
+    List<Comment> findRepliesAfter(
+            @Param("parentId") UUID parentId,
+            @Param("afterCreatedAt") Instant afterCreatedAt,
+            @Param("afterId") UUID afterId,
+            @Param("limit") int limit);
 
     @Query(value = "select * from comment where path @> cast(:path as ltree) order by nlevel(path)", nativeQuery = true)
     List<Comment> findAncestry(@Param("path") String path);

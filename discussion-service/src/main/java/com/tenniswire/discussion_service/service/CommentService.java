@@ -31,12 +31,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class CommentService {
 
+    /** What the listing hands out when the caller names no size of its own (readers.md §1.7). */
     private static final int DEFAULT_LIMIT = 50;
 
     // A ceiling rather than a rejection: the parameter arrives from outside, and without one a
     // single request can ask the service to assemble the whole thread and every author's name.
     private static final int MAX_LIMIT = 200;
     private static final int MIN_LIMIT = 1;
+
+    // How much of a subtree one branch response carries. Both are the size of a first helping, not
+    // a ceiling on what can be read: past either edge the reader goes on through /replies or
+    // through a branch of the node he stopped at.
+    private static final int BRANCH_DEPTH = 5;
+    private static final int BRANCH_WIDTH = 20;
 
     private final CommentRepository comments;
     private final CommentCollapse collapse;
@@ -165,14 +172,38 @@ public class CommentService {
         return new CommentPage(BlockRenderPolicy.apply(CommentTree.forest(page), blocksOf(viewerId)), nextCursor);
     }
 
-    /** The comment with its whole subtree, or 404 when the viewer has removed the branch head. */
+    // The comment with as much of its subtree as one response carries, or 404 when the viewer has
+    // removed the branch head. Nodes whose replies did not fit come back marked.
     @Transactional(readOnly = true)
     public CommentView branch(UUID commentId, @Nullable UUID viewerId) {
         var head = findOrThrow(commentId);
-        var tree = CommentTree.forest(comments.findSubtree(head.path()));
-        // findSubtree returns head plus descendants, so the forest has exactly one root
+        var tree = CommentTree.forest(comments.findSubtreeToDepth(head.path(), BRANCH_DEPTH), BRANCH_WIDTH);
+        // the query returns head plus descendants, so the forest has exactly one root
         return BlockRenderPolicy.apply(tree.getFirst(), blocksOf(viewerId))
                 .orElseThrow(() -> new ResourceNotFoundException("Comment", commentId));
+    }
+
+    // Direct replies of one comment, a page at a time. Where a branch stops, this carries on: every
+    // reply is reachable, however many a comment gathered
+    @Transactional(readOnly = true)
+    public CommentPage replies(
+            UUID parentId, @Nullable UUID viewerId, @Nullable Integer limit, @Nullable String cursor) {
+        var parent = findOrThrow(parentId);
+        var blocks = blocksOf(viewerId);
+        // Whoever removed the comment itself has removed what hangs off it, exactly as in a branch
+        BlockRenderPolicy.apply(CommentTree.forest(List.of(parent)).getFirst(), blocks)
+                .orElseThrow(() -> new ResourceNotFoundException("Comment", parentId));
+
+        var size = limit == null ? DEFAULT_LIMIT : Math.clamp(limit, MIN_LIMIT, MAX_LIMIT);
+        var after = CommentCursor.decode(cursor);
+        var rows = after == null
+                ? comments.findRepliesFirstPage(parentId, size + 1)
+                : comments.findRepliesAfter(parentId, after.createdAt(), after.id(), size + 1);
+        var more = rows.size() > size;
+        var page = more ? rows.subList(0, size) : rows;
+
+        var nextCursor = more ? CommentCursor.encode(page.getLast()) : null;
+        return new CommentPage(BlockRenderPolicy.apply(CommentTree.forest(page), blocks), nextCursor);
     }
 
     /**
@@ -189,7 +220,9 @@ public class CommentService {
         var cursor =
                 BlockRenderPolicy.apply(chain.getFirst(), blocksOf(viewerId)).orElse(null);
         while (cursor != null) {
-            flat.add(new CommentView(cursor.comment(), cursor.visibility(), List.of()));
+            // The chain carries no replies at all, so any comment that has one is truncated here
+            flat.add(new CommentView(
+                    cursor.comment(), cursor.visibility(), cursor.comment().replyCount() > 0, List.of()));
             cursor = cursor.replies().isEmpty() ? null : cursor.replies().getFirst();
         }
         if (flat.isEmpty() || !flat.getLast().comment().id().equals(commentId)) {

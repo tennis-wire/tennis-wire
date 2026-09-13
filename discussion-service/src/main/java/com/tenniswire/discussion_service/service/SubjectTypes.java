@@ -5,7 +5,7 @@ import java.util.Collection;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
-public class SubjectTypes {
+public final class SubjectTypes {
 
     private final Set<String> known;
 

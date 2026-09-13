@@ -21,6 +21,14 @@ final class CommentTree {
 
     /** Roots are the nodes whose parent is not in the list — top-level comments, or the branch head. */
     static List<CommentNode> forest(List<Comment> comments) {
+        return forest(comments, Integer.MAX_VALUE);
+    }
+
+    /**
+     * @param maxChildren how many direct replies a node may carry; the rest are dropped, oldest
+     *     kept, and the node is marked so the caller can be told where to ask for the remainder
+     */
+    static List<CommentNode> forest(List<Comment> comments, int maxChildren) {
         var nodes = new LinkedHashMap<UUID, CommentNode>();
         for (var comment : comments) {
             nodes.put(comment.id(), new CommentNode(comment));
@@ -38,6 +46,15 @@ final class CommentTree {
         }
         for (var node : nodes.values()) {
             node.children().sort(OLDEST_FIRST);
+            if (node.children().size() > maxChildren) {
+                node.children().subList(maxChildren, node.children().size()).clear();
+            }
+            // One rule for every caller: the node is marked when the service is handing over fewer
+            // direct replies than the comment has. That covers the width cap here, the depth cap
+            // that kept the deepest rows out of the result set, and the endpoints that return no
+            // replies at all. Blocks are deliberately out of view — they are applied after this,
+            // and what a viewer removed for himself is not something we withheld from him.
+            node.repliesTruncated(node.children().size() < node.comment().replyCount());
         }
         roots.sort(OLDEST_FIRST);
         return roots;

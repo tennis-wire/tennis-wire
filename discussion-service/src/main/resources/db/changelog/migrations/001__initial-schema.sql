@@ -60,7 +60,9 @@ CREATE INDEX idx_comment_subject ON comment (subject_type, subject_id);
 CREATE INDEX idx_comment_top_level ON comment (subject_type, subject_id, created_at, id)
     WHERE in_reply_to_id IS NULL;
 CREATE INDEX idx_comment_root_id ON comment (root_id);
-CREATE INDEX idx_comment_in_reply_to ON comment (in_reply_to_id);
+-- The sort key rides along so that paging a comment's direct replies is one index scan; the
+-- leading column alone still answers the plain "who are this node's children" lookups.
+CREATE INDEX idx_comment_in_reply_to ON comment (in_reply_to_id, created_at, id);
 
 -- changeset andrei:5
 -- comment: Create block table — peer-level, one-directional, mode chosen at block time (no DB default)
