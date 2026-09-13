@@ -5,6 +5,7 @@ import com.tenniswire.auth_support.Roles;
 import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
@@ -34,6 +35,10 @@ public class SecurityConfig {
                         .hasRole(Roles.SERVICE)
                         .requestMatchers("/api/users/me/**")
                         .hasRole(Roles.USER)
+                        // After the /me rule, and for the same reason: deleting an account by id is
+                        // support's, on behalf of someone who cannot reach his own path.
+                        .requestMatchers(HttpMethod.DELETE, "/api/users/*")
+                        .hasRole(Roles.ADMIN)
                         // Fail closed, as in the gateway: a path without a rule is unreachable.
                         .anyRequest()
                         .denyAll())

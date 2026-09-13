@@ -3,6 +3,7 @@ package com.tenniswire.user_service;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -18,6 +19,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -29,6 +31,10 @@ class SecurityConfigTest {
     private static final String ME = "/api/users/me";
     private static final String RESOLVE = "/internal/identities/resolve";
     private static final String LOOKUP = "/internal/users";
+
+    // Deleting an account reaches Keycloak, and what is under test here is the chain in front of it
+    @MockitoBean
+    private com.tenniswire.user_service.client.KeycloakAdmin keycloak;
 
     private MockMvc mvc;
 
@@ -94,6 +100,22 @@ class SecurityConfigTest {
         mvc.perform(get(LOOKUP).param("ids", id).with(tokenWith("service"))).andExpect(status().isOk());
 
         mvc.perform(get(LOOKUP).param("ids", id).with(tokenWith("user"))).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void deletingOwnAccountIsAReadersAlone() throws Exception {
+        mvc.perform(delete(ME)).andExpect(status().isUnauthorized());
+        mvc.perform(delete(ME).with(tokenWith("service"))).andExpect(status().isForbidden());
+        mvc.perform(delete(ME).with(tokenWith("user"))).andExpect(status().isAccepted());
+    }
+
+    @Test
+    void deletingSomebodyElsesAccountIsSupportsAlone() throws Exception {
+        var someone = "/api/users/" + UUID.randomUUID();
+
+        mvc.perform(delete(someone).with(tokenWith("user"))).andExpect(status().isForbidden());
+        // an admin gets through the chain; that there is no such account is the service answering
+        mvc.perform(delete(someone).with(tokenWith("admin"))).andExpect(status().isNotFound());
     }
 
     @Test
