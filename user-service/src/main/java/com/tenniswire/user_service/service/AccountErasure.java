@@ -56,7 +56,7 @@ public class AccountErasure {
     /** Accounts due this pass, the longest overdue first. */
     @Transactional(readOnly = true)
     public List<UUID> due() {
-        return pending.due(Instant.now(), PageRequest.of(0, properties.batchSize()));
+        return pending.due(PageRequest.of(0, properties.batchSize()));
     }
 
     /** One step for one account. Failures are recorded on the row rather than thrown at the job. */
@@ -98,7 +98,7 @@ public class AccountErasure {
             // The request could not reach Keycloak. Nothing has been closed yet, so there is
             // nothing to outwait either — the clock starts here and the rest waits for next pass.
             keycloak.stripAndDisable(record.subject());
-            record.identityClosedAt(now).retryAfter(now.plus(grace));
+            record.identityClosedAt(now).retryAfter(now.plus(grace)).attempts(0);
             return;
         }
         // Kept even though retry_after already says the same: that is a schedule, worked out from
@@ -128,7 +128,9 @@ public class AccountErasure {
             // (discussion-rules §12.20). Everything else about him is already gone. Asked about
             // again on a cadence rather than at the date he gave: nothing here is told when a ban
             // is lifted.
-            record.retryAfter(now.plus(properties.recheck()));
+            // Counted from zero again: what failed before is done, and the next failure should
+            // start at the shortest wait rather than at whatever this account once climbed to.
+            record.retryAfter(now.plus(properties.recheck())).attempts(0);
             return;
         }
         keycloak.delete(record.subject());
