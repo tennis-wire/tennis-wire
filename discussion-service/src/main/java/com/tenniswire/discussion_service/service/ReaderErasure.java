@@ -1,37 +1,26 @@
 package com.tenniswire.discussion_service.service;
 
-import com.tenniswire.discussion_service.entity.ReportResolution;
 import com.tenniswire.discussion_service.entity.UserRestriction;
-import com.tenniswire.discussion_service.repository.BlockRepository;
 import com.tenniswire.discussion_service.repository.CommentRepository;
-import com.tenniswire.discussion_service.repository.ReportRepository;
 import com.tenniswire.discussion_service.repository.UserRestrictionRepository;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional
 public class ReaderErasure {
 
+    public static final int BATCH_SIZE = 250;
+
     private final CommentRepository comments;
-    private final CommentCollapse collapse;
-    private final ReportRepository reports;
-    private final BlockRepository blocks;
     private final UserRestrictionRepository restrictions;
+    private final ErasedReaderWriter writer;
 
     public ReaderErasure(
-            CommentRepository comments,
-            CommentCollapse collapse,
-            ReportRepository reports,
-            BlockRepository blocks,
-            UserRestrictionRepository restrictions) {
+            CommentRepository comments, UserRestrictionRepository restrictions, ErasedReaderWriter writer) {
         this.comments = comments;
-        this.collapse = collapse;
-        this.reports = reports;
-        this.blocks = blocks;
         this.restrictions = restrictions;
+        this.writer = writer;
     }
 
     public ErasedReader erase(UUID readerId) {
@@ -43,14 +32,10 @@ public class ReaderErasure {
                 .orElse(null);
 
         var his = comments.findIdsByAuthor(readerId);
-        if (!his.isEmpty()) {
-            comments.anonymize(his);
-            // read back: anonymize wrote around the entities and cleared the context behind it
-            collapse.of(comments.findAllById(his));
-            reports.closeOpenOn(his, ReportResolution.VOIDED);
+        for (var from = 0; from < his.size(); from += BATCH_SIZE) {
+            writer.erase(his.subList(from, Math.min(from + BATCH_SIZE, his.size())));
         }
-        blocks.deleteInvolving(readerId);
-        restrictions.deleteExpiredFor(readerId, now);
+        writer.eraseTheRest(readerId, now);
 
         return new ErasedReader(ban != null, ban == null ? null : ban.expiresAt());
     }

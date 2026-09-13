@@ -17,6 +17,7 @@ import com.tenniswire.discussion_service.service.RestrictionService;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -107,6 +108,22 @@ class ReaderErasureIT {
                         .toList())
                 .isNotEmpty()
                 .allSatisfy(r -> assertThat(r.resolution()).isEqualTo(ReportResolution.VOIDED));
+    }
+
+    @Test
+    void aReaderWhoWroteMoreThanOneBatchIsErasedWholeAllTheSame() {
+        var his = new ArrayList<UUID>();
+        for (var i = 0; i < ReaderErasure.BATCH_SIZE + 5; i++) {
+            his.add(commentService
+                    .create(alice, "article", subjectId, "one of many " + i)
+                    .comment()
+                    .id());
+        }
+
+        erasure.erase(alice);
+
+        // not the first batch and then whatever the driver would take: all of it
+        assertThat(comments.findAllById(his)).isEmpty();
     }
 
     @Test
