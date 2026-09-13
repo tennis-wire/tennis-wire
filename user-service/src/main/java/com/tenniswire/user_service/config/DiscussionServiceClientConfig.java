@@ -1,6 +1,6 @@
 package com.tenniswire.user_service.config;
 
-import com.tenniswire.user_service.client.KeycloakAdmin;
+import com.tenniswire.user_service.client.ReaderTraceClient;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
 import org.springframework.boot.http.client.HttpClientSettings;
@@ -11,14 +11,14 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.web.client.RestClient;
 
 @Configuration
-@EnableConfigurationProperties(KeycloakAdminProperties.class)
-public class KeycloakAdminConfig {
+@EnableConfigurationProperties(DiscussionServiceProperties.class)
+public class DiscussionServiceClientConfig {
 
     @Bean
-    KeycloakAdmin keycloakAdmin(
+    ReaderTraceClient readerTraceClient(
             RestClient.Builder builder,
             ClientHttpRequestFactoryBuilder<?> requestFactories,
-            KeycloakAdminProperties properties,
+            DiscussionServiceProperties properties,
             ClientRegistrationRepository registrations,
             OAuth2AuthorizedClientService authorizedClients) {
 
@@ -30,6 +30,6 @@ public class KeycloakAdminConfig {
                 .requestInterceptor(ServiceTokens.interceptor(registrations, authorizedClients, requestFactory))
                 .build();
 
-        return new KeycloakAdmin(http, properties.realm());
+        return new ReaderTraceClient(http);
     }
 }
