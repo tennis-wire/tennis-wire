@@ -189,8 +189,7 @@ class CommentAuthorTest {
                         .content(commentBody("retry me")))
                 .andExpect(status().isServiceUnavailable());
 
-        assertThat(commentRepository.findBySubjectTypeAndSubjectIdAndInReplyToIdIsNullOrderByCreatedAtAscIdAsc(
-                        "publication", subjectId))
+        assertThat(commentRepository.findTopLevelFirstPage("publication", subjectId, 10))
                 .isEmpty();
     }
 

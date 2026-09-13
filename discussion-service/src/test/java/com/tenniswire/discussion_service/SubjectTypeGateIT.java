@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 
+/** The allowlist as the service sees it, against the same application.yaml the service runs with. */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
 class SubjectTypeGateIT {
@@ -30,7 +31,7 @@ class SubjectTypeGateIT {
 
     @Test
     void anUnknownSubjectIsRefusedOnTheListingRatherThanAnsweredWithNothing() {
-        assertThatThrownBy(() -> commentService.listTopLevel("artcle", subjectId, null))
+        assertThatThrownBy(() -> commentService.listTopLevel("artcle", subjectId, null, null, null))
                 .isInstanceOf(UnknownSubjectTypeException.class);
     }
 
@@ -41,7 +42,7 @@ class SubjectTypeGateIT {
         var reply = commentService.reply(alice, root.id(), "reply").comment();
 
         assertThat(reply.subjectType()).isEqualTo("publication");
-        assertThatCode(() -> commentService.listTopLevel("publication", subjectId, null))
+        assertThatCode(() -> commentService.listTopLevel("publication", subjectId, null, null, null))
                 .doesNotThrowAnyException();
     }
 }

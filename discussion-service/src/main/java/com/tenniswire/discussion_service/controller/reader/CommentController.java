@@ -52,9 +52,15 @@ public class CommentController {
     /** Top-level comments under a subject; each carries replyCount for the "show N replies" control. */
     @GetMapping
     public CommentPageResponse listTopLevel(
-            @RequestParam String subjectType, @RequestParam UUID subjectId, @AuthenticationPrincipal Jwt jwt) {
-        var views = commentService.listTopLevel(subjectType, subjectId, currentUser.idOrNull(jwt));
-        return CommentPageResponse.unpaged(responses.of(views));
+            @RequestParam String subjectType,
+            @RequestParam UUID subjectId,
+            // Both optional and both left to the service: the default and the ceiling are one
+            // decision and belong in one place.
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) String cursor,
+            @AuthenticationPrincipal Jwt jwt) {
+        var page = commentService.listTopLevel(subjectType, subjectId, currentUser.idOrNull(jwt), limit, cursor);
+        return new CommentPageResponse(responses.of(page.items()), page.nextCursor());
     }
 
     @PostMapping

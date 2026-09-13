@@ -210,8 +210,7 @@ class CommentServiceIT {
                 .isInstanceOf(CommentingRestrictedException.class)
                 .satisfies(e -> assertThat(((CommentingRestrictedException) e).restrictedUntil())
                         .isNotNull());
-        assertThat(commentRepository.findBySubjectTypeAndSubjectIdAndInReplyToIdIsNullOrderByCreatedAtAscIdAsc(
-                        "publication", subjectId))
+        assertThat(commentRepository.findTopLevelFirstPage("publication", subjectId, 10))
                 .isEmpty();
     }
 
@@ -254,7 +253,10 @@ class CommentServiceIT {
         var nested = commentService.reply(alice, bobReply.id(), "nested").comment();
         blockService.block(alice, bob, BlockMode.SUBTREE_REMOVAL);
 
-        assertThat(commentService.listTopLevel("publication", subjectId, alice)).hasSize(1);
+        assertThat(commentService
+                        .listTopLevel("publication", subjectId, alice, null, null)
+                        .items())
+                .hasSize(1);
         assertThat(commentService.branch(root.id(), alice).replies()).isEmpty();
         assertThatThrownBy(() -> commentService.branch(bobReply.id(), alice))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -285,14 +287,19 @@ class CommentServiceIT {
         commentRepository.anonymize(List.of(a.id()));
 
         // an anonymous viewer: an immutable empty block map, the one that throws on a null key
-        var listed = commentService.listTopLevel("publication", subjectId, null);
+        var listed = commentService
+                .listTopLevel("publication", subjectId, null, null, null)
+                .items();
         assertThat(listed).hasSize(1);
         assertThat(listed.getFirst().visibility()).isEqualTo(Visibility.DELETED);
         assertThat(commentService.branch(a.id(), null).replies())
                 .extracting(v -> v.comment().id())
                 .containsExactly(b.id());
         // and a viewer who has blocks, which is the other side of the render policy
-        assertThat(commentService.listTopLevel("publication", subjectId, bob)).hasSize(1);
+        assertThat(commentService
+                        .listTopLevel("publication", subjectId, bob, null, null)
+                        .items())
+                .hasSize(1);
 
         assertThatThrownBy(() -> commentService.deleteOwn(alice, a.id())).isInstanceOf(ForbiddenException.class);
     }

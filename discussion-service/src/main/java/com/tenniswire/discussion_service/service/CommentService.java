@@ -31,6 +31,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class CommentService {
 
+    private static final int DEFAULT_LIMIT = 50;
+
+    // A ceiling rather than a rejection: the parameter arrives from outside, and without one a
+    // single request can ask the service to assemble the whole thread and every author's name.
+    private static final int MAX_LIMIT = 200;
+    private static final int MIN_LIMIT = 1;
+
     private final CommentRepository comments;
     private final CommentCollapse collapse;
     private final BlockRepository blocks;
@@ -58,7 +65,7 @@ public class CommentService {
 
     public CreatedComment create(UUID authorId, String subjectType, UUID subjectId, String body) {
         // Only here and on the listing: a reply takes its subject from the parent, so a kind
-        // dropped from the list stops taking new threads without cutting the ones already standing
+        // dropped from the list stops taking new threads without cutting the ones already standing.
         subjects.assertKnown(subjectType);
         assertMayComment(authorId);
 
@@ -129,14 +136,33 @@ public class CommentService {
         hide(findOrThrow(commentId), Comment.HIDDEN_BY_BOT, null);
     }
 
+    // One page of top-level comments, oldest first. A limit outside the allowed range is brought
+    // into it rather than refused: a limit is a request for how much, not a claim about the world,
+    // and no client is served by a 400 where 200 rows would do.
     @Transactional(readOnly = true)
-    public List<CommentView> listTopLevel(String subjectType, UUID subjectId, @Nullable UUID viewerId) {
+    public CommentPage listTopLevel(
+            String subjectType,
+            UUID subjectId,
+            @Nullable UUID viewerId,
+            @Nullable Integer limit,
+            @Nullable String cursor) {
         // On the read path too: an unknown type matches nothing, and an empty list is what a page
         // with no comments yet looks like. A misspelt client would look like a quiet article.
         subjects.assertKnown(subjectType);
-        var rows = comments.findBySubjectTypeAndSubjectIdAndInReplyToIdIsNullOrderByCreatedAtAscIdAsc(
-                subjectType, subjectId);
-        return BlockRenderPolicy.apply(CommentTree.forest(rows), blocksOf(viewerId));
+        var size = limit == null ? DEFAULT_LIMIT : Math.clamp(limit, MIN_LIMIT, MAX_LIMIT);
+        var after = CommentCursor.decode(cursor);
+
+        var rows = after == null
+                ? comments.findTopLevelFirstPage(subjectType, subjectId, size + 1)
+                : comments.findTopLevelAfter(subjectType, subjectId, after.createdAt(), after.id(), size + 1);
+        var more = rows.size() > size;
+        var page = more ? rows.subList(0, size) : rows;
+
+        // Taken from the last row of the page, not from the last one this viewer will see: blocks
+        // are applied below, and a page he has removed in full would otherwise end the listing for
+        // him while comments are still waiting behind it.
+        var nextCursor = more ? CommentCursor.encode(page.getLast()) : null;
+        return new CommentPage(BlockRenderPolicy.apply(CommentTree.forest(page), blocksOf(viewerId)), nextCursor);
     }
 
     /** The comment with its whole subtree, or 404 when the viewer has removed the branch head. */

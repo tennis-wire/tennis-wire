@@ -63,6 +63,13 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("UNKNOWN_SUBJECT_TYPE", ex.getMessage()));
     }
 
+    @ExceptionHandler(InvalidCursorException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCursor(InvalidCursorException ex) {
+        // A cursor is opaque and always ours, so a broken one is a client that built its own or
+        // kept one across a change of format. Silence would look like the end of the thread.
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ErrorResponse.of("INVALID_CURSOR", ex.getMessage()));
+    }
+
     @ExceptionHandler(UserServiceUnavailableException.class)
     public ResponseEntity<ErrorResponse> handleUserServiceUnavailable(UserServiceUnavailableException ex) {
         // Not ex.getMessage(): which dependency failed, and how, belongs in the log at the throw site.

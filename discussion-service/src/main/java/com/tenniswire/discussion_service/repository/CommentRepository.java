@@ -13,8 +13,35 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface CommentRepository extends JpaRepository<Comment, UUID> {
 
-    List<Comment> findBySubjectTypeAndSubjectIdAndInReplyToIdIsNullOrderByCreatedAtAscIdAsc(
-            String subjectType, UUID subjectId);
+    // Keyset rather than offset: a comment written while the reader is on the first page shifts
+    // every offset after it, so the second page repeats one comment or skips one, and OFFSET makes
+    // the database count the skipped rows on every call. One row beyond the page is asked for so
+    // that the caller can tell whether there is more without a second query.
+    @Query(value = """
+select * from comment
+where subject_type = :subjectType and subject_id = :subjectId and in_reply_to_id is null
+order by created_at, id
+limit :limit
+""", nativeQuery = true)
+    List<Comment> findTopLevelFirstPage(
+            @Param("subjectType") String subjectType, @Param("subjectId") UUID subjectId, @Param("limit") int limit);
+
+    // The pair is compared as a row value so the index is used whole. created_at on its own is not
+    // unique — two comments can land in the same microsecond — and would lose one of them or hand
+    // it out twice.
+    @Query(value = """
+select * from comment
+where subject_type = :subjectType and subject_id = :subjectId and in_reply_to_id is null
+  and (created_at, id) > (:afterCreatedAt, :afterId)
+order by created_at, id
+limit :limit
+""", nativeQuery = true)
+    List<Comment> findTopLevelAfter(
+            @Param("subjectType") String subjectType,
+            @Param("subjectId") UUID subjectId,
+            @Param("afterCreatedAt") Instant afterCreatedAt,
+            @Param("afterId") UUID afterId,
+            @Param("limit") int limit);
 
     List<Comment> findByRootIdOrderByCreatedAtAscIdAsc(UUID rootId);
 
