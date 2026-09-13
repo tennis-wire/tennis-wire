@@ -328,6 +328,23 @@ running, an authenticated read, any write and `scripts/smoke.sh` answer 503:
 comments carry the reader's platform id and their author's display name, and
 both of those live in user-service. Anonymous reads are unaffected.
 
+user-service calls two things of its own, both as itself rather than on behalf
+of whoever is on the line. Keycloak's admin API over `KEYCLOAK_BASE_URL`
+(`http://localhost:8180`) and `KEYCLOAK_REALM` (`tennis-wire`), authenticating
+with `USER_SERVICE_CLIENT_SECRET` — the server root and not the issuer, because
+the admin API sits above the realm. And discussion-service over
+`DISCUSSION_SERVICE_URL` (`http://localhost:8093`), on its own port and never
+through the gateway, to take away what a reader who has left wrote.
+
+Deleting an account finishes out of band: a job passes once a minute over the
+accounts on their way out, closing the identity, waiting until a token issued
+before that could no longer be good, erasing the trace, and deleting the profile
+and the account. Without Keycloak it cannot learn how long a token stays good
+and skips the pass rather than guess; without discussion-service the trace stays
+and the account is not deleted. It comes back to both next minute, and the
+request itself answers 202 either way — the deletion is written down and will
+happen. `user.erasure.*` in `application.yaml` holds the intervals.
+
 ### Transcription service
 
 ```bash

@@ -33,6 +33,58 @@ spring:
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/tennis-wire}
           audiences:
             - tennis-wire-api
+      client:
+        registration:
+          # Calls this service makes as itself rather than on behalf of whoever is on the line:
+          # Keycloak's admin API and the erase in discussion-service. One registration for both -
+          # the token is the same whichever door it opens. The id is ServiceTokens.REGISTRATION_ID.
+          service-account:
+            provider: keycloak
+            client-id: user-service
+            client-secret: ${USER_SERVICE_CLIENT_SECRET:dev-user-service-secret}
+            authorization-grant-type: client_credentials
+        provider:
+          keycloak:
+            # token-uri, not issuer-uri: an issuer is looked up while the context starts, and then
+            # neither the service nor any @SpringBootTest comes up without Keycloak.
+            token-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/tennis-wire}/protocol/openid-connect/token
+
+user:
+  keycloak:
+    # The server root, not the issuer: the admin API sits above the realm, and the issuer URI has
+    # the realm in it already.
+    base-url: ${KEYCLOAK_BASE_URL:http://localhost:8180}
+    realm: ${KEYCLOAK_REALM:tennis-wire}
+    connect-timeout: 2s
+    read-timeout: 5s
+
+  discussion-service:
+    # Its own port over cluster DNS, not the gateway: /internal/** is deliberately not routed there.
+    base-url: ${DISCUSSION_SERVICE_URL:http://localhost:8093}
+    connect-timeout: 2s
+    # Erasing a whole reader's worth of comments is more work than a lookup. Nobody waits on it
+    # either way: the job has its own thread, and the call made when a reader asks to leave is
+    # handed off to another one rather than kept on his.
+    read-timeout: 15s
+
+  erasure:
+    # ISO-8601: @Scheduled reads this as a plain string and parses it itself, without Boot's
+    # relaxed binding. The rest of this block goes through @ConfigurationProperties and does not.
+    interval: PT1M
+    # Added to the realm's access token lifespan to get the wait. More than the interval, so a token
+    # issued a moment before an account was disabled has expired before anything is taken away.
+    grace-margin: 2m
+    # Nothing tells this service when a ban is lifted, so an address a ban is holding is asked about
+    # again on this cadence rather than believed indefinitely.
+    recheck: 5m
+    # An account that keeps failing is looked at less and less often, up to the cap. Without this a
+    # row that can never be finished is retried every minute for as long as the service runs.
+    retry-backoff: 1m
+    retry-cap: 1h
+    # How long a departed reader's display name stays out of circulation (discussion-rules §13.17).
+    name-held: 30d
+    lifespan-cache: 10m
+    batch-size: 50
 
 server:
   port: 8092

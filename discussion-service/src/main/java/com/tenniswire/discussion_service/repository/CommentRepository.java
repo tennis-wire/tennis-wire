@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface CommentRepository extends JpaRepository<Comment, UUID> {
 
@@ -16,6 +17,11 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
             String subjectType, UUID subjectId);
 
     List<Comment> findByRootIdOrderByCreatedAtAscIdAsc(UUID rootId);
+
+    // Ids only: the erase anonymises them in one statement and never needs the rows themselves
+    // until the collapse reads them back.
+    @Query("select c.id from Comment c where c.authorId = :authorId")
+    List<UUID> findIdsByAuthor(@Param("authorId") UUID authorId);
 
     @Query(
             value = "select * from comment where path <@ cast(:path as ltree) order by created_at, id",
@@ -28,6 +34,46 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
     @Modifying
     @Query("update Comment c set c.replyCount = c.replyCount + 1 where c.id = :id")
     int incrementReplyCount(@Param("id") UUID id);
+
+    // By an amount rather than by one: a collapse can take several children of the same surviving
+    // parent. Guarded rather than trusted — the count is raw, maintained here alone, and a negative
+    // one would show up on the article card.
+    @Modifying
+    @Query("update Comment c set c.replyCount = c.replyCount - :by where c.id = :id and c.replyCount >= :by")
+    int decrementReplyCount(@Param("id") UUID id, @Param("by") int by);
+
+    // Direct children of each of the given comments, gravestones included. Deleted, not living:
+    // in_reply_to_id refuses to let a parent go while any row still hangs off it, and after the
+    // collapse a childless gravestone no longer exists unless moderation or a report pinned it.
+    // The whole set is asked at once so the walk upward costs a fixed number of trips.
+    @Query("""
+        select new com.tenniswire.discussion_service.repository.ChildTally(c.inReplyToId, count(c))
+        from Comment c
+        where c.inReplyToId in :parentIds
+        group by c.inReplyToId
+        """)
+    List<ChildTally> countChildrenOf(@Param("parentIds") Collection<UUID> parentIds);
+
+    // One statement for the whole collapsed set: the foreign key is checked once it has run, by
+    // which time child and parent have gone together. The context is cleared because what it still
+    // holds of those rows is no longer in the database.
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from Comment c where c.id in :ids")
+    int deleteByIdIn(@Param("ids") Collection<UUID> ids);
+
+    // What the erase leaves behind: a node with nothing of its author in it, kept only because
+    // something still stands on it. deletedAt is coalesced rather than overwritten so a comment he
+    // had already taken down keeps the time he did it.
+    // Transactional in its own right: unlike the rest, this one is also called straight from a
+    // test, and a repository method on its own runs in Spring Data's read-only transaction.
+    @Transactional
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+        update Comment c
+        set c.authorId = null, c.body = null, c.deletedAt = coalesce(c.deletedAt, current_timestamp)
+        where c.id in :ids
+        """)
+    int anonymize(@Param("ids") Collection<UUID> ids);
 
     // Removals and hand-counted violations land in one total. A counted one has no source of its
     // own — only a person counts one — hence the coalesce. The two columns exclude each other.

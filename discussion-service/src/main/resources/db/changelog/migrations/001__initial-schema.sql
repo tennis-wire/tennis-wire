@@ -82,19 +82,20 @@ BEGIN
         -- root comment: path is its own label, root_id points to itself
         NEW.path    = NEW.path_key::text::ltree;
         NEW.root_id = NEW.id;
-ELSE
-SELECT path, root_id INTO parent_path, parent_root
-FROM comment
-WHERE id = NEW.in_reply_to_id;
+    ELSE
+        SELECT path, root_id INTO parent_path, parent_root
+        FROM comment
+        WHERE id = NEW.in_reply_to_id;
 
-IF parent_path IS NULL THEN
+        IF parent_path IS NULL THEN
             RAISE EXCEPTION 'parent comment % not found', NEW.in_reply_to_id;
-END IF;
+        END IF;
 
         NEW.path    = parent_path || NEW.path_key::text;
         NEW.root_id = parent_root;
-END IF;
-RETURN NEW;
+    END IF;
+
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -111,7 +112,7 @@ CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
-RETURN NEW;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -220,3 +221,21 @@ ALTER TABLE comment
 
 CREATE INDEX idx_comment_counted_author ON comment (author_id, counted_at)
     WHERE counted_at IS NOT NULL;
+
+-- changeset andrei:14
+-- comment: A comment outlives the reader who wrote it. Erasing an account takes away what nothing
+-- comment: stands on and leaves the rest as anonymous nodes, so the replies underneath survive:
+-- comment: author_id goes, and the body goes with it — what the rules promise a departing reader is
+-- comment: erasure, not concealment (discussion-rules §13.14, §11.23). Emptiness is confined to
+-- comment: comments already taken down: one still standing has both. The same two columns are what
+-- comment: the thirty-day wipe of removed text will need (§8.20, §11.22).
+ALTER TABLE comment
+    ALTER COLUMN author_id DROP NOT NULL,
+    ALTER COLUMN body DROP NOT NULL,
+    DROP CONSTRAINT chk_comment_body_len;
+
+ALTER TABLE comment
+    ADD CONSTRAINT chk_comment_body_len CHECK (
+        body IS NULL OR char_length(body) BETWEEN 1 AND 10000),
+    ADD CONSTRAINT chk_comment_whole_while_standing CHECK (
+        deleted_at IS NOT NULL OR (author_id IS NOT NULL AND body IS NOT NULL));

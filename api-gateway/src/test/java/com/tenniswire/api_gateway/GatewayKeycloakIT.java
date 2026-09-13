@@ -1,10 +1,12 @@
 package com.tenniswire.api_gateway;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.delete;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -43,6 +45,7 @@ class GatewayKeycloakIT {
     private static final String CLI = "dev-cli";
     private static final String EDITORIAL = "/api/editorial/articles";
     private static final String USERS_ME = "/api/users/me";
+    private static final String SOMEONES_ACCOUNT = "/api/users/8f1d9c4e-3a2b-4c5d-9e6f-0a1b2c3d4e5f";
 
     // Keep the tag in step with docker-compose.yml: the point of this test is that both
     // read the same realm file on the same server version.
@@ -61,6 +64,8 @@ class GatewayKeycloakIT {
         // needs the port.
         DOWNSTREAM.start();
         DOWNSTREAM.stubFor(get(urlPathEqualTo(EDITORIAL)).willReturn(aResponse().withStatus(200)));
+        DOWNSTREAM.stubFor(delete(urlPathMatching("/api/users/[^/]+"))
+                .willReturn(aResponse().withStatus(202)));
     }
 
     @DynamicPropertySource
@@ -108,6 +113,24 @@ class GatewayKeycloakIT {
                 .exchange()
                 .expectStatus()
                 .isForbidden();
+    }
+
+    @Test
+    void deletingSomebodyElsesAccountNeedsAnAdmin() {
+        // The reader has the role that opens /me, and that is deliberately not enough here.
+        client.delete()
+                .uri(SOMEONES_ACCOUNT)
+                .header(HttpHeaders.AUTHORIZATION, bearer(passwordToken("reader", "reader")))
+                .exchange()
+                .expectStatus()
+                .isForbidden();
+
+        client.delete()
+                .uri(SOMEONES_ACCOUNT)
+                .header(HttpHeaders.AUTHORIZATION, bearer(passwordToken("dev", "dev")))
+                .exchange()
+                .expectStatus()
+                .isAccepted();
     }
 
     @Test

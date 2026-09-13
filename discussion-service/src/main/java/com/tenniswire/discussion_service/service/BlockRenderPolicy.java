@@ -31,7 +31,10 @@ public final class BlockRenderPolicy {
     /** Empty when the node is removed for this viewer. */
     public static Optional<CommentView> apply(CommentNode node, Map<UUID, BlockMode> blocks) {
         var comment = node.comment();
-        var mode = blocks.get(comment.authorId());
+        // A comment whose author erased his account belongs to nobody, so no block bears on it.
+        // Asked rather than looked up: an anonymous viewer's map is Map.of(), which throws on a
+        // null key instead of missing.
+        var mode = comment.hasNoAuthor() ? null : blocks.get(comment.authorId());
         if (mode == BlockMode.SUBTREE_REMOVAL) {
             return Optional.empty();
         }

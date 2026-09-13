@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -46,4 +47,14 @@ public interface UserRestrictionRepository extends JpaRepository<UserRestriction
             @Param("userIds") Collection<UUID> userIds,
             @Param("capability") String capability,
             @Param("now") Instant now);
+
+    // Expired and lifted rows only. A ban still running outlives the account on purpose: it is the
+    // answer the erase gives user-service, and asking twice has to give it twice (§12.20). Once it
+    // has run out, the next erase for the same reader sweeps it up.
+    @Modifying
+    @Query("""
+        delete from UserRestriction r
+        where r.userId = :readerId and r.expiresAt is not null and r.expiresAt <= :now
+        """)
+    int deleteExpiredFor(@Param("readerId") UUID readerId, @Param("now") Instant now);
 }

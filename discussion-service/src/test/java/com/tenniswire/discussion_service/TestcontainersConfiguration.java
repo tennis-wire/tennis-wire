@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @TestConfiguration(proxyBeanMethods = false)
-class TestcontainersConfiguration {
+public class TestcontainersConfiguration {
 
     // Keep in sync with the postgres image in the root docker-compose.yml. Must be 18+:
     // the schema calls the builtin uuidv7().

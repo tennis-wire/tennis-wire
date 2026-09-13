@@ -41,6 +41,14 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("COMMENT_ALREADY_REMOVED", ex.getMessage()));
     }
 
+    @ExceptionHandler(ParentDeletedException.class)
+    public ResponseEntity<ErrorResponse> handleParentDeleted(ParentDeletedException ex) {
+        // 409 rather than 404: the node may well still be there carrying other replies, and what
+        // the request conflicts with is its being down. The client keeps the text and offers to
+        // post it as a comment of its own.
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of("PARENT_DELETED", ex.getMessage()));
+    }
+
     @ExceptionHandler(ResolutionNotApplicableException.class)
     public ResponseEntity<ErrorResponse> handleResolution(ResolutionNotApplicableException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)

@@ -52,6 +52,11 @@ public class SecurityConfig {
                         // admin-only, has to declare itself rather than inherit this rule.
                         .pathMatchers("/api/users/me/**")
                         .hasRole(Roles.USER)
+                        // Declaring itself, as that comment says it must: support deletes an
+                        // account on a reader's behalf, which is the only way out for someone
+                        // banned for good. Nothing else under /api/users/** is reachable.
+                        .pathMatchers(HttpMethod.DELETE, "/api/users/*")
+                        .hasRole(Roles.ADMIN)
                         // Fail closed: a route without a rule is unreachable, not merely
                         // reachable by anyone who happens to be logged in.
                         .anyExchange()

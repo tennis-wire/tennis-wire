@@ -19,6 +19,10 @@ import org.hibernate.generator.EventType;
 @NoArgsConstructor
 public class IdentityLink {
 
+    // The only provider there is: Google and Apple are brokered inside Keycloak and never reach
+    // this table under their own names. The column exists for the day that stops being true.
+    public static final String KEYCLOAK = "keycloak";
+
     @EmbeddedId
     private IdentityLinkId id;
 
