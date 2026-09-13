@@ -23,6 +23,9 @@ class KeycloakAdminTest {
 
     private static final String BASE = "http://keycloak:8080";
     private static final String USERS = BASE + "/admin/realms/tennis-wire/users/sub-1";
+    private static final String ACCOUNT =
+            "{\"id\":\"sub-1\",\"username\":\"leaving@example.test\",\"email\":\"leaving@example.test\","
+                    + "\"enabled\":true,\"firstName\":\"Given\",\"lastName\":\"Family\"}";
 
     private MockRestServiceServer keycloak;
     private KeycloakAdmin admin;
@@ -35,22 +38,25 @@ class KeycloakAdminTest {
     }
 
     @Test
-    void strippingLeavesTheAddressAndTakesEverythingElse() {
+    void whatIsWrittenBackCarriesTheAddressItReadRatherThanOnlyTheChanges() {
+        keycloak.expect(requestTo(USERS))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(ACCOUNT, MediaType.APPLICATION_JSON));
         keycloak.expect(requestTo(USERS))
                 .andExpect(method(HttpMethod.PUT))
-                .andExpect(content().json("{\"enabled\":false,\"firstName\":\"\",\"lastName\":\"\",\"attributes\":{}}"))
+                .andExpect(content()
+                        .json("{\"username\":\"leaving@example.test\",\"email\":\"leaving@example.test\","
+                                + "\"enabled\":false,\"firstName\":\"\",\"lastName\":\"\"}"))
                 .andRespond(withSuccess());
         keycloak.expect(requestTo(USERS + "/logout"))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withSuccess());
         keycloak.expect(requestTo(USERS + "/credentials"))
-                .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("[{\"id\":\"cred-1\",\"type\":\"password\"}]", MediaType.APPLICATION_JSON));
         keycloak.expect(requestTo(USERS + "/credentials/cred-1"))
                 .andExpect(method(HttpMethod.DELETE))
                 .andRespond(withSuccess());
         keycloak.expect(requestTo(USERS + "/federated-identity"))
-                .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("[{\"identityProvider\":\"google\"}]", MediaType.APPLICATION_JSON));
         keycloak.expect(requestTo(USERS + "/federated-identity/google"))
                 .andExpect(method(HttpMethod.DELETE))
@@ -63,6 +69,7 @@ class KeycloakAdminTest {
 
     @Test
     void anAccountWithNothingOnItIsStrippedWithoutComplaint() {
+        keycloak.expect(requestTo(USERS)).andRespond(withSuccess(ACCOUNT, MediaType.APPLICATION_JSON));
         keycloak.expect(requestTo(USERS)).andRespond(withSuccess());
         keycloak.expect(requestTo(USERS + "/logout")).andRespond(withSuccess());
         keycloak.expect(requestTo(USERS + "/credentials")).andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
@@ -71,6 +78,16 @@ class KeycloakAdminTest {
 
         admin.stripAndDisable("sub-1");
 
+        keycloak.verify();
+    }
+
+    @Test
+    void anAccountAlreadyGoneIsNotWrittenBackTo() {
+        keycloak.expect(requestTo(USERS)).andExpect(method(HttpMethod.GET)).andRespond(withResourceNotFound());
+
+        admin.stripAndDisable("sub-1");
+
+        // nothing else was sent: there is nobody left to strip
         keycloak.verify();
     }
 

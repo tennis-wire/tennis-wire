@@ -2,12 +2,18 @@ package com.tenniswire.user_service.client;
 
 import com.tenniswire.user_service.exception.IdentityProviderUnavailableException;
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.security.oauth2.core.OAuth2AuthorizationException;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -30,9 +36,19 @@ public class KeycloakAdmin {
     }
 
     public void stripAndDisable(String subject) {
-        // First and by itself: from here nothing new is issued in his name, whatever the rest does.
-        // Empty strings rather than nulls — Keycloak leaves a field alone when the value is null.
-        update(subject, Map.of("enabled", false, "firstName", "", "lastName", "", "attributes", Map.of()));
+        var account = read(subject);
+        if (account == null) {
+            return;
+        }
+        // Read, change, write the whole thing back. An update replaces the representation rather
+        // than merging into it, so a body carrying only what changed would clear every root
+        // attribute left out of it — the address among them, which is the one thing that must stay.
+        var stripped = new LinkedHashMap<>(account);
+        stripped.put("enabled", false);
+        stripped.put("firstName", "");
+        stripped.put("lastName", "");
+        update(subject, stripped);
+
         logout(subject);
         removeCredentials(subject);
         unlinkProviders(subject);
@@ -46,7 +62,7 @@ public class KeycloakAdmin {
                 .toBodilessEntity());
     }
 
-    //  How long an access token this realm issues stays good. What the erase has to outwait: a token
+    // How long an access token this realm issues stays good. What the erase has to outwait: a token
     // handed out a moment before the account was disabled is a self-contained JWT and goes on being
     // accepted until it expires.
     public Duration accessTokenLifespan() {
@@ -60,10 +76,18 @@ public class KeycloakAdmin {
         return Duration.ofSeconds(value.longValue());
     }
 
-    private void update(String subject, Map<String, Object> fields) {
+    private Map<String, Object> read(String subject) {
+        return call("read the account", () -> http.get()
+                .uri("/admin/realms/{realm}/users/{id}", realm, subject)
+                .retrieve()
+                .onStatus(KeycloakAdmin::notFound, ALREADY_GONE)
+                .body(FIELDS));
+    }
+
+    private void update(String subject, Map<String, Object> account) {
         call("update the account", () -> http.put()
                 .uri("/admin/realms/{realm}/users/{id}", realm, subject)
-                .body(fields)
+                .body(account)
                 .retrieve()
                 .onStatus(KeycloakAdmin::notFound, ALREADY_GONE)
                 .toBodilessEntity());
@@ -117,9 +141,24 @@ public class KeycloakAdmin {
     private <T> T call(String what, Supplier<T> operation) {
         try {
             return operation.get();
+        } catch (HttpClientErrorException e) {
+            // Not an outage. A 400 is a body built wrong here; a 401 or 403 is the service token or
+            // the realm-management roles behind it. Asking again fixes neither.
+            log.error("Keycloak refused to {} in realm {} with {}", what, realm, e.getStatusCode());
+            throw new IdentityProviderUnavailableException("Keycloak refused to " + what, e);
         } catch (RestClientException e) {
-            log.warn("Keycloak could not {} in realm {}: {}", what, realm, e.getMessage());
+            log.warn("Keycloak could not {} in realm {}: {}", what, realm, e.getMostSpecificCause());
             throw new IdentityProviderUnavailableException("Keycloak could not " + what, e);
+        } catch (OAuth2AuthorizationException e) {
+            // Thrown while getting the service token, before the admin API is reached at all. An
+            // unreachable Keycloak is an outage; a refusal means this client is misconfigured.
+            var cause = e.getCause();
+            if (cause instanceof ResourceAccessException || cause instanceof HttpServerErrorException) {
+                log.warn("service token request failed: {}", NestedExceptionUtils.getMostSpecificCause(e));
+            } else {
+                log.error("service token request refused: {}", e.getError());
+            }
+            throw new IdentityProviderUnavailableException("service token unavailable", e);
         }
     }
 }

@@ -35,9 +35,10 @@ spring:
             - tennis-wire-api
       client:
         registration:
-          # Calls made as this service rather than as a reader: Keycloak's admin API. The id is
-          # KeycloakAdminConfig.REGISTRATION_ID.
-          keycloak-admin:
+          # Calls this service makes as itself rather than on behalf of whoever is on the line:
+          # Keycloak's admin API and the erase in discussion-service. One registration for both —
+          # the token is the same whichever door it opens. The id is ServiceTokens.REGISTRATION_ID.
+          service-account:
             provider: keycloak
             client-id: user-service
             client-secret: ${USER_SERVICE_CLIENT_SECRET:dev-user-service-secret}
@@ -56,6 +57,14 @@ user:
     realm: ${KEYCLOAK_REALM:tennis-wire}
     connect-timeout: 2s
     read-timeout: 5s
+
+  discussion-service:
+    # Its own port over cluster DNS, not the gateway: /internal/** is deliberately not routed there.
+    base-url: ${DISCUSSION_SERVICE_URL:http://localhost:8093}
+    connect-timeout: 2s
+    # Erasing a whole reader's worth of comments is more work than a lookup, and it runs from a job
+    # nobody is waiting on.
+    read-timeout: 15s
 
 server:
   port: 8092
