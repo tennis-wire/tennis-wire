@@ -82,19 +82,20 @@ BEGIN
         -- root comment: path is its own label, root_id points to itself
         NEW.path    = NEW.path_key::text::ltree;
         NEW.root_id = NEW.id;
-ELSE
-SELECT path, root_id INTO parent_path, parent_root
-FROM comment
-WHERE id = NEW.in_reply_to_id;
+    ELSE
+        SELECT path, root_id INTO parent_path, parent_root
+        FROM comment
+        WHERE id = NEW.in_reply_to_id;
 
-IF parent_path IS NULL THEN
+        IF parent_path IS NULL THEN
             RAISE EXCEPTION 'parent comment % not found', NEW.in_reply_to_id;
-END IF;
+        END IF;
 
         NEW.path    = parent_path || NEW.path_key::text;
         NEW.root_id = parent_root;
-END IF;
-RETURN NEW;
+    END IF;
+
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -111,7 +112,7 @@ CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
-RETURN NEW;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -230,7 +231,7 @@ CREATE INDEX idx_comment_counted_author ON comment (author_id, counted_at)
 -- comment: the thirty-day wipe of removed text will need (§8.20, §11.22).
 ALTER TABLE comment
     ALTER COLUMN author_id DROP NOT NULL,
-ALTER COLUMN body DROP NOT NULL,
+    ALTER COLUMN body DROP NOT NULL,
     DROP CONSTRAINT chk_comment_body_len;
 
 ALTER TABLE comment

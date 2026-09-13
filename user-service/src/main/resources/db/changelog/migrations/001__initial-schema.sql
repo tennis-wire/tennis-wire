@@ -43,20 +43,16 @@ CREATE INDEX idx_identity_link_user ON identity_link (user_id);
 -- changeset andrei:5 splitStatements:false
 -- comment: Keep updated_at honest in the database rather than trusting every write path
 -- rollback: DROP TRIGGER IF EXISTS trigger_profile_updated_at ON profile; DROP FUNCTION IF EXISTS update_updated_at_column();
-CREATE
-OR REPLACE FUNCTION update_updated_at_column()
+CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at
-= NOW();
-RETURN NEW;
+    NEW.updated_at = NOW();
+    RETURN NEW;
 END;
-$$
-LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trigger_profile_updated_at
-    BEFORE UPDATE
-    ON profile
+    BEFORE UPDATE ON profile
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
@@ -105,35 +101,29 @@ CREATE TABLE display_name_reservation
 -- comment: table. Raised as a unique violation because that is what it is to a caller - both the
 -- comment: rename, which reports the name as taken, and the stub generator, which tries another.
 -- rollback: DROP TRIGGER IF EXISTS trigger_profile_reject_reserved_name ON profile; DROP FUNCTION IF EXISTS profile_reject_reserved_name();
-CREATE
-OR REPLACE FUNCTION profile_reject_reserved_name()
+CREATE OR REPLACE FUNCTION profile_reject_reserved_name()
 RETURNS TRIGGER AS $$
 BEGIN
     -- A rename that does not change the name, and every touch that merely rewrites the row, are
     -- nobody's business here.
-    IF
-TG_OP = 'UPDATE' AND LOWER(NEW.display_name) = LOWER(OLD.display_name) THEN
+    IF TG_OP = 'UPDATE' AND LOWER(NEW.display_name) = LOWER(OLD.display_name) THEN
         RETURN NEW;
-END IF;
+    END IF;
 
-    IF
-EXISTS (SELECT 1
+    IF EXISTS (SELECT 1
                FROM display_name_reservation
                WHERE name_lower = LOWER(NEW.display_name)
                  AND reserved_until > NOW()) THEN
         RAISE EXCEPTION 'display name % is still reserved', NEW.display_name
             USING ERRCODE = 'unique_violation';
-END IF;
+    END IF;
 
-RETURN NEW;
+    RETURN NEW;
 END;
-$$
-LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trigger_profile_reject_reserved_name
-    BEFORE INSERT OR
-UPDATE OF display_name
-ON profile
+    BEFORE INSERT OR UPDATE OF display_name ON profile
     FOR EACH ROW
     EXECUTE FUNCTION profile_reject_reserved_name();
 
