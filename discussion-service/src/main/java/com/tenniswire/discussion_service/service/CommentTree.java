@@ -19,6 +19,10 @@ final class CommentTree {
 
     private CommentTree() {}
 
+    private static boolean hidden(Comment comment) {
+        return comment.isDeleted() && comment.replyCount() == 0;
+    }
+
     /** Roots are the nodes whose parent is not in the list — top-level comments, or the branch head. */
     static List<CommentNode> forest(List<Comment> comments) {
         return forest(comments, Integer.MAX_VALUE);
@@ -44,6 +48,15 @@ final class CommentTree {
                 parent.children().add(node);
             }
         }
+        // Pruned before anything is counted, and from the tree rather than from the input: a node
+        // dropped out of the flat list would leave its children parentless, and they would surface
+        // as roots of their own. Taken off its parent, the whole subtree goes with it — which is
+        // right, because a comment nobody is shown has nothing shown underneath it either.
+        roots.removeIf(root -> hidden(root.comment()));
+        for (var node : nodes.values()) {
+            node.children().removeIf(child -> hidden(child.comment()));
+        }
+
         for (var node : nodes.values()) {
             node.children().sort(OLDEST_FIRST);
             if (node.children().size() > maxChildren) {

@@ -46,8 +46,11 @@ class CommentCollapse {
         }
         var known = withAncestors(taken);
         var ids = List.copyOf(known.keySet());
-        var children = comments.countChildrenOf(ids).stream()
-                .collect(Collectors.toMap(ChildTally::parentId, ChildTally::children, (a, b) -> a, HashMap::new));
+        var tallies = comments.countChildrenOf(ids);
+        var rows = tallies.stream()
+                .collect(Collectors.toMap(ChildTally::parentId, ChildTally::rows, (a, b) -> a, HashMap::new));
+        var shown = tallies.stream()
+                .collect(Collectors.toMap(ChildTally::parentId, ChildTally::shown, (a, b) -> a, HashMap::new));
         var reported = reports.findReportedAmong(ids);
 
         var ordered = new ArrayList<>(known.values());
@@ -56,21 +59,30 @@ class CommentCollapse {
         var doomed = new LinkedHashSet<UUID>();
         var lost = new HashMap<UUID, Integer>();
         for (var node : ordered) {
-            if (!canGo(node, children, reported)) {
+            if (!goesFromView(node, shown)) {
                 continue;
             }
-            doomed.add(node.id());
+            if (rowMayGoToo(node, rows, reported)) {
+                doomed.add(node.id());
+            }
             var parent = node.inReplyToId();
             if (parent != null) {
-                children.merge(parent, -1L, Long::sum);
+                shown.merge(parent, -1L, Long::sum);
+                if (doomed.contains(node.id())) {
+                    rows.merge(parent, -1L, Long::sum);
+                }
                 lost.merge(parent, 1, Integer::sum);
             }
         }
-        if (doomed.isEmpty()) {
+        if (lost.isEmpty() && doomed.isEmpty()) {
             return 0;
         }
-        comments.deleteByIdIn(doomed);
-        // Survivors only: a parent that went took its own count away with it.
+        if (!doomed.isEmpty()) {
+            comments.deleteByIdIn(doomed);
+        }
+        // Survivors only: a parent that went took its own count away with it. A pinned one is a
+        // survivor — its row stays — so its count comes down to what is still shown beneath it,
+        // which is how it comes to read zero and drop out of the page itself.
         lost.forEach((parent, n) -> {
             if (!doomed.contains(parent)) {
                 comments.decrementReplyCount(parent, n);
@@ -79,8 +91,22 @@ class CommentCollapse {
         return doomed.size();
     }
 
-    private static boolean canGo(Comment node, Map<UUID, Long> children, Set<UUID> reported) {
-        if (children.getOrDefault(node.id(), 0L) > 0) {
+    /**
+     * Whether the reader stops seeing it: down, with nothing left beneath him. Says nothing about
+     * the row, which moderation may need to keep.
+     */
+    private static boolean goesFromView(Comment node, Map<UUID, Long> shown) {
+        return shown.getOrDefault(node.id(), 0L) <= 0 && (node.hasNoAuthor() || node.isDeleted());
+    }
+
+    /**
+     * And whether the row may go with it. Two separate questions, and running them together is a
+     * mistake worth naming: the foreign key counts every child still in the table, pinned ones
+     * included, so deleting a parent on the strength of what is shown would leave a row pointing at
+     * nothing.
+     */
+    private static boolean rowMayGoToo(Comment node, Map<UUID, Long> rows, Set<UUID> reported) {
+        if (rows.getOrDefault(node.id(), 0L) > 0) {
             return false;
         }
         // Nothing is kept for a reader who erased his account: the counter reads author_id and no
@@ -91,10 +117,7 @@ class CommentCollapse {
         // hiddenAt: the counter reads that column, and the author is still there to be counted.
         // countedAt: same, for a violation counted by hand.
         // reported: the queue card outlives the author deleting his own comment (§10.22).
-        return node.isDeleted()
-                && !node.isHiddenByModeration()
-                && node.countedAt() == null
-                && !reported.contains(node.id());
+        return !node.isHiddenByModeration() && node.countedAt() == null && !reported.contains(node.id());
     }
 
     /** One query per level of depth, however many comments came in. */

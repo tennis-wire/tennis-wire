@@ -146,6 +146,7 @@ public class CommentService {
     // One page of top-level comments, oldest first. A limit outside the allowed range is brought
     // into it rather than refused: a limit is a request for how much, not a claim about the world,
     // and no client is served by a 400 where 200 rows would do.
+
     @Transactional(readOnly = true)
     public CommentPage listTopLevel(
             String subjectType,
@@ -178,20 +179,29 @@ public class CommentService {
     public CommentView branch(UUID commentId, @Nullable UUID viewerId) {
         var head = findOrThrow(commentId);
         var tree = CommentTree.forest(comments.findSubtreeToDepth(head.path(), BRANCH_DEPTH), BRANCH_WIDTH);
-        // the query returns head plus descendants, so the forest has exactly one root
+        // Empty when the head is a placeholder nobody is shown: the row is there, the comment is
+        // not. The query returns head plus descendants, so otherwise there is exactly one root.
+        if (tree.isEmpty()) {
+            throw new ResourceNotFoundException("Comment", commentId);
+        }
         return BlockRenderPolicy.apply(tree.getFirst(), blocksOf(viewerId))
                 .orElseThrow(() -> new ResourceNotFoundException("Comment", commentId));
     }
 
     // Direct replies of one comment, a page at a time. Where a branch stops, this carries on: every
-    // reply is reachable, however many a comment gathered
+    // reply is reachable, however many a comment gathered.
     @Transactional(readOnly = true)
     public CommentPage replies(
             UUID parentId, @Nullable UUID viewerId, @Nullable Integer limit, @Nullable String cursor) {
         var parent = findOrThrow(parentId);
         var blocks = blocksOf(viewerId);
-        // Whoever removed the comment itself has removed what hangs off it, exactly as in a branch
-        BlockRenderPolicy.apply(CommentTree.forest(List.of(parent)).getFirst(), blocks)
+        // Gone from view, or removed by this viewer: either way there is no comment here to read
+        // the replies of, exactly as in a branch
+        var head = CommentTree.forest(List.of(parent));
+        if (head.isEmpty()) {
+            throw new ResourceNotFoundException("Comment", parentId);
+        }
+        BlockRenderPolicy.apply(head.getFirst(), blocks)
                 .orElseThrow(() -> new ResourceNotFoundException("Comment", parentId));
 
         var size = limit == null ? DEFAULT_LIMIT : Math.clamp(limit, MIN_LIMIT, MAX_LIMIT);
@@ -215,7 +225,11 @@ public class CommentService {
     public List<CommentView> ancestry(UUID commentId, @Nullable UUID viewerId) {
         var target = findOrThrow(commentId);
         var chain = CommentTree.forest(comments.findAncestry(target.path()));
-        // the ancestry is one linear tree rooted at the thread root
+        // Empty when the thread root itself is a placeholder nobody is shown, which is the whole
+        // chain gone. Otherwise the ancestry is one linear tree rooted at that root.
+        if (chain.isEmpty()) {
+            throw new ResourceNotFoundException("Comment", commentId);
+        }
         var flat = new ArrayList<CommentView>();
         var cursor =
                 BlockRenderPolicy.apply(chain.getFirst(), blocksOf(viewerId)).orElse(null);
@@ -251,11 +265,14 @@ public class CommentService {
         }
         var now = Instant.now();
         comment.deletedAt(now).hiddenAt(now).hiddenSource(source).hiddenBy(moderatorId);
-        // No collapse here: the row stays, so everything above it keeps a child and stays too.
-        // What the reader should see instead is a render rule, and it comes with B3 (§11.7, §11.12).
         // However the comment came down, the queue is done with it — including when it was taken
         // down straight from the comment endpoint, with no card ever opened.
         reports.closeOpen(comment.id(), ReportResolution.HIDDEN, moderatorId);
+        // The row stays, pinned by the very column that records the removal, but the reader stops
+        // being shown it once nothing is left underneath (§11.7). The collapse is what carries that
+        // upward: the counts come down, and a placeholder above that held nothing else goes with it.
+        comments.flush();
+        collapse.of(List.of(comment));
     }
 
     private Map<UUID, BlockMode> blocksOf(@Nullable UUID viewerId) {

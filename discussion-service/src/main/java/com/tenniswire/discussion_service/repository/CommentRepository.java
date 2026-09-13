@@ -104,7 +104,10 @@ limit :limit
     // collapse a childless gravestone no longer exists unless moderation or a report pinned it.
     // The whole set is asked at once so the walk upward costs a fixed number of trips.
     @Query("""
-        select new com.tenniswire.discussion_service.repository.ChildTally(c.inReplyToId, count(c))
+        select new com.tenniswire.discussion_service.repository.ChildTally(
+            c.inReplyToId,
+            count(c),
+            sum(case when c.deletedAt is null or c.replyCount > 0 then 1 else 0 end))
         from Comment c
         where c.inReplyToId in :parentIds
         group by c.inReplyToId
