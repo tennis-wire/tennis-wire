@@ -27,6 +27,10 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers(SPRINGDOC_PATHS)
                         .permitAll()
+                        // Service to service, over cluster DNS. The gateway does not route it, and
+                        // no reader token opens it however far it travels.
+                        .requestMatchers("/internal/**")
+                        .hasRole(Roles.SERVICE)
                         .requestMatchers(HttpMethod.GET, "/api/discussion/comments/**")
                         .permitAll()
                         .requestMatchers("/api/discussion/moderation/restrictions/**")

@@ -8,12 +8,15 @@ import com.tenniswire.discussion_service.exception.CommentingRestrictedException
 import com.tenniswire.discussion_service.exception.ForbiddenException;
 import com.tenniswire.discussion_service.exception.ResourceNotFoundException;
 import com.tenniswire.discussion_service.repository.CommentRepository;
+import com.tenniswire.discussion_service.repository.ReportRepository;
 import com.tenniswire.discussion_service.service.BlockService;
 import com.tenniswire.discussion_service.service.CommentService;
+import com.tenniswire.discussion_service.service.ReportService;
 import com.tenniswire.discussion_service.service.RestrictionService;
 import com.tenniswire.discussion_service.service.Visibility;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +25,8 @@ import org.springframework.context.annotation.Import;
 
 /**
  * Against a real PostgreSQL: the ltree trigger, INSERT ... RETURNING into the @Generated columns,
- * the reply_count update and the restriction gate are all things a mock would only pretend about.
+ * the reply_count update, the restriction gate and the foreign key that decides what a collapse may
+ * take away are all things a mock would only pretend about.
  */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
@@ -38,7 +42,13 @@ class CommentServiceIT {
     private RestrictionService restrictionService;
 
     @Autowired
+    private ReportService reportService;
+
+    @Autowired
     private CommentRepository commentRepository;
+
+    @Autowired
+    private ReportRepository reportRepository;
 
     private final UUID subjectId = UUID.randomUUID();
     private final UUID alice = UUID.randomUUID();
@@ -119,6 +129,75 @@ class CommentServiceIT {
     }
 
     @Test
+    void aCommentNothingHangsOffGoesAwayOutright() {
+        var root = commentService.create(alice, "article", subjectId, "root").comment();
+
+        commentService.deleteOwn(alice, root.id());
+
+        assertThat(commentRepository.findById(root.id())).isEmpty();
+    }
+
+    @Test
+    void theLastLivingLeafTakesTheGravestonesAboveItAlong() {
+        var a = commentService.create(alice, "article", subjectId, "A").comment();
+        var b = commentService.reply(bob, a.id(), "B").comment();
+        var c = commentService.reply(alice, b.id(), "C").comment();
+
+        commentService.deleteOwn(bob, b.id());
+        // C still stands on it, so the gravestone stays
+        assertThat(commentRepository.findById(b.id())).isPresent();
+
+        commentService.deleteOwn(alice, c.id());
+
+        assertThat(commentRepository.findById(c.id())).isEmpty();
+        assertThat(commentRepository.findById(b.id())).isEmpty();
+        assertThat(commentRepository.findById(a.id()).orElseThrow().replyCount())
+                .isZero();
+    }
+
+    @Test
+    void aGravestoneWithAnotherChildStaysAndLosesOneFromTheCount() {
+        var a = commentService.create(alice, "article", subjectId, "A").comment();
+        var b = commentService.reply(bob, a.id(), "B").comment();
+        var c = commentService.reply(alice, b.id(), "C").comment();
+        commentService.reply(alice, b.id(), "D");
+
+        commentService.deleteOwn(bob, b.id());
+        commentService.deleteOwn(alice, c.id());
+
+        assertThat(commentRepository.findById(c.id())).isEmpty();
+        assertThat(commentRepository.findById(b.id()).orElseThrow().replyCount())
+                .isEqualTo(1);
+    }
+
+    @Test
+    void aReportedCommentIsKeptSoTheQueueCardSurvivesItsAuthorDeletingIt() {
+        var root = commentService.create(alice, "article", subjectId, "root").comment();
+        reportService.report(bob, root.id(), "spam");
+
+        commentService.deleteOwn(alice, root.id());
+
+        assertThat(commentRepository.findById(root.id()).orElseThrow().isDeleted())
+                .isTrue();
+        assertThat(reportRepository.countByCommentIdAndResolvedAtIsNull(root.id()))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void aCommentRemovedByModerationPinsTheGravestoneAboveIt() {
+        var a = commentService.create(alice, "article", subjectId, "A").comment();
+        var b = commentService.reply(bob, a.id(), "B").comment();
+        var c = commentService.reply(alice, b.id(), "C").comment();
+
+        commentService.deleteOwn(bob, b.id());
+        commentService.hideByModerator(c.id(), moderator);
+
+        // the row records the violation and carries the closed reports, so B keeps a child
+        assertThat(commentRepository.findById(c.id())).isPresent();
+        assertThat(commentRepository.findById(b.id())).isPresent();
+    }
+
+    @Test
     void activeRestrictionRejectsTheWriteBeforeInsert() {
         restrictionService.restrictCommenting(bob, moderator, Instant.now().plus(Duration.ofHours(1)), "flood");
 
@@ -190,5 +269,60 @@ class CommentServiceIT {
         blockService.unblock(alice, bob);
         blockService.unblock(alice, bob);
         assertThat(blockService.list(alice)).isEmpty();
+    }
+
+    @Test
+    void aCommentWhoseAuthorIsGoneStillCarriesItsRepliesAndAnswersToNobody() {
+        var a = commentService.create(alice, "article", subjectId, "A").comment();
+        var b = commentService.reply(bob, a.id(), "B").comment();
+        commentRepository.anonymize(List.of(a.id()));
+
+        // an anonymous viewer: an immutable empty block map, the one that throws on a null key
+        var listed = commentService.listTopLevel("article", subjectId, null);
+        assertThat(listed).hasSize(1);
+        assertThat(listed.getFirst().visibility()).isEqualTo(Visibility.DELETED);
+        assertThat(commentService.branch(a.id(), null).replies())
+                .extracting(v -> v.comment().id())
+                .containsExactly(b.id());
+        // and a viewer who has blocks, which is the other side of the render policy
+        assertThat(commentService.listTopLevel("article", subjectId, bob)).hasSize(1);
+
+        assertThatThrownBy(() -> commentService.deleteOwn(alice, a.id())).isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void aReplyUnderAnAuthorlessCommentIsNotMuted() {
+        var a = commentService.create(alice, "article", subjectId, "A").comment();
+        blockService.block(alice, bob, BlockMode.GRAVESTONE);
+        commentRepository.anonymize(List.of(a.id()));
+
+        assertThat(commentService.reply(bob, a.id(), "B").mutedByRecipient()).isFalse();
+    }
+
+    @Test
+    void anAuthorlessGravestoneGoesWhenTheLastReplyUnderItDoes() {
+        var a = commentService.create(alice, "article", subjectId, "A").comment();
+        var b = commentService.reply(bob, a.id(), "B").comment();
+        commentRepository.anonymize(List.of(a.id()));
+
+        commentService.deleteOwn(bob, b.id());
+
+        // nothing pins a node whose author is gone: no violation to count, no queue card to keep
+        assertThat(commentRepository.findById(b.id())).isEmpty();
+        assertThat(commentRepository.findById(a.id())).isEmpty();
+    }
+
+    @Test
+    void aSurvivingParentLosesOneFromTheCountPerChildTakenAway() {
+        var a = commentService.create(alice, "article", subjectId, "A").comment();
+        var b = commentService.reply(bob, a.id(), "B").comment();
+        var c = commentService.reply(bob, a.id(), "C").comment();
+        commentService.reply(alice, a.id(), "D");
+
+        commentService.deleteOwn(bob, b.id());
+        commentService.deleteOwn(bob, c.id());
+
+        assertThat(commentRepository.findById(a.id()).orElseThrow().replyCount())
+                .isEqualTo(1);
     }
 }

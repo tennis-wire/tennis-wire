@@ -53,3 +53,31 @@ CREATE TRIGGER trigger_profile_updated_at
     BEFORE UPDATE ON profile
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- changeset andrei:6
+-- comment: An account on its way out. The request records it here and shuts the identity down; the
+-- comment: rest runs from a job, because an access token handed out a moment earlier has to be
+-- comment: outwaited and another service has to be reached on the way (readers.md §1.6).
+-- comment: subject is kept here rather than read back from identity_link: the profile goes, and the
+-- comment: links with it, long before the Keycloak account does when a ban holds the address.
+CREATE TABLE pending_identity_delete (
+                                         user_id            UUID PRIMARY KEY,
+                                         subject            TEXT NOT NULL,
+                                         requested_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    -- When the account was disabled and stripped. The wait counts from here and not from the
+    -- request: until this is set, nothing has been closed and there is nothing to outwait.
+                                         identity_closed_at TIMESTAMPTZ,
+                                         trace_erased_at    TIMESTAMPTZ,
+
+    -- A ban outlives the account, or deleting one would free the address and shed it
+    -- (discussion-rules §12.20). Held with no date is a ban with no end: never freed.
+                                         address_held       BOOLEAN NOT NULL DEFAULT FALSE,
+                                         address_held_until TIMESTAMPTZ,
+
+                                         attempts           INTEGER NOT NULL DEFAULT 0,
+                                         last_attempt_at    TIMESTAMPTZ,
+                                         last_error         TEXT,
+
+                                         CONSTRAINT chk_pending_hold CHECK (address_held OR address_held_until IS NULL)
+);

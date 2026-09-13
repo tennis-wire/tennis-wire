@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CommentService {
 
     private final CommentRepository comments;
+    private final CommentCollapse collapse;
     private final BlockRepository blocks;
     private final UserRestrictionRepository restrictions;
     private final ReportRepository reports;
@@ -38,18 +39,18 @@ public class CommentService {
 
     public CommentService(
             CommentRepository comments,
+            CommentCollapse collapse,
             BlockRepository blocks,
             UserRestrictionRepository restrictions,
             ReportRepository reports,
             DomainEventPublisher events) {
         this.comments = comments;
+        this.collapse = collapse;
         this.blocks = blocks;
         this.restrictions = restrictions;
         this.reports = reports;
         this.events = events;
     }
-
-    // -- Write path (spec §9) --
 
     public CreatedComment create(UUID authorId, String subjectType, UUID subjectId, String body) {
         assertMayComment(authorId);
@@ -80,18 +81,30 @@ public class CommentService {
         var saved = comments.saveAndFlush(comment);
         comments.incrementReplyCount(parent.id());
 
-        var muted = blocks.existsById(new BlockId(parent.authorId(), authorId));
+        // Nobody is left to have blocked him once the parent's author has erased his account.
+        var muted = !parent.hasNoAuthor() && blocks.existsById(new BlockId(parent.authorId(), authorId));
         events.publish(toEvent(saved));
         return new CreatedComment(saved, muted);
     }
 
-    /** Soft delete by the author. Idempotent. */
+    /**
+     * Deletion by the author. The node is marked deleted and then, if nothing stands on it, taken
+     * away outright along with every gravestone above it that it was the last thing holding up
+     * (discussion-rules §8.5, §8.7). Idempotent.
+     */
     public void deleteOwn(UUID actorId, UUID commentId) {
         var comment = findOrThrow(commentId);
-        if (!comment.authorId().equals(actorId)) {
+        // actorId first: a comment left behind by an erased account answers to nobody.
+        if (!actorId.equals(comment.authorId())) {
             throw new ForbiddenException("Not the author of comment " + commentId);
         }
-        softDelete(comment);
+        if (comment.isDeleted()) {
+            return;
+        }
+        comment.deletedAt(Instant.now());
+        // before the collapse reads it back: the mark is what decides the walk
+        comments.flush();
+        collapse.of(List.of(comment));
     }
 
     /**
@@ -106,8 +119,6 @@ public class CommentService {
     public void hideByBot(UUID commentId) {
         hide(findOrThrow(commentId), Comment.HIDDEN_BY_BOT, null);
     }
-
-    // -- Read path (spec §10): dumb queries, tree in memory, block modes applied per viewer --
 
     @Transactional(readOnly = true)
     public List<CommentView> listTopLevel(String subjectType, UUID subjectId, @Nullable UUID viewerId) {
@@ -149,19 +160,13 @@ public class CommentService {
         return flat;
     }
 
-    // -- Helpers --
+    // Helpers
 
     private void assertMayComment(UUID authorId) {
         var active = restrictions.findActive(authorId, UserRestriction.CAPABILITY_COMMENT, Instant.now());
         if (!active.isEmpty()) {
             // ordered indefinite-first, then latest expiry: the first row is the binding one
             throw new CommentingRestrictedException(active.getFirst().expiresAt());
-        }
-    }
-
-    private void softDelete(Comment comment) {
-        if (!comment.isDeleted()) {
-            comment.deletedAt(Instant.now());
         }
     }
 
@@ -175,6 +180,8 @@ public class CommentService {
         }
         var now = Instant.now();
         comment.deletedAt(now).hiddenAt(now).hiddenSource(source).hiddenBy(moderatorId);
+        // No collapse here: the row stays, so everything above it keeps a child and stays too.
+        // What the reader should see instead is a render rule, and it comes with B3 (§11.7, §11.12).
         // However the comment came down, the queue is done with it — including when it was taken
         // down straight from the comment endpoint, with no card ever opened.
         reports.closeOpen(comment.id(), ReportResolution.HIDDEN, moderatorId);
