@@ -52,7 +52,9 @@ public class ReaderTraceClient {
         }
         if (erased == null) {
             // Better to ask again than to read an empty answer as "no ban" and free the address.
-            log.error("discussion-service answered the erase of {} without a body", userId);
+            // Which reader it was rides on the exception, which the caller logs: an id that arrived
+            // as a path variable has no business being written into a log line unescaped.
+            log.error("discussion-service answered an erase without a body");
             throw new DiscussionServiceUnavailableException("the erase of " + userId + " came back with no answer");
         }
         return erased;

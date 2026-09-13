@@ -1,0 +1,13 @@
+# Test profile, activated for the whole module in build.gradle.kts rather than per class, so a new
+# test cannot quietly come up without it.
+#
+# A plain application.yaml here would not do: it resolves to the same classpath location as the real
+# one and would hide it outright rather than adding to it, leaving the service with no datasource
+# and no issuer.
+
+user:
+  erasure:
+    # What the job does is driven directly by AccountErasureIT, which is both faster and the only
+    # way to say which pass is being looked at. Left running, it would also reach for Keycloak and
+    # discussion-service in the middle of tests about something else.
+    enabled: false

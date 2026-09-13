@@ -3,17 +3,21 @@ package com.tenniswire.user_service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.tenniswire.user_service.client.ErasedReader;
 import com.tenniswire.user_service.client.KeycloakAdmin;
+import com.tenniswire.user_service.client.ReaderTraceClient;
 import com.tenniswire.user_service.exception.IdentityProviderUnavailableException;
 import com.tenniswire.user_service.exception.ResourceNotFoundException;
 import com.tenniswire.user_service.repository.PendingIdentityDeleteRepository;
 import com.tenniswire.user_service.service.AccountDeletionService;
 import com.tenniswire.user_service.service.IdentityService;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -27,6 +31,9 @@ class AccountDeletionIT {
     @MockitoBean
     private KeycloakAdmin keycloak;
 
+    @MockitoBean
+    private ReaderTraceClient traces;
+
     @Autowired
     private AccountDeletionService deletions;
 
@@ -36,14 +43,21 @@ class AccountDeletionIT {
     @Autowired
     private PendingIdentityDeleteRepository pending;
 
+    @BeforeEach
+    void discussionServiceAnswers() {
+        given(traces.erase(any())).willReturn(new ErasedReader(false, null));
+    }
+
     @Test
-    void theIdentityIsShutAndWhatIsLeftIsWrittenDown() {
+    void theIdentityIsShutAndHisCommentsGoAtOnce() {
         var subject = UUID.randomUUID().toString();
         var userId = identities.resolve("keycloak", subject);
 
         deletions.request(userId);
 
         verify(keycloak).stripAndDisable(subject);
+        // the rules promise the comments disappear at once, not when the job gets round to it
+        verify(traces).erase(userId);
         var record = pending.findById(userId).orElseThrow();
         assertThat(record.subject()).isEqualTo(subject);
         assertThat(record.identityClosedAt()).isNotNull();

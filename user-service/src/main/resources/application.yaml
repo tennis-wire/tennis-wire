@@ -36,7 +36,7 @@ spring:
       client:
         registration:
           # Calls this service makes as itself rather than on behalf of whoever is on the line:
-          # Keycloak's admin API and the erase in discussion-service. One registration for both —
+          # Keycloak's admin API and the erase in discussion-service. One registration for both -
           # the token is the same whichever door it opens. The id is ServiceTokens.REGISTRATION_ID.
           service-account:
             provider: keycloak
@@ -65,6 +65,19 @@ user:
     # Erasing a whole reader's worth of comments is more work than a lookup, and it runs from a job
     # nobody is waiting on.
     read-timeout: 15s
+
+  erasure:
+    # ISO-8601: @Scheduled reads this as a plain string and parses it itself, without Boot's
+    # relaxed binding. The rest of this block goes through @ConfigurationProperties and does not.
+    interval: PT1M
+    # Added to the realm's access token lifespan to get the wait. More than the interval, so a token
+    # issued a moment before an account was disabled has expired before anything is taken away.
+    grace-margin: 2m
+    # Nothing tells this service when a ban is lifted, so an address a ban is holding is asked about
+    # again on this cadence rather than believed indefinitely.
+    recheck: 5m
+    lifespan-cache: 10m
+    batch-size: 50
 
 server:
   port: 8092
