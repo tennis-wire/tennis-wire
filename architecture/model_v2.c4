@@ -276,7 +276,7 @@ model {
 
       service userApi 'User API' {
         #planned
-        description 'Профили, настройки, /api/users/me'
+        description 'Профили, настройки, /api/users/me. Удаление аккаунта: запрос гасит учётку, остальное доделывает фоновая джоба'
       }
 
       database userDb 'User DB' {
@@ -419,8 +419,14 @@ model {
   tennisService.contentService.contentApi -> tennisService.searchService 'Индексация'
 
   // --- User / Discussion internal ---
-  tennisService.userService.userApi -> tennisService.userService.userDb 'Профили, identity_link'
+  tennisService.userService.userApi -> tennisService.userService.userDb 'Профили, identity_link, аккаунты на удалении, резервации имён'
   tennisService.discussionService.discussionApi -> tennisService.discussionService.discussionDb 'CRUD'
+
+  // Оба направления между сервисами идут напрямую по кластерному DNS, /internal/** через gateway
+  // не маршрутизируется. Цикл здесь намеренный: каждая сторона владеет тем, чего у другой нет —
+  // discussion спрашивает имена авторов, user удаляет след ушедшего читателя (readers.md §1.6).
+  tennisService.discussionService.discussionApi -> tennisService.userService.userApi 'GET /internal/users?ids=: имена авторов пачкой'
+  tennisService.userService.userApi -> tennisService.discussionService.discussionApi 'DELETE /internal/users/{id}: стирание следа, ответ несёт срок действующего бана'
 
   // --- Auth: клиенты -> Identity Provider ---
   // Идентификаторы клиентов и роли — auth.md §2–§3
@@ -434,6 +440,9 @@ model {
   tennisService.contentService.contentApi -> tennisService.identity.identityOidc 'JWKS: валидация JWT'
   tennisService.transcriptionService.transcriptionApi -> tennisService.identity.identityOidc 'JWKS: валидация JWT, owner у задач'
   tennisService.discussionService.discussionApi -> tennisService.identity.identityOidc 'JWKS: валидация JWT; на анонимных чтениях токен необязателен, но валидируется'
+  tennisService.userService.userApi -> tennisService.identity.identityOidc 'JWKS: валидация JWT'
+  // Роли manage-users и view-realm выданы сервисному аккаунту клиента user-service (auth.md §3)
+  tennisService.userService.userApi -> tennisService.identity.identityOidc 'Admin API: гашение и удаление учётки, чтение accessTokenLifespan'
 
   // --- Identity internal ---
   tennisService.identity.identityOidc -> tennisService.identity.identityDb 'Realm data'
