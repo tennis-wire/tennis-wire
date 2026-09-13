@@ -3,6 +3,7 @@ package com.tenniswire.user_service.repository;
 import com.tenniswire.user_service.entity.PendingIdentityDelete;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.QueryHint;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,11 +29,17 @@ public interface PendingIdentityDeleteRepository extends JpaRepository<PendingId
         """)
     int markIdentityClosed(@Param("userId") UUID userId);
 
-    // Whoever asked first is dealt with first. The table holds one row per account on its way out
-    // and empties itself, so it is read whole rather than through a query that would have to encode
-    // every reason a row might not be due yet — those live in one place, in the step itself.
-    @Query("select p.userId from PendingIdentityDelete p order by p.requestedAt")
-    List<UUID> oldestFirst(Pageable page);
+    // Due first, and only what is due. The reasons an account waits are still worked out in one
+    // place — the step itself — but the answer is kept on the row, because a row that is waiting has
+    // to be invisible here rather than read and put back. Some are never finished at all: a ban with
+    // no end holds its address for good, and enough of those would otherwise fill this page and
+    // leave nothing new ever reached.
+    @Query("""
+        select p.userId from PendingIdentityDelete p
+        where p.retryAfter is null or p.retryAfter <= :now
+        order by coalesce(p.retryAfter, p.requestedAt)
+        """)
+    List<UUID> due(@Param("now") Instant now, Pageable page);
 
     // Skipped rather than waited for: another instance is already working this account, and there
     // are others to get on with. -2 is Hibernate's SKIP LOCKED.

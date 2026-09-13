@@ -58,6 +58,12 @@ public class PendingIdentityDelete {
     @Column(name = "address_held_until")
     private Instant addressHeldUntil;
 
+    // When this row is worth looking at again. Set by every step that puts the account down
+    // without finishing it, so that a row still waiting is not read at all rather than read and
+    // skipped. Null means it has not been looked at yet.
+    @Column(name = "retry_after")
+    private Instant retryAfter;
+
     @Column(nullable = false)
     private int attempts;
 

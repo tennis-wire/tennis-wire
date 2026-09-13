@@ -7,7 +7,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 import com.tenniswire.user_service.client.ErasedReader;
@@ -179,8 +179,8 @@ class AccountErasureIT {
         job.pass();
         job.pass();
 
-        // once from the request itself and once from the pass, and not a third time
-        verify(traces, times(2)).erase(userId);
+        // once when he asked to leave and once on the pass, and not a third time
+        verify(traces, timeout(5_000).times(2)).erase(userId);
     }
 
     @Test
@@ -270,15 +270,43 @@ class AccountErasureIT {
         assertThat(pending.findById(other)).isEmpty();
     }
 
+    @Test
+    void accountsThatAreNeverFinishedDoNotFillThePage() {
+        // A ban with no end holds its address for good, so these rows never go. One more than a
+        // page of them, all of them older than the account that comes next.
+        for (var i = 0; i <= 50; i++) {
+            heldForGood();
+        }
+        var freshOne = askedToLeave();
+        pauseIsOver(freshOne);
+
+        job.pass();
+
+        assertThat(pending.findById(freshOne)).isEmpty();
+    }
+
     private UUID askedToLeave() {
         var userId = identities.resolve("keycloak", UUID.randomUUID().toString());
         deletions.request(userId);
         return userId;
     }
 
+    // An account parked for good, in the state one actually lives in: its trace erased, its address
+    // held, and a date on it for when the ban is worth asking about again
+    private void heldForGood() {
+        var userId = askedToLeave();
+        var record = pending.findById(userId).orElseThrow();
+        pending.saveAndFlush(record.identityClosedAt(Instant.now().minus(LONG_ENOUGH))
+                .traceErasedAt(Instant.now().minus(LONG_ENOUGH))
+                .addressHeld(true)
+                .lastAttemptAt(Instant.now())
+                .retryAfter(Instant.now().plus(Duration.ofMinutes(5))));
+    }
+
     private void pauseIsOver(UUID userId) {
         var record = pending.findById(userId).orElseThrow();
-        pending.saveAndFlush(record.identityClosedAt(Instant.now().minus(LONG_ENOUGH)));
+        pending.saveAndFlush(
+                record.identityClosedAt(Instant.now().minus(LONG_ENOUGH)).retryAfter(null));
     }
 
     private void heldLongEnoughAgo(String name) {
@@ -288,6 +316,7 @@ class AccountErasureIT {
 
     private void askedLongEnoughAgo(UUID userId) {
         var record = pending.findById(userId).orElseThrow();
-        pending.saveAndFlush(record.lastAttemptAt(Instant.now().minus(LONG_ENOUGH)));
+        pending.saveAndFlush(record.lastAttemptAt(Instant.now().minus(LONG_ENOUGH))
+                .retryAfter(Instant.now().minus(LONG_ENOUGH)));
     }
 }

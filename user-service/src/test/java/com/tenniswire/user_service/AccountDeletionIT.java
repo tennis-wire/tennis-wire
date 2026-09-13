@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -56,8 +57,9 @@ class AccountDeletionIT {
         deletions.request(userId);
 
         verify(keycloak).stripAndDisable(subject);
-        // the rules promise the comments disappear at once, not when the job gets round to it
-        verify(traces).erase(userId);
+        // the rules promise the comments disappear at once, not when the job gets round to it —
+        // started here and not waited on, so it is watched for rather than asserted outright
+        verify(traces, timeout(5_000)).erase(userId);
         var record = pending.findById(userId).orElseThrow();
         assertThat(record.subject()).isEqualTo(subject);
         assertThat(record.identityClosedAt()).isNotNull();

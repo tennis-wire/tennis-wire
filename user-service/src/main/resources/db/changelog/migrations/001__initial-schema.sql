@@ -136,3 +136,16 @@ UPDATE OF display_name
 ON profile
     FOR EACH ROW
     EXECUTE FUNCTION profile_reject_reserved_name();
+
+-- changeset andrei:9
+-- comment: When this account is worth looking at again. The wait itself is worked out in the job -
+-- comment: an address a ban holds is asked about on a cadence, one that keeps failing is asked about
+-- comment: less and less - and only the answer is kept here, so that a row waiting is invisible to
+-- comment: the query rather than picked up and put down again. Without it, accounts that are never
+-- comment: finished at all - a ban with no end holds its address for good - fill the page the job
+-- comment: reads and nothing new is ever reached. NULL means it has not been looked at yet.
+ALTER TABLE pending_identity_delete
+    ADD COLUMN retry_after TIMESTAMPTZ;
+
+CREATE INDEX idx_pending_identity_delete_due
+    ON pending_identity_delete (COALESCE(retry_after, requested_at));

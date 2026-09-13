@@ -62,8 +62,9 @@ user:
     # Its own port over cluster DNS, not the gateway: /internal/** is deliberately not routed there.
     base-url: ${DISCUSSION_SERVICE_URL:http://localhost:8093}
     connect-timeout: 2s
-    # Erasing a whole reader's worth of comments is more work than a lookup, and it runs from a job
-    # nobody is waiting on.
+    # Erasing a whole reader's worth of comments is more work than a lookup. Nobody waits on it
+    # either way: the job has its own thread, and the call made when a reader asks to leave is
+    # handed off to another one rather than kept on his.
     read-timeout: 15s
 
   erasure:

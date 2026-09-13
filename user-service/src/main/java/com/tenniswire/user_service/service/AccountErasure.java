@@ -53,14 +53,10 @@ public class AccountErasure {
         this.properties = properties;
     }
 
-    /**
-     * Accounts to look at this pass, oldest request first. Not filtered: the table holds one row per
-     * account on its way out and empties itself, so reading it whole costs less than a query that
-     * has to encode every reason a row might not be due.
-     */
+    /** Accounts due this pass, the longest overdue first. */
     @Transactional(readOnly = true)
     public List<UUID> due() {
-        return pending.oldestFirst(PageRequest.of(0, properties.batchSize()));
+        return pending.due(Instant.now(), PageRequest.of(0, properties.batchSize()));
     }
 
     /** One step for one account. Failures are recorded on the row rather than thrown at the job. */
@@ -76,7 +72,11 @@ public class AccountErasure {
         try {
             step(record, grace);
         } catch (RuntimeException e) {
-            record.attempts(record.attempts() + 1).lastAttemptAt(Instant.now()).lastError(shorten(e));
+            var failedAt = Instant.now();
+            record.attempts(record.attempts() + 1)
+                    .lastAttemptAt(failedAt)
+                    .lastError(shorten(e))
+                    .retryAfter(failedAt.plus(backoff(record.attempts())));
             if (backoff(record.attempts()).compareTo(properties.retryCap()) >= 0) {
                 // Slowed all the way down and still failing. Nothing here will fix it, so say so
                 // where it will be seen rather than go on warning once a minute for ever.
@@ -98,13 +98,14 @@ public class AccountErasure {
             // The request could not reach Keycloak. Nothing has been closed yet, so there is
             // nothing to outwait either — the clock starts here and the rest waits for next pass.
             keycloak.stripAndDisable(record.subject());
-            record.identityClosedAt(now);
+            record.identityClosedAt(now).retryAfter(now.plus(grace));
             return;
         }
+        // Kept even though retry_after already says the same: that is a schedule, worked out from
+        // whatever the realm said at the time, and this is the rule it was meant to serve. A realm
+        // reconfigured to longer-lived tokens must not be outrun by a date written under the old one.
         if (now.isBefore(record.identityClosedAt().plus(grace))) {
-            return;
-        }
-        if (tooSoonToLookAgain(record, now)) {
+            record.retryAfter(record.identityClosedAt().plus(grace));
             return;
         }
 
@@ -124,7 +125,10 @@ public class AccountErasure {
 
         if (erased.banned()) {
             // The address stays taken until the ban runs out, or for good if it has no end
-            // (discussion-rules §12.20). Everything else about him is already gone.
+            // (discussion-rules §12.20). Everything else about him is already gone. Asked about
+            // again on a cadence rather than at the date he gave: nothing here is told when a ban
+            // is lifted.
+            record.retryAfter(now.plus(properties.recheck()));
             return;
         }
         keycloak.delete(record.subject());
@@ -141,18 +145,6 @@ public class AccountErasure {
     @Transactional
     public void releaseNamesHeldLongEnough() {
         names.release(Instant.now());
-    }
-
-    // Two reasons to leave an account alone for a while, and they want different waits. An address a
-    // ban is holding is asked about on a steady cadence, because only the answer can say whether the
-    // ban is still there. An account that keeps failing is asked about less and less, because
-    // whatever is wrong is not going to be fixed by asking sooner
-    private boolean tooSoonToLookAgain(PendingIdentityDelete record, Instant now) {
-        if (record.lastAttemptAt() == null) {
-            return false;
-        }
-        var wait = record.addressHeld() ? properties.recheck() : backoff(record.attempts());
-        return now.isBefore(record.lastAttemptAt().plus(wait));
     }
 
     private Duration backoff(int attempts) {

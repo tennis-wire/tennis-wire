@@ -1,10 +1,8 @@
 package com.tenniswire.user_service.service;
 
 import com.tenniswire.user_service.client.KeycloakAdmin;
-import com.tenniswire.user_service.client.ReaderTraceClient;
 import com.tenniswire.user_service.entity.IdentityLink;
 import com.tenniswire.user_service.entity.PendingIdentityDelete;
-import com.tenniswire.user_service.exception.DiscussionServiceUnavailableException;
 import com.tenniswire.user_service.exception.IdentityProviderUnavailableException;
 import com.tenniswire.user_service.exception.ResourceNotFoundException;
 import com.tenniswire.user_service.repository.IdentityLinkRepository;
@@ -34,19 +32,19 @@ public class AccountDeletionService {
     private final IdentityLinkRepository links;
     private final PendingIdentityDeleteRepository pending;
     private final KeycloakAdmin keycloak;
-    private final ReaderTraceClient traces;
+    private final ImmediateTraceErasure trace;
 
     public AccountDeletionService(
             ProfileRepository profiles,
             IdentityLinkRepository links,
             PendingIdentityDeleteRepository pending,
             KeycloakAdmin keycloak,
-            ReaderTraceClient traces) {
+            ImmediateTraceErasure trace) {
         this.profiles = profiles;
         this.links = links;
         this.pending = pending;
         this.keycloak = keycloak;
-        this.traces = traces;
+        this.trace = trace;
     }
 
     // Idempotent: asking twice records once, and the second call only retries what did not work
@@ -64,21 +62,9 @@ public class AccountDeletionService {
             // just asked to leave. The job closes what is left, and until it does he can still sign in.
             log.warn("account {} is recorded for deletion but Keycloak would not close it: {}", userId, e.getMessage());
         }
-        eraseTheTrace(userId);
-    }
-
-    /**
-     * His comments go now rather than when the job gets to them: the rules promise they disappear at
-     * once (discussion-rules §13.6), and waiting out an outstanding token is only needed before the
-     * profile goes, not before the trace does. Best effort - the job asks again either way, and it
-     * is the job's answer that decides when the account itself may follow.
-     */
-    private void eraseTheTrace(UUID userId) {
-        try {
-            traces.erase(userId);
-        } catch (DiscussionServiceUnavailableException e) {
-            log.warn("the trace of {} is still there: {}", userId, e.getMessage());
-        }
+        // Off this thread: the reader is owed his comments going at once, not a wait on another
+        // service while they do.
+        trace.start(userId);
     }
 
     private PendingIdentityDelete record(UUID userId) {
