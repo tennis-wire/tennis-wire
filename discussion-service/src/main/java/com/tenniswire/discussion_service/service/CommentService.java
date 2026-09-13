@@ -10,6 +10,7 @@ import com.tenniswire.discussion_service.event.CommentCreatedEvent;
 import com.tenniswire.discussion_service.event.DomainEventPublisher;
 import com.tenniswire.discussion_service.exception.CommentingRestrictedException;
 import com.tenniswire.discussion_service.exception.ForbiddenException;
+import com.tenniswire.discussion_service.exception.ParentDeletedException;
 import com.tenniswire.discussion_service.exception.ResolutionNotApplicableException;
 import com.tenniswire.discussion_service.exception.ResourceNotFoundException;
 import com.tenniswire.discussion_service.repository.BlockRepository;
@@ -69,8 +70,14 @@ public class CommentService {
 
     public CreatedComment reply(UUID authorId, UUID parentId, String body) {
         assertMayComment(authorId);
-        // A soft-deleted parent still accepts replies: the node is kept for exactly that reason.
         var parent = findOrThrow(parentId);
+        // A gravestone is kept to hold up what is already under it, not to gather more. It has no
+        // reply button (discussion-rules §5.2), so this is someone whose form was open while the
+        // comment came down — and letting it through would keep alive a node that was about to
+        // collapse under §8.7.
+        if (parent.isDeleted()) {
+            throw new ParentDeletedException(parentId);
+        }
 
         var comment = new Comment()
                 .subjectType(parent.subjectType())
@@ -81,8 +88,9 @@ public class CommentService {
         var saved = comments.saveAndFlush(comment);
         comments.incrementReplyCount(parent.id());
 
-        // Nobody is left to have blocked him once the parent's author has erased his account.
-        var muted = !parent.hasNoAuthor() && blocks.existsById(new BlockId(parent.authorId(), authorId));
+        // A standing comment always has its author, so there is always someone who may have
+        // blocked him: the constraint sees to it that only a comment already down can be authorless.
+        var muted = blocks.existsById(new BlockId(parent.authorId(), authorId));
         events.publish(toEvent(saved));
         return new CreatedComment(saved, muted);
     }

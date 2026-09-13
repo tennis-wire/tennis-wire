@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.tenniswire.discussion_service.entity.BlockMode;
 import com.tenniswire.discussion_service.exception.CommentingRestrictedException;
 import com.tenniswire.discussion_service.exception.ForbiddenException;
+import com.tenniswire.discussion_service.exception.ParentDeletedException;
 import com.tenniswire.discussion_service.exception.ResourceNotFoundException;
 import com.tenniswire.discussion_service.repository.CommentRepository;
 import com.tenniswire.discussion_service.repository.ReportRepository;
@@ -110,12 +111,9 @@ class CommentServiceIT {
         var deleted = branch.replies().getFirst();
         assertThat(deleted.visibility()).isEqualTo(Visibility.DELETED);
         assertThat(deleted.replies()).extracting(v -> v.comment().id()).containsExactly(nested.id());
-        // still accepts replies: the node is kept for exactly that
-        assertThat(commentService
-                        .reply(alice, reply.id(), "after delete")
-                        .comment()
-                        .inReplyToId())
-                .isEqualTo(reply.id());
+        // and takes no more: the node is kept to hold up what is already under it
+        assertThatThrownBy(() -> commentService.reply(alice, reply.id(), "after delete"))
+                .isInstanceOf(ParentDeletedException.class);
     }
 
     @Test
@@ -291,12 +289,12 @@ class CommentServiceIT {
     }
 
     @Test
-    void aReplyUnderAnAuthorlessCommentIsNotMuted() {
+    void aCommentWhoseAuthorIsGoneTakesNoReplies() {
         var a = commentService.create(alice, "article", subjectId, "A").comment();
-        blockService.block(alice, bob, BlockMode.GRAVESTONE);
         commentRepository.anonymize(List.of(a.id()));
 
-        assertThat(commentService.reply(bob, a.id(), "B").mutedByRecipient()).isFalse();
+        // the same refusal as any gravestone: nothing marks this one out to whoever is replying
+        assertThatThrownBy(() -> commentService.reply(bob, a.id(), "B")).isInstanceOf(ParentDeletedException.class);
     }
 
     @Test
