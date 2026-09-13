@@ -115,8 +115,9 @@ Realm-роли (client-роли не используем — проще мап�
 | `/api/discussion/comments/**` GET | анонимно | токен, если есть, всё равно валидируется — по нему применяются блокировки зрителя |
 | `/api/discussion/comments/**` POST/DELETE, `/api/discussion/blocks/**` | `user` | |
 | `/api/discussion/moderation/**` | `moderator` или `moderator-bot` | сервис сужает: `/moderation/restrictions/**` и `GET`/`PATCH /moderation/reports/**` — только `moderator`; `POST /moderation/reports` — только `moderator-bot` |
-| `/api/users/me/**` | `user` | planned |
-| `/api/users/**` (прочее) | `admin` | planned |
+| `/api/users/me/**` | `user` | сюда же `DELETE /api/users/me` — читатель удаляет свой аккаунт |
+| `DELETE /api/users/{id}` | `admin` | удаление аккаунта через поддержку: единственный выход для забаненного навсегда (`discussion-rules.md` §12.16) |
+| `/api/users/**` (прочее) | — | правила нет, значит `denyAll`. Новый путь объявляет себя сам |
 
 CORS терминируется в gateway (сделано).
 
