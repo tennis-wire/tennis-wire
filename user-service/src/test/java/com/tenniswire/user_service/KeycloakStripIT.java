@@ -1,5 +1,6 @@
 package com.tenniswire.user_service;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tenniswire.user_service.client.KeycloakAdmin;
@@ -98,9 +99,6 @@ class KeycloakStripIT {
         assertThat(admin.accessTokenLifespan()).isPositive();
     }
 
-    // -- Everything below talks to Keycloak on its own, so that the code under test is not also the
-    // -- thing checking it.
-
     private String createReader(String email, String password) {
         var response = asAdmin()
                 .post()
@@ -123,18 +121,20 @@ class KeycloakStripIT {
                         List.of(Map.of("type", "password", "value", password, "temporary", false))))
                 .retrieve()
                 .toBodilessEntity();
-        var location = response.getHeaders().getLocation();
-        return location == null
-                ? null
-                : location.getPath().substring(location.getPath().lastIndexOf('/') + 1);
+        var created =
+                requireNonNull(response.getHeaders().getLocation(), "Keycloak created a user without saying where");
+        var path = created.getPath();
+        return path.substring(path.lastIndexOf('/') + 1);
     }
 
     private Map<String, Object> getUser(String subject) {
-        return asAdmin()
-                .get()
-                .uri("/admin/realms/{realm}/users/{id}", REALM, subject)
-                .retrieve()
-                .body(FIELDS);
+        return requireNonNull(
+                asAdmin()
+                        .get()
+                        .uri("/admin/realms/{realm}/users/{id}", REALM, subject)
+                        .retrieve()
+                        .body(FIELDS),
+                "Keycloak answered with no user representation");
     }
 
     private List<Map<String, Object>> credentialsOf(String subject) {
@@ -154,7 +154,7 @@ class KeycloakStripIT {
         form.add("password", password);
         return RestClient.create()
                 .post()
-                .uri(URI.create(KEYCLOAK.getAuthServerUrl() + "/realms/" + REALM + "/protocol/openid-connect/token"))
+                .uri(tokenEndpoint())
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .body(form)
                 .retrieve()
@@ -191,11 +191,16 @@ class KeycloakStripIT {
         form.add("client_secret", "dev-user-service-secret");
         var answer = RestClient.create()
                 .post()
-                .uri(URI.create(KEYCLOAK.getAuthServerUrl() + "/realms/" + REALM + "/protocol/openid-connect/token"))
+                .uri(tokenEndpoint())
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .body(form)
                 .retrieve()
                 .body(FIELDS);
-        return String.valueOf(answer.get("access_token"));
+        return String.valueOf(requireNonNull(answer, "Keycloak answered the token request with no body")
+                .get("access_token"));
+    }
+
+    private static URI tokenEndpoint() {
+        return URI.create(KEYCLOAK.getAuthServerUrl() + "/realms/" + REALM + "/protocol/openid-connect/token");
     }
 }
