@@ -314,6 +314,22 @@ intended behaviour, not a misconfiguration.
 Datasource settings are overridable via `DB_HOST`, `DB_PORT`, `DB_NAME`,
 `DB_USERNAME` and `DB_PASSWORD`.
 
+api-gateway keeps its rate-limit buckets in Redis, over `REDIS_HOST`
+(`localhost`) and `REDIS_PORT` (`6379`). Without Redis the limiter fails open —
+a request it cannot count goes through — so the gateway keeps serving and only
+the counting is gone. Its Redis health indicator is switched off for that
+reason: reporting DOWN would take the gateway out of rotation over a degraded
+guardrail. The numbers themselves live under `gateway.rate-limit` and are tuned
+by configuration rather than a rebuild.
+
+`gateway.rate-limit.trusted-proxies` is how many proxies append to
+`X-Forwarded-For` in front of the gateway; the address is counted that far from
+the right, because the nearest proxy writes last and everything to its left
+arrived in the request. One is right for ingress alone. **Put a CDN in front and
+this has to go up**, or the last entry becomes the CDN's own address and every
+anonymous reader shares one bucket. With no forwarded chain at all the peer of
+the connection answers, which is what makes the address bucket work locally.
+
 `REPORT_HASH_KEY` is the key a reporter's identity is hashed under before it is
 stored, so that a repeat complaint can be recognised without keeping who
 complained. It has a development default and must be overridden anywhere else:
@@ -414,6 +430,8 @@ compile and belongs in `sx`.
 
 ```bash
 ./gradlew check                       # spotless, PMD, SpotBugs, tests
+./gradlew :<module>:build             # the same for one module
+./gradlew :<module>:test              # tests only — no PMD, no SpotBugs
 
 cd transcription-service
 uv run ruff check .
