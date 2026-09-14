@@ -40,6 +40,20 @@
     ],
     "defaultGroups": ["/readers"],
 
+    "identityProviders": [
+        {
+            "alias": "google",
+            "providerId": "google",
+            "enabled": true,
+            "trustEmail": true,
+            "config": {
+                "clientId": "${GOOGLE_CLIENT_ID}",
+                "clientSecret": "${GOOGLE_CLIENT_SECRET}",
+                "syncMode": "IMPORT"
+            }
+        }
+    ],
+
     "clients": [
         {
             "clientId": "editorial-ui",
