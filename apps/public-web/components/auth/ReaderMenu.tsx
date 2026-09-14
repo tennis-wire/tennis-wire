@@ -1,10 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-
-type SessionInfo =
-    | { authenticated: false }
-    | { authenticated: true; displayName: string | null; displayNameChosen: boolean }
+import { useReaderSession } from './ReaderSessionProvider'
 
 const slot: React.CSSProperties = {
     marginLeft: 8,
@@ -33,21 +29,7 @@ const button: React.CSSProperties = {
 }
 
 export default function ReaderMenu() {
-    // Empty on the server and on the first client render, filled in after
-    // mount. Reading the cookie during render would make every page dynamic,
-    // and guessing would give the theme toggle's hydration mismatch.
-    const [session, setSession] = useState<SessionInfo | null>(null)
-
-    useEffect(() => {
-        let live = true
-        fetch('/api/auth/session')
-            .then((response) => response.json())
-            .then((info: SessionInfo) => live && setSession(info))
-            .catch(() => live && setSession({ authenticated: false }))
-        return () => {
-            live = false
-        }
-    }, [])
+    const { session } = useReaderSession()
 
     if (!session) return <span style={slot} />
 
