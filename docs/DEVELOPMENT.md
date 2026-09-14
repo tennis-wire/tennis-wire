@@ -243,8 +243,8 @@ finds. The file carries placeholders:
 
 ```json
 "config": {
-    "clientId": "${GOOGLE_CLIENT_ID}",
-    "clientSecret": "${GOOGLE_CLIENT_SECRET}"
+"clientId": "${GOOGLE_CLIENT_ID}",
+"clientSecret": "${GOOGLE_CLIENT_SECRET}"
 }
 ```
 
@@ -446,6 +446,22 @@ cd apps/editorial-ui && npm ci && npm run dev     # :5173
 cd apps/public-web   && npm ci && npm run dev     # :3000
 cd apps/mobile       && npm ci && npm start       # Expo
 ```
+
+`public-web` needs configuration of its own: copy `apps/public-web/.env.example`
+to `.env.local` and fill in `SESSION_PASSWORD` with `openssl rand -base64 32`.
+The rest of the file has working local defaults. Nothing there is secret except
+that password, and `.env.local` is git-ignored anyway.
+
+Signing in needs Keycloak; anything the reader does afterwards needs the gateway
+and `user-service` behind it, so the useful local set is `postgres` and
+`keycloak` in compose plus `api-gateway` and `user-service` from the IDE. With
+the gateway down the site still renders — the header just falls back to a
+sign-in link, and `/api/auth/session` answers with no name.
+
+The session lives in cookies the browser cannot read and the server never hands
+out: `tw_session` holds the tokens, `tw_idt` the id_token for the logout hint,
+and `tw_flow` exists only between `/api/auth/login` and the callback. Their
+contents and the proxy that uses them are described in `architecture/auth.md`.
 
 Formatting is shared: a single `.prettierrc` at the repository root applies to
 all three apps, each of which keeps its own `.prettierignore`. ESLint config is
