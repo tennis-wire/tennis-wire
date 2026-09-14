@@ -4,7 +4,9 @@
 #
 # Application services are NOT here on purpose: they have no Dockerfiles yet
 # and are expected to run from the IDE against this stack.
-# Credentials below are local-only development defaults, not secrets.
+# Credentials below are local-only development defaults, not secrets. The one
+# real credential, the Google client secret, comes from .env and is not in the
+# repository — see .env.example.
 #
 # All ports are bound to 127.0.0.1: nothing here is meant to be reachable
 # from the network, and MinIO in particular must not be (see its comment).
@@ -50,6 +52,15 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HEALTH_ENABLED: "true"
+      # Read by the ${...} placeholders in the realm file. Values come from .env;
+      # the fallbacks keep the stand starting for anyone without Google
+      # credentials, at the cost of a Google button that answers invalid_client.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-not-set}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-not-set}
+      # Those placeholders are resolved only when this property is on. `kc.sh
+      # import` sets it itself; `start --import-realm` does not, and without it
+      # the literal ${GOOGLE_CLIENT_SECRET} is imported as the secret.
+      JAVA_OPTS_APPEND: "-Dkeycloak.migration.replace-placeholders=true"
     command: ["start-dev", "--import-realm"]
     volumes:
       - ./docker/keycloak/import:/opt/keycloak/data/import:ro
