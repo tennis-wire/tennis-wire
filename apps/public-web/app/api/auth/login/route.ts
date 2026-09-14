@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import * as client from 'openid-client'
 
-import { callbackUrl, oidcConfig } from '@/lib/auth/config'
+import { appOrigin, callbackUrl, oidcConfig } from '@/lib/auth/config'
 import { FLOW_COOKIE, flowCookieOptions, sealFlow } from '@/lib/auth/session'
-import { safeReturnTo } from '@/lib/auth/returnTo'
+import { safeReturnTo, sameOriginPath } from '@/lib/auth/returnTo'
 
 export async function GET(request: NextRequest) {
     const config = await oidcConfig()
@@ -27,7 +27,10 @@ export async function GET(request: NextRequest) {
         codeVerifier,
         state,
         nonce,
-        returnTo: safeReturnTo(request.nextUrl.searchParams.get('returnTo')),
+        returnTo: safeReturnTo(
+            request.nextUrl.searchParams.get('returnTo') ??
+                sameOriginPath(request.headers.get('referer'), appOrigin())
+        ),
     })
 
     const response = NextResponse.redirect(authorizationUrl, { status: 303 })

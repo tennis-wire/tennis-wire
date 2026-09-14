@@ -9,6 +9,7 @@ import {
     sessionCookieOptions,
     type Session,
 } from '@/lib/auth/session'
+import { gatewayOrigin } from './client'
 import { clientAddress, takeToken } from './rateLimit'
 
 // The request is rebuilt, never forwarded. Anything not listed here stays on
@@ -17,12 +18,6 @@ import { clientAddress, takeToken } from './rateLimit'
 // would break the gateway's key resolver.
 const REQUEST_HEADERS = ['content-type', 'accept']
 const RESPONSE_HEADERS = ['content-type']
-
-function gatewayOrigin(): string {
-    const value = process.env.GATEWAY_ORIGIN
-    if (!value) throw new Error('GATEWAY_ORIGIN is not set')
-    return value.replace(/\/$/, '')
-}
 
 function json(status: number, code: string) {
     return NextResponse.json({ code }, { status })

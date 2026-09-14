@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useTheme } from '@/theme'
 import { useState } from 'react'
 import Search from '@/components/Search'
+import ReaderMenu from '@/components/auth/ReaderMenu'
 
 const NAV_ITEMS = [
     { label: 'Главная', href: '/' },
@@ -200,6 +201,8 @@ export default function Header() {
                 >
                     {isDark ? '☀️' : '🌙'}
                 </button>
+
+                <ReaderMenu />
 
                 {/* Profile avatar */}
                 <Link
