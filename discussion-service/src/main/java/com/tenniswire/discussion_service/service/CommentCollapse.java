@@ -21,8 +21,8 @@ import org.springframework.stereotype.Component;
 /**
  * The rule of discussion-rules §8.7 in one place: a comment stands while something is left under it
  * and goes when nothing is, and so does whatever it was the last thing holding up. Callers hand in
- * the nodes they have just taken down — one for an author's own delete, a whole account's worth for
- * an erase — and the walk continues upward through comments that need not belong to the same reader.
+ * the nodes they have just taken down - one for an author's own delete, a whole account's worth for
+ * an erase - and the walk continues upward through comments that need not belong to the same reader.
  *
  * <p>Reads are batched over the entire set rather than repeated per node: one query per level of
  * depth to gather the ancestors, then one each for children and reports. The order is deepest
@@ -39,16 +39,26 @@ class CommentCollapse {
         this.reports = reports;
     }
 
-    /** @return how many comments were taken away */
-    int of(Collection<Comment> taken) {
+    /**
+     * @param wereShown which of {@code taken} a reader could still see before the caller changed
+     *     them. The caller alone knows: by the time this runs the rows are marked and flushed, so
+     *     the tally below already leaves them out, and counting them out a second time would take a
+     *     live reply's place away with them.
+     * @return how many comments were taken away
+     */
+    int of(Collection<Comment> taken, Set<UUID> wereShown) {
         if (taken.isEmpty()) {
             return 0;
         }
         var known = withAncestors(taken);
         var ids = List.copyOf(known.keySet());
-        var children = comments.countChildrenOf(ids).stream()
-                .collect(Collectors.toMap(ChildTally::parentId, ChildTally::children, (a, b) -> a, HashMap::new));
+        var tallies = comments.countChildrenOf(ids);
+        var rows = tallies.stream()
+                .collect(Collectors.toMap(ChildTally::parentId, ChildTally::rows, (a, b) -> a, HashMap::new));
+        var shown = tallies.stream()
+                .collect(Collectors.toMap(ChildTally::parentId, ChildTally::shown, (a, b) -> a, HashMap::new));
         var reported = reports.findReportedAmong(ids);
+        var handedIn = taken.stream().map(Comment::id).collect(Collectors.toSet());
 
         var ordered = new ArrayList<>(known.values());
         ordered.sort(Comparator.comparingInt(CommentCollapse::depth).reversed());
@@ -56,21 +66,41 @@ class CommentCollapse {
         var doomed = new LinkedHashSet<UUID>();
         var lost = new HashMap<UUID, Integer>();
         for (var node : ordered) {
-            if (!canGo(node, children, reported)) {
+            if (!goesFromView(node, shown)) {
                 continue;
             }
-            doomed.add(node.id());
+            if (rowMayGoToo(node, rows, reported)) {
+                doomed.add(node.id());
+            }
             var parent = node.inReplyToId();
-            if (parent != null) {
-                children.merge(parent, -1L, Long::sum);
+            if (parent == null) {
+                continue;
+            }
+            // Ancestors only. The tally was read after the caller flushed, so a handed-in node is
+            // already missing from it; taking it out again empties a parent that still has live
+            // replies, and that emptiness then travels all the way up.
+            if (!handedIn.contains(node.id())) {
+                shown.merge(parent, -1L, Long::sum);
+            }
+            if (doomed.contains(node.id())) {
+                rows.merge(parent, -1L, Long::sum);
+            }
+            // The stored count is a different matter: it still counts the node, and comes down by
+            // one for every child that stops being shown. Unless the child was out of view before
+            // any of this, in which case the count lost it long ago.
+            if (!handedIn.contains(node.id()) || wereShown.contains(node.id())) {
                 lost.merge(parent, 1, Integer::sum);
             }
         }
-        if (doomed.isEmpty()) {
+        if (lost.isEmpty() && doomed.isEmpty()) {
             return 0;
         }
-        comments.deleteByIdIn(doomed);
-        // Survivors only: a parent that went took its own count away with it.
+        if (!doomed.isEmpty()) {
+            comments.deleteByIdIn(doomed);
+        }
+        // Survivors only: a parent that went took its own count away with it. A pinned one is a
+        // survivor - its row stays - so its count comes down to what is still shown beneath it,
+        // which is how it comes to read zero and drop out of the page itself.
         lost.forEach((parent, n) -> {
             if (!doomed.contains(parent)) {
                 comments.decrementReplyCount(parent, n);
@@ -79,8 +109,22 @@ class CommentCollapse {
         return doomed.size();
     }
 
-    private static boolean canGo(Comment node, Map<UUID, Long> children, Set<UUID> reported) {
-        if (children.getOrDefault(node.id(), 0L) > 0) {
+    /**
+     * Whether the reader stops seeing it: down, with nothing left beneath him. Says nothing about
+     * the row, which moderation may need to keep.
+     */
+    private static boolean goesFromView(Comment node, Map<UUID, Long> shown) {
+        return shown.getOrDefault(node.id(), 0L) <= 0 && (node.hasNoAuthor() || node.isDeleted());
+    }
+
+    /**
+     * And whether the row may go with it. Two separate questions, and running them together is a
+     * mistake worth naming: the foreign key counts every child still in the table, pinned ones
+     * included, so deleting a parent on the strength of what is shown would leave a row pointing at
+     * nothing.
+     */
+    private static boolean rowMayGoToo(Comment node, Map<UUID, Long> rows, Set<UUID> reported) {
+        if (rows.getOrDefault(node.id(), 0L) > 0) {
             return false;
         }
         // Nothing is kept for a reader who erased his account: the counter reads author_id and no
@@ -91,10 +135,7 @@ class CommentCollapse {
         // hiddenAt: the counter reads that column, and the author is still there to be counted.
         // countedAt: same, for a violation counted by hand.
         // reported: the queue card outlives the author deleting his own comment (§10.22).
-        return node.isDeleted()
-                && !node.isHiddenByModeration()
-                && node.countedAt() == null
-                && !reported.contains(node.id());
+        return !node.isHiddenByModeration() && node.countedAt() == null && !reported.contains(node.id());
     }
 
     /** One query per level of depth, however many comments came in. */
@@ -118,7 +159,7 @@ class CommentCollapse {
                 .collect(Collectors.toSet());
     }
 
-    // From the ltree path, which is already loaded — cheaper than asking the database for nlevel().
+    // From the ltree path, which is already loaded - cheaper than asking the database for nlevel().
     private static int depth(Comment comment) {
         var path = comment.path();
         var depth = 1;

@@ -134,7 +134,7 @@ class ReportRepositoryIT {
 
     private UUID comment() {
         return comments.saveAndFlush(new Comment()
-                        .subjectType("article")
+                        .subjectType("publication")
                         .subjectId(UUID.randomUUID())
                         .authorId(UUID.randomUUID())
                         .body("reported"))

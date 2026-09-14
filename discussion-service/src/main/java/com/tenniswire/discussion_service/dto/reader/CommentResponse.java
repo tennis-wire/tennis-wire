@@ -16,6 +16,11 @@ import java.util.UUID;
  *
  * <p>{@code replyCount} is the raw direct-reply count and may exceed what a blocking viewer will
  * actually get back (spec §13).
+ *
+ * <p>{@code repliesTruncated} means this response carries fewer direct replies than the comment
+ * has, and says nothing about what the viewer's own blocks removed. Where it is set, the replies of
+ * that node are read through {@code GET /comments/&#123;id&#125;/replies}, from its first page: the
+ * branch hands out a prefix, not a position to resume from.
  */
 public record CommentResponse(
         UUID id,
@@ -27,6 +32,7 @@ public record CommentResponse(
         @JsonInclude(JsonInclude.Include.NON_NULL) String body,
         String visibility,
         int replyCount,
+        boolean repliesTruncated,
         Instant createdAt,
         Instant updatedAt,
         List<CommentResponse> replies) {
@@ -45,6 +51,7 @@ public record CommentResponse(
                 showBody ? c.body() : null,
                 visibility.value(),
                 c.replyCount(),
+                view.repliesTruncated(),
                 c.createdAt(),
                 c.updatedAt(),
                 view.replies().stream().map(reply -> from(reply, authors)).toList());

@@ -55,6 +55,21 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("RESOLUTION_NOT_APPLICABLE", ex.getMessage()));
     }
 
+    @ExceptionHandler(UnknownSubjectTypeException.class)
+    public ResponseEntity<ErrorResponse> handleUnknownSubjectType(UnknownSubjectTypeException ex) {
+        // 400 rather than 404: nothing was looked up. The set is configuration, so a client sending
+        // a type we do not serve is wrong about the API rather than about a thing that is missing.
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of("UNKNOWN_SUBJECT_TYPE", ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidCursorException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCursor(InvalidCursorException ex) {
+        // A cursor is opaque and always ours, so a broken one is a client that built its own or
+        // kept one across a change of format. Silence would look like the end of the thread.
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ErrorResponse.of("INVALID_CURSOR", ex.getMessage()));
+    }
+
     @ExceptionHandler(UserServiceUnavailableException.class)
     public ResponseEntity<ErrorResponse> handleUserServiceUnavailable(UserServiceUnavailableException ex) {
         // Not ex.getMessage(): which dependency failed, and how, belongs in the log at the throw site.

@@ -248,7 +248,7 @@ class ModerationQueueIT {
 
     private UUID comment() {
         return commentService
-                .create(author, "article", subjectId, "reported")
+                .create(author, "publication", subjectId, "reported")
                 .comment()
                 .id();
     }

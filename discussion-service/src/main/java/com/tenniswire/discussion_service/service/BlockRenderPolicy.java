@@ -46,6 +46,7 @@ public final class BlockRenderPolicy {
         } else if (mode == BlockMode.SOFT) {
             visibility = Visibility.SOFT_HIDDEN;
         }
-        return Optional.of(new CommentView(comment, visibility, apply(node.children(), blocks)));
+        return Optional.of(
+                new CommentView(comment, visibility, node.repliesTruncated(), apply(node.children(), blocks)));
     }
 }

@@ -50,6 +50,15 @@ server:
   port: 8093
 
 discussion:
+  # What a comment may hang off. One kind so far: anything content-service publishes, news and
+  # long-form alike — they are one entity there, told apart by a column, and a discussion belongs
+  # to the entity rather than to the shape it was written in. Not called "article" for that reason:
+  # content-service uses that word for the half of them that is not news.
+  # The schema keeps the set open so that adding a kind is a config change; anything outside this
+  # list is a 400 rather than a thread under something that is not there. Replies are not checked:
+  # they inherit the subject of the comment they answer.
+  subject-types: [publication]
+
   user-service:
     # Called directly, never through the gateway: /internal/** is not routed there.
     base-url: ${USER_SERVICE_URL:http://localhost:8092}

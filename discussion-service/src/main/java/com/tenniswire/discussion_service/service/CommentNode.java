@@ -9,6 +9,7 @@ public final class CommentNode {
 
     private final Comment comment;
     private final List<CommentNode> children = new ArrayList<>();
+    private boolean repliesTruncated;
 
     CommentNode(Comment comment) {
         this.comment = comment;
@@ -20,5 +21,14 @@ public final class CommentNode {
 
     public List<CommentNode> children() {
         return children;
+    }
+
+    // Whether direct replies exist that this assembly did not put under the node
+    public boolean repliesTruncated() {
+        return repliesTruncated;
+    }
+
+    void repliesTruncated(boolean value) {
+        this.repliesTruncated = value;
     }
 }

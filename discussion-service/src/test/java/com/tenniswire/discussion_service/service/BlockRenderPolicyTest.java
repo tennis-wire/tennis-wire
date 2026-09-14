@@ -16,8 +16,11 @@ class BlockRenderPolicyTest {
     private static final UUID ALICE = UUID.randomUUID();
     private static final UUID BOB = UUID.randomUUID();
 
-    private final Comment root = comment(ALICE, null, 1);
-    private final Comment reply = comment(BOB, root.id(), 2);
+    // replyCount is set to match the tree: the assembly reads it to tell a comment that is down
+    // with nothing under it, which is shown to nobody, from one that still carries replies. A
+    // fixture that left it at zero would describe a tree that cannot occur.
+    private final Comment root = comment(ALICE, null, 1).replyCount(1);
+    private final Comment reply = comment(BOB, root.id(), 2).replyCount(1);
     private final Comment nested = comment(ALICE, reply.id(), 3);
 
     @Test
@@ -95,7 +98,7 @@ class BlockRenderPolicyTest {
     private static Comment comment(UUID author, UUID parent, int seq) {
         return new Comment()
                 .id(UUID.randomUUID())
-                .subjectType("article")
+                .subjectType("publication")
                 .subjectId(UUID.randomUUID())
                 .inReplyToId(parent)
                 .authorId(author)

@@ -29,7 +29,7 @@ class ErasedReaderWriterIT {
 
     @Test
     void theChildsBatchMayComeFirst() {
-        var parent = comments.create(alice, "article", subjectId, "his").comment();
+        var parent = comments.create(alice, "publication", subjectId, "his").comment();
         var child = comments.reply(alice, parent.id(), "also his").comment();
 
         writer.erase(List.of(child.id()));
@@ -41,7 +41,7 @@ class ErasedReaderWriterIT {
 
     @Test
     void orTheParentsMay() {
-        var parent = comments.create(alice, "article", subjectId, "his").comment();
+        var parent = comments.create(alice, "publication", subjectId, "his").comment();
         var child = comments.reply(alice, parent.id(), "also his").comment();
 
         writer.erase(List.of(parent.id()));

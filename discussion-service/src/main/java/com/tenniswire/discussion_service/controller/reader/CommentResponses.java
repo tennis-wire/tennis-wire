@@ -60,7 +60,7 @@ public class CommentResponses {
         var authors = profileFetchedBeforeWriting == null
                 ? Map.<UUID, AuthorResponse>of()
                 : Map.of(comment.authorId(), AuthorResponse.named(profileFetchedBeforeWriting));
-        var view = new CommentView(comment, Visibility.VISIBLE, List.of());
+        var view = new CommentView(comment, Visibility.VISIBLE, false, List.of());
         return new CommentCreatedResponse(CommentResponse.from(view, authors), created.mutedByRecipient());
     }
 

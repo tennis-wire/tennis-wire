@@ -28,7 +28,7 @@ CREATE TABLE comment (
                          path_key        BIGINT GENERATED ALWAYS AS IDENTITY,
 
     -- Generic subject anchor — no FK, subject lives in another service
-                         subject_type    TEXT NOT NULL,            -- 'article' | 'forum_topic' | ... (open set, intentionally not an enum)
+                         subject_type    TEXT NOT NULL,            -- 'publication' | 'match' | ... (open set, intentionally not an enum; the served set is discussion.subject-types)
                          subject_id      UUID NOT NULL,
 
     -- Tree structure
@@ -51,10 +51,18 @@ CREATE TABLE comment (
 
 -- changeset andrei:4
 -- comment: Indexes for comment — subtree by path (GiST), listing by subject, whole-thread by root, parent lookup
+-- comment: idx_comment_top_level carries the keyset listing whole: the two subject columns pick the
+-- comment: thread, the other two are its sort key, and the partial clause keeps replies out of an
+-- comment: index only the top level is ever read through. idx_comment_subject stays for what counts
+-- comment: a whole thread, replies included.
 CREATE INDEX idx_comment_path ON comment USING GIST (path);
 CREATE INDEX idx_comment_subject ON comment (subject_type, subject_id);
+CREATE INDEX idx_comment_top_level ON comment (subject_type, subject_id, created_at, id)
+    WHERE in_reply_to_id IS NULL;
 CREATE INDEX idx_comment_root_id ON comment (root_id);
-CREATE INDEX idx_comment_in_reply_to ON comment (in_reply_to_id);
+-- The sort key rides along so that paging a comment's direct replies is one index scan; the
+-- leading column alone still answers the plain "who are this node's children" lookups.
+CREATE INDEX idx_comment_in_reply_to ON comment (in_reply_to_id, created_at, id);
 
 -- changeset andrei:5
 -- comment: Create block table — peer-level, one-directional, mode chosen at block time (no DB default)

@@ -12,6 +12,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
+    // Buckets for RequestRateLimiter. Redis and not memory: the gateway runs more than one
+    // instance, and a per-instance count is no limit at all once there are two of them.
+    implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
     implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")

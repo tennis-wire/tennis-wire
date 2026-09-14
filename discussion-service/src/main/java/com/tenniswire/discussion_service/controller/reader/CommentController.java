@@ -52,9 +52,15 @@ public class CommentController {
     /** Top-level comments under a subject; each carries replyCount for the "show N replies" control. */
     @GetMapping
     public CommentPageResponse listTopLevel(
-            @RequestParam String subjectType, @RequestParam UUID subjectId, @AuthenticationPrincipal Jwt jwt) {
-        var views = commentService.listTopLevel(subjectType, subjectId, currentUser.idOrNull(jwt));
-        return CommentPageResponse.unpaged(responses.of(views));
+            @RequestParam String subjectType,
+            @RequestParam UUID subjectId,
+            // Both optional and both left to the service: the default and the ceiling are one
+            // decision and belong in one place.
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) String cursor,
+            @AuthenticationPrincipal Jwt jwt) {
+        var page = commentService.listTopLevel(subjectType, subjectId, currentUser.idOrNull(jwt), limit, cursor);
+        return new CommentPageResponse(responses.of(page.items()), page.nextCursor());
     }
 
     @PostMapping
@@ -76,11 +82,22 @@ public class CommentController {
         return responses.created(commentService.reply(authorId, id, request.body()), profile);
     }
 
-    /** "Show replies": the comment with its whole subtree. */
+    // "Show replies": the comment with the part of its subtree one response carries
     @GetMapping("/{id}/branch")
     public BranchResponse branch(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
         var view = commentService.branch(id, currentUser.idOrNull(jwt));
-        return new BranchResponse(responses.of(view), null);
+        return new BranchResponse(responses.of(view));
+    }
+
+    // Direct replies of one comment, paged: how a reader gets past what a branch handed over
+    @GetMapping("/{id}/replies")
+    public CommentPageResponse replies(
+            @PathVariable UUID id,
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) String cursor,
+            @AuthenticationPrincipal Jwt jwt) {
+        var page = commentService.replies(id, currentUser.idOrNull(jwt), limit, cursor);
+        return new CommentPageResponse(responses.of(page.items()), page.nextCursor());
     }
 
     /** Permalink: the chain of parents from the thread root down to this comment. */

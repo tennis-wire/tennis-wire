@@ -59,7 +59,8 @@ class ReaderErasureIT {
 
     @Test
     void aCommentNobodyAnsweredGoesWithHim() {
-        var alone = commentService.create(alice, "article", subjectId, "alone").comment();
+        var alone =
+                commentService.create(alice, "publication", subjectId, "alone").comment();
 
         erasure.erase(alice);
 
@@ -68,7 +69,7 @@ class ReaderErasureIT {
 
     @Test
     void aCommentSomebodyAnsweredIsLeftWithNothingOfHisInIt() {
-        var his = commentService.create(alice, "article", subjectId, "his").comment();
+        var his = commentService.create(alice, "publication", subjectId, "his").comment();
         var hers = commentService.reply(bob, his.id(), "hers").comment();
 
         erasure.erase(alice);
@@ -82,7 +83,7 @@ class ReaderErasureIT {
 
     @Test
     void aGravestoneHisLastCommentWasHoldingUpGoesToo() {
-        var top = commentService.create(bob, "article", subjectId, "top").comment();
+        var top = commentService.create(bob, "publication", subjectId, "top").comment();
         var middle = commentService.reply(bob, top.id(), "middle").comment();
         var his = commentService.reply(alice, middle.id(), "his").comment();
         commentService.deleteOwn(bob, middle.id());
@@ -97,7 +98,7 @@ class ReaderErasureIT {
 
     @Test
     void openReportsOnWhatSurvivedAreVoided() {
-        var his = commentService.create(alice, "article", subjectId, "his").comment();
+        var his = commentService.create(alice, "publication", subjectId, "his").comment();
         commentService.reply(bob, his.id(), "keeps the node");
         reportService.report(bob, his.id(), "spam");
 
@@ -115,7 +116,7 @@ class ReaderErasureIT {
         var his = new ArrayList<UUID>();
         for (var i = 0; i < ReaderErasure.BATCH_SIZE + 5; i++) {
             his.add(commentService
-                    .create(alice, "article", subjectId, "one of many " + i)
+                    .create(alice, "publication", subjectId, "one of many " + i)
                     .comment()
                     .id());
         }
@@ -172,7 +173,7 @@ class ReaderErasureIT {
     void askingTwiceSaysTheSameThing() {
         // written first: the ban below is on commenting, and it holds against him from the moment
         // it is issued, erase or no erase
-        commentService.create(alice, "article", subjectId, "alone");
+        commentService.create(alice, "publication", subjectId, "alone");
         restrictionService.restrictCommenting(alice, moderator, Instant.now().plus(Duration.ofHours(3)), "flood");
 
         var first = erasure.erase(alice);

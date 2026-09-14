@@ -87,7 +87,7 @@ class CommentAuthorTest {
 
     @Test
     void aVisibleCommentNamesItsAuthor() throws Exception {
-        commentService.create(alice, "article", subjectId, "hello");
+        commentService.create(alice, "publication", subjectId, "hello");
 
         mvc.perform(listing())
                 .andExpect(status().isOk())
@@ -100,7 +100,7 @@ class CommentAuthorTest {
 
     @Test
     void aRestrictedAuthorIsFlaggedAndNeitherNamedNorLookedUp() throws Exception {
-        commentService.create(alice, "article", subjectId, "hello");
+        commentService.create(alice, "publication", subjectId, "hello");
         restrictionService.restrictCommenting(alice, UUID.randomUUID(), null, "indefinite");
 
         mvc.perform(listing())
@@ -115,8 +115,8 @@ class CommentAuthorTest {
 
     @Test
     void hidingAnAuthorWithholdsTheNameAndCollapsingKeepsIt() throws Exception {
-        commentService.create(alice, "article", subjectId, "hidden");
-        commentService.create(bob, "article", subjectId, "collapsed");
+        commentService.create(alice, "publication", subjectId, "hidden");
+        commentService.create(bob, "publication", subjectId, "collapsed");
         blockService.block(viewer, alice, BlockMode.GRAVESTONE);
         blockService.block(viewer, bob, BlockMode.SOFT);
         when(resolver.resolve(any())).thenReturn(viewer);
@@ -131,7 +131,8 @@ class CommentAuthorTest {
 
     @Test
     void aDeletedCommentHasNoAuthor() throws Exception {
-        var comment = commentService.create(alice, "article", subjectId, "gone").comment();
+        var comment =
+                commentService.create(alice, "publication", subjectId, "gone").comment();
         // a reply is what keeps the node: with nothing under it the comment goes away outright
         commentService.reply(bob, comment.id(), "still here");
         commentService.deleteOwn(alice, comment.id());
@@ -144,7 +145,7 @@ class CommentAuthorTest {
 
     @Test
     void anAuthorUserServiceDoesNotKnowIsLeftOut() throws Exception {
-        commentService.create(UUID.randomUUID(), "article", subjectId, "orphan");
+        commentService.create(UUID.randomUUID(), "publication", subjectId, "orphan");
 
         mvc.perform(listing())
                 .andExpect(status().isOk())
@@ -154,7 +155,8 @@ class CommentAuthorTest {
 
     @Test
     void aBranchNamesEveryReplyWithOneLookup() throws Exception {
-        var root = commentService.create(alice, "article", subjectId, "root").comment();
+        var root =
+                commentService.create(alice, "publication", subjectId, "root").comment();
         commentService.reply(bob, root.id(), "reply");
 
         mvc.perform(get(COMMENTS + "/" + root.id() + "/branch"))
@@ -167,7 +169,7 @@ class CommentAuthorTest {
 
     @Test
     void userServiceDownFailsTheWholeListing() throws Exception {
-        commentService.create(alice, "article", subjectId, "hello");
+        commentService.create(alice, "publication", subjectId, "hello");
         // doThrow, not when(...): calling the mock inside when() would run the answer stubbed above
         doThrow(new UserServiceUnavailableException("down")).when(profiles).profiles(any());
 
@@ -187,17 +189,16 @@ class CommentAuthorTest {
                         .content(commentBody("retry me")))
                 .andExpect(status().isServiceUnavailable());
 
-        assertThat(commentRepository.findBySubjectTypeAndSubjectIdAndInReplyToIdIsNullOrderByCreatedAtAscIdAsc(
-                        "article", subjectId))
+        assertThat(commentRepository.findTopLevelFirstPage("publication", subjectId, 10))
                 .isEmpty();
     }
 
     private MockHttpServletRequestBuilder listing() {
-        return get(COMMENTS).param("subjectType", "article").param("subjectId", subjectId.toString());
+        return get(COMMENTS).param("subjectType", "publication").param("subjectId", subjectId.toString());
     }
 
     private String commentBody(String text) {
-        return "{\"subjectType\":\"article\",\"subjectId\":\"" + subjectId + "\",\"body\":\"" + text + "\"}";
+        return "{\"subjectType\":\"publication\",\"subjectId\":\"" + subjectId + "\",\"body\":\"" + text + "\"}";
     }
 
     private static RequestPostProcessor reader() {
