@@ -2,6 +2,7 @@ package com.tenniswire.api_gateway.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.net.InetSocketAddress;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
@@ -15,11 +16,14 @@ import reactor.core.publisher.Mono;
 
 class RateLimitConfigTest {
 
-    private final KeyResolver resolver = new RateLimitConfig().readerOrAddressKeyResolver();
+    private static final int ONE_PROXY = 1;
+
+    private final KeyResolver resolver =
+            new RateLimitConfig().readerOrAddressKeyResolver(new RateLimitProperties(ONE_PROXY, null, null, null));
 
     @Test
     void aReaderIsCountedByHisSubject() {
-        var exchange = withForwardedFor(null)
+        var exchange = request()
                 .mutate()
                 .principal(Mono.just(tokenFor("reader-subject")))
                 .build();
@@ -28,15 +32,23 @@ class RateLimitConfigTest {
     }
 
     @Test
-    void anAnonymousCallIsCountedByWhatTheIngressForwarded() {
-        var exchange = withForwardedFor("caller-address, proxy-address");
+    void anAnonymousCallIsCountedByWhatTheNearestProxyWrote() {
+        var exchange = forwardedFor("caller-address");
 
         assertThat(resolver.resolve(exchange).block()).isEqualTo("caller-address");
     }
 
     @Test
-    void aSubjectWinsOverAForwardedAddress() {
-        var exchange = withForwardedFor("caller-address")
+    void whatTheCallerPutInFrontOfThatIsIgnored() {
+        // the ingress appends what it saw, so the entry it wrote is last whatever came before it
+        var exchange = forwardedFor("invented, also-invented, caller-address");
+
+        assertThat(resolver.resolve(exchange).block()).isEqualTo("caller-address");
+    }
+
+    @Test
+    void aSubjectWinsOverAnAddress() {
+        var exchange = forwardedFor("caller-address")
                 .mutate()
                 .principal(Mono.just(tokenFor("reader-subject")))
                 .build();
@@ -45,16 +57,25 @@ class RateLimitConfigTest {
     }
 
     @Test
-    void neitherOneMeansNoKeyAtAll() {
-        assertThat(resolver.resolve(withForwardedFor(null)).block()).isNull();
+    void withNoChainAtAllThePeerOfTheConnectionAnswers() {
+        var exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/discussion/comments")
+                .remoteAddress(InetSocketAddress.createUnresolved("peer-host", 40404)));
+
+        assertThat(resolver.resolve(exchange).block()).isEqualTo("peer-host");
     }
 
-    private static ServerWebExchange withForwardedFor(String value) {
-        var request = MockServerHttpRequest.get("/api/discussion/comments");
-        if (value != null) {
-            request = request.header(RateLimitConfig.FORWARDED_FOR, value);
-        }
-        return MockServerWebExchange.from(request);
+    @Test
+    void nothingToCountAgainstMeansNoKeyAtAll() {
+        assertThat(resolver.resolve(request()).block()).isNull();
+    }
+
+    private static ServerWebExchange request() {
+        return MockServerWebExchange.from(MockServerHttpRequest.get("/api/discussion/comments"));
+    }
+
+    private static ServerWebExchange forwardedFor(String chain) {
+        return MockServerWebExchange.from(
+                MockServerHttpRequest.get("/api/discussion/comments").header(RateLimitConfig.FORWARDED_FOR, chain));
     }
 
     private static JwtAuthenticationToken tokenFor(String subject) {

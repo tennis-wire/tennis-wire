@@ -21,8 +21,8 @@ import org.springframework.stereotype.Component;
 /**
  * The rule of discussion-rules §8.7 in one place: a comment stands while something is left under it
  * and goes when nothing is, and so does whatever it was the last thing holding up. Callers hand in
- * the nodes they have just taken down — one for an author's own delete, a whole account's worth for
- * an erase — and the walk continues upward through comments that need not belong to the same reader.
+ * the nodes they have just taken down - one for an author's own delete, a whole account's worth for
+ * an erase - and the walk continues upward through comments that need not belong to the same reader.
  *
  * <p>Reads are batched over the entire set rather than repeated per node: one query per level of
  * depth to gather the ancestors, then one each for children and reports. The order is deepest
@@ -39,8 +39,14 @@ class CommentCollapse {
         this.reports = reports;
     }
 
-    /** @return how many comments were taken away */
-    int of(Collection<Comment> taken) {
+    /**
+     * @param wereShown which of {@code taken} a reader could still see before the caller changed
+     *     them. The caller alone knows: by the time this runs the rows are marked and flushed, so
+     *     the tally below already leaves them out, and counting them out a second time would take a
+     *     live reply's place away with them.
+     * @return how many comments were taken away
+     */
+    int of(Collection<Comment> taken, Set<UUID> wereShown) {
         if (taken.isEmpty()) {
             return 0;
         }
@@ -52,6 +58,7 @@ class CommentCollapse {
         var shown = tallies.stream()
                 .collect(Collectors.toMap(ChildTally::parentId, ChildTally::shown, (a, b) -> a, HashMap::new));
         var reported = reports.findReportedAmong(ids);
+        var handedIn = taken.stream().map(Comment::id).collect(Collectors.toSet());
 
         var ordered = new ArrayList<>(known.values());
         ordered.sort(Comparator.comparingInt(CommentCollapse::depth).reversed());
@@ -66,11 +73,22 @@ class CommentCollapse {
                 doomed.add(node.id());
             }
             var parent = node.inReplyToId();
-            if (parent != null) {
+            if (parent == null) {
+                continue;
+            }
+            // Ancestors only. The tally was read after the caller flushed, so a handed-in node is
+            // already missing from it; taking it out again empties a parent that still has live
+            // replies, and that emptiness then travels all the way up.
+            if (!handedIn.contains(node.id())) {
                 shown.merge(parent, -1L, Long::sum);
-                if (doomed.contains(node.id())) {
-                    rows.merge(parent, -1L, Long::sum);
-                }
+            }
+            if (doomed.contains(node.id())) {
+                rows.merge(parent, -1L, Long::sum);
+            }
+            // The stored count is a different matter: it still counts the node, and comes down by
+            // one for every child that stops being shown. Unless the child was out of view before
+            // any of this, in which case the count lost it long ago.
+            if (!handedIn.contains(node.id()) || wereShown.contains(node.id())) {
                 lost.merge(parent, 1, Integer::sum);
             }
         }
@@ -81,7 +99,7 @@ class CommentCollapse {
             comments.deleteByIdIn(doomed);
         }
         // Survivors only: a parent that went took its own count away with it. A pinned one is a
-        // survivor — its row stays — so its count comes down to what is still shown beneath it,
+        // survivor - its row stays - so its count comes down to what is still shown beneath it,
         // which is how it comes to read zero and drop out of the page itself.
         lost.forEach((parent, n) -> {
             if (!doomed.contains(parent)) {
@@ -141,7 +159,7 @@ class CommentCollapse {
                 .collect(Collectors.toSet());
     }
 
-    // From the ltree path, which is already loaded — cheaper than asking the database for nlevel().
+    // From the ltree path, which is already loaded - cheaper than asking the database for nlevel().
     private static int depth(Comment comment) {
         var path = comment.path();
         var depth = 1;

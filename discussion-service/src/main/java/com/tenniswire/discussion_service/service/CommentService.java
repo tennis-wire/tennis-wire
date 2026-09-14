@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
@@ -44,6 +45,11 @@ public class CommentService {
     // through a branch of the node he stopped at.
     private static final int BRANCH_DEPTH = 5;
     private static final int BRANCH_WIDTH = 20;
+
+    // The ceiling on rows read for one branch, whatever shape the thread took. Spent nearest the
+    // head first, so what it cuts is the far end of a very wide level, and that comes back through
+    // the marks on the nodes above it.
+    private static final int BRANCH_BUDGET = 500;
 
     private final CommentRepository comments;
     private final CommentCollapse collapse;
@@ -93,7 +99,7 @@ public class CommentService {
         var parent = findOrThrow(parentId);
         // A gravestone is kept to hold up what is already under it, not to gather more. It has no
         // reply button (discussion-rules §5.2), so this is someone whose form was open while the
-        // comment came down — and letting it through would keep alive a node that was about to
+        // comment came down - and letting it through would keep alive a node that was about to
         // collapse under §8.7.
         if (parent.isDeleted()) {
             throw new ParentDeletedException(parentId);
@@ -127,7 +133,7 @@ public class CommentService {
         comment.deletedAt(Instant.now());
         // before the collapse reads it back: the mark is what decides the walk
         comments.flush();
-        collapse.of(List.of(comment));
+        collapse.of(List.of(comment), Set.of(comment.id()));
     }
 
     /**
@@ -146,7 +152,6 @@ public class CommentService {
     // One page of top-level comments, oldest first. A limit outside the allowed range is brought
     // into it rather than refused: a limit is a request for how much, not a claim about the world,
     // and no client is served by a 400 where 200 rows would do.
-
     @Transactional(readOnly = true)
     public CommentPage listTopLevel(
             String subjectType,
@@ -178,7 +183,8 @@ public class CommentService {
     @Transactional(readOnly = true)
     public CommentView branch(UUID commentId, @Nullable UUID viewerId) {
         var head = findOrThrow(commentId);
-        var tree = CommentTree.forest(comments.findSubtreeToDepth(head.path(), BRANCH_DEPTH), BRANCH_WIDTH);
+        var rows = comments.findSubtreeToDepth(head.path(), BRANCH_DEPTH, BRANCH_BUDGET);
+        var tree = CommentTree.forest(rows, BRANCH_WIDTH);
         // Empty when the head is a placeholder nobody is shown: the row is there, the comment is
         // not. The query returns head plus descendants, so otherwise there is exactly one root.
         if (tree.isEmpty()) {
@@ -265,14 +271,14 @@ public class CommentService {
         }
         var now = Instant.now();
         comment.deletedAt(now).hiddenAt(now).hiddenSource(source).hiddenBy(moderatorId);
-        // However the comment came down, the queue is done with it — including when it was taken
+        // However the comment came down, the queue is done with it - including when it was taken
         // down straight from the comment endpoint, with no card ever opened.
         reports.closeOpen(comment.id(), ReportResolution.HIDDEN, moderatorId);
         // The row stays, pinned by the very column that records the removal, but the reader stops
         // being shown it once nothing is left underneath (§11.7). The collapse is what carries that
         // upward: the counts come down, and a placeholder above that held nothing else goes with it.
         comments.flush();
-        collapse.of(List.of(comment));
+        collapse.of(List.of(comment), Set.of(comment.id()));
     }
 
     private Map<UUID, BlockMode> blocksOf(@Nullable UUID viewerId) {

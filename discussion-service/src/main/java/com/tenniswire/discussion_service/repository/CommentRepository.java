@@ -27,7 +27,7 @@ limit :limit
             @Param("subjectType") String subjectType, @Param("subjectId") UUID subjectId, @Param("limit") int limit);
 
     // The pair is compared as a row value so the index is used whole. created_at on its own is not
-    // unique — two comments can land in the same microsecond — and would lose one of them or hand
+    // unique - two comments can land in the same microsecond - and would lose one of them or hand
     // it out twice.
     @Query(value = """
 select * from comment
@@ -50,20 +50,26 @@ limit :limit
     @Query("select c.id from Comment c where c.authorId = :authorId")
     List<UUID> findIdsByAuthor(@Param("authorId") UUID authorId);
 
-    // Depth-capped: an unbounded subtree makes the size of one response a property of how far the
-    // thread grew. Five levels below the head, and a node at the bottom opens a branch of its own
-    // from there, so nothing becomes unreachable. Width is cut afterwards, in the assembly: twenty
-    // children a node is not something one statement expresses without window functions.
+    // Depth-capped and budgeted: an unbounded subtree makes the work of one request a property of
+    // how far the thread grew, and a depth cap alone does not fix that - a comment with five
+    // thousand replies would still have five thousand rows read to hand back twenty.
+    //
+    // Breadth-first, so the budget spends itself on the levels nearest the head. Ordering by
+    // nlevel puts every parent ahead of its children, so a cut can never leave a row whose parent
+    // is missing. Width is trimmed afterwards, in the assembly: twenty children a node is not
+    // something one statement expresses without window functions.
     @Query(value = """
 select * from comment
 where path <@ cast(:path as ltree)
   and nlevel(path) <= nlevel(cast(:path as ltree)) + :depth
-order by created_at, id
+order by nlevel(path), created_at, id
+limit :budget
 """, nativeQuery = true)
-    List<Comment> findSubtreeToDepth(@Param("path") String path, @Param("depth") int depth);
+    List<Comment> findSubtreeToDepth(
+            @Param("path") String path, @Param("depth") int depth, @Param("budget") int budget);
 
     // Direct replies of one comment, paged the same way the top level is: this is what carries a
-    // reader past the twentieth reply, and it returns children only — their own subtrees would put
+    // reader past the twentieth reply, and it returns children only - their own subtrees would put
     // the unbounded response back one level down.
     @Query(value = """
 select * from comment
@@ -93,7 +99,7 @@ limit :limit
     int incrementReplyCount(@Param("id") UUID id);
 
     // By an amount rather than by one: a collapse can take several children of the same surviving
-    // parent. Guarded rather than trusted — the count is raw, maintained here alone, and a negative
+    // parent. Guarded rather than trusted - the count is raw, maintained here alone, and a negative
     // one would show up on the article card.
     @Modifying
     @Query("update Comment c set c.replyCount = c.replyCount - :by where c.id = :id and c.replyCount >= :by")
@@ -136,7 +142,7 @@ limit :limit
     int anonymize(@Param("ids") Collection<UUID> ids);
 
     // Removals and hand-counted violations land in one total. A counted one has no source of its
-    // own — only a person counts one — hence the coalesce. The two columns exclude each other.
+    // own - only a person counts one - hence the coalesce. The two columns exclude each other.
     @Query("""
         select new com.tenniswire.discussion_service.repository.RemovalTally(
             c.authorId,

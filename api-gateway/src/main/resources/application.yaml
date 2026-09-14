@@ -147,6 +147,9 @@ spring:
 # replenish at 1/s and cost 5, which is one report every five seconds with two allowed back to back.
 gateway:
   rate-limit:
+    # How many proxies append to X-Forwarded-For in front of the gateway. Raise it the day a CDN
+    # goes in front of the ingress, or every anonymous reader ends up sharing the CDN's bucket.
+    trusted-proxies: 1
     writes:
       replenish-rate: 1
       burst-capacity: 10
