@@ -115,11 +115,12 @@
             "implicitFlowEnabled": false,
             "directAccessGrantsEnabled": false,
             "serviceAccountsEnabled": false,
-            "redirectUris": ["http://localhost:3000/api/auth/callback/*"],
+            "redirectUris": ["http://localhost:3000/api/auth/callback/keycloak"],
             "webOrigins": ["http://localhost:3000"],
             "defaultClientScopes": ["acr", "basic", "email", "profile", "roles", "web-origins"],
             "optionalClientScopes": ["address", "microprofile-jwt", "offline_access", "organization", "phone"],
             "attributes": {
+                "pkce.code.challenge.method": "S256",
                 "post.logout.redirect.uris": "http://localhost:3000/*"
             },
             "protocolMappers": [
