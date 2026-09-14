@@ -77,6 +77,23 @@ class BlockRenderPolicyTest {
     }
 
     @Test
+    void aRemovalByModerationIsToldFromADeletionAndBeatsTheSameModes() {
+        var now = Instant.now();
+        // what hide() writes: the deletion mark as well, which is why moderation is asked first
+        reply.deletedAt(now)
+                .hiddenAt(now)
+                .hiddenSource(Comment.HIDDEN_BY_MODERATOR)
+                .hiddenBy(UUID.randomUUID());
+
+        assertThat(replyView(render(Map.of())).visibility()).isEqualTo(Visibility.REMOVED);
+        assertThat(replyView(render(Map.of(BOB, BlockMode.SOFT))).visibility()).isEqualTo(Visibility.REMOVED);
+        assertThat(replyView(render(Map.of(BOB, BlockMode.GRAVESTONE))).visibility())
+                .isEqualTo(Visibility.REMOVED);
+        assertThat(render(Map.of(BOB, BlockMode.SUBTREE_REMOVAL)).getFirst().replies())
+                .isEmpty();
+    }
+
+    @Test
     void forestOrdersSiblingsOldestFirstWhateverTheInputOrder() {
         var later = comment(BOB, root.id(), 4);
         var forest = CommentTree.forest(List.of(later, nested, reply, root));

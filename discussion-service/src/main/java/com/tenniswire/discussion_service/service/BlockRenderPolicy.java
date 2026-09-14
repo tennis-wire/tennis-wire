@@ -10,10 +10,10 @@ import java.util.UUID;
 /**
  * The three render modes of the spec §7, applied in memory over a loaded tree.
  *
- * <p>Precedence per node: subtree_removal drops the node and everything under it, deletion beats
- * the two "keep the children" modes (there is no body to hide either way), then gravestone, then
- * soft. Nothing here rejects a write: the blocked author's replies are stored and shown to
- * everyone else.
+ * <p>Precedence per node: subtree_removal drops the node and everything under it, a comment that
+ * is down beats the two "keep the children" modes (there is no body to hide either way), then
+ * gravestone, then soft. Nothing here rejects a write: the blocked author's replies are stored and
+ * shown to everyone else.
  */
 public final class BlockRenderPolicy {
 
@@ -39,7 +39,11 @@ public final class BlockRenderPolicy {
             return Optional.empty();
         }
         var visibility = Visibility.VISIBLE;
-        if (comment.isDeleted()) {
+        // Moderation first: its removal sets deletedAt as well, and the placeholder must say
+        // which of the two it was. An erased account leaves that mark alone (§13.7).
+        if (comment.isHiddenByModeration()) {
+            visibility = Visibility.REMOVED;
+        } else if (comment.isDeleted()) {
             visibility = Visibility.DELETED;
         } else if (mode == BlockMode.GRAVESTONE) {
             visibility = Visibility.GRAVESTONE;
