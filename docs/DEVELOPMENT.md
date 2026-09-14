@@ -222,6 +222,69 @@ mail to Mailpit; read it at <http://localhost:8025> and follow the link.
 Mailpit accepts everything and delivers nothing. It has no volume, so the
 mailbox is empty again after `down -v` — as is the realm itself.
 
+#### Google
+
+The Google button is a realm-level identity provider, so it shows up on the
+login page of every client that uses this realm — `public-web`, `mobile` and
+`editorial-ui` alike. `trustEmail` is on: an address that arrives from Google
+counts as confirmed and the reader skips the verification mail. `syncMode` is
+`IMPORT`, so a profile is copied on first login and never overwritten
+afterwards; the name shown on the site lives in `user-service` anyway.
+
+Everything else is left at the Keycloak default, the first broker login flow
+included. When a Google address matches an account that already registered with
+a password, the reader is asked to confirm the link — not signed straight in.
+The identity provider names no flow of its own, which in Keycloak 26 means it
+falls back to the realm's, and the realm's is the built-in `first broker login`.
+
+The client secret is **not** in the realm file. This repository is public, and
+Google scans public repositories for its own credentials and revokes what it
+finds. The file carries placeholders:
+
+```json
+"config": {
+    "clientId": "${GOOGLE_CLIENT_ID}",
+    "clientSecret": "${GOOGLE_CLIENT_SECRET}"
+}
+```
+
+Two substitutions with the same syntax happen in a row, and it is worth knowing
+which one failed. Compose resolves `${GOOGLE_CLIENT_ID}` in `docker-compose.yml`
+from `.env` and puts the result in the container's environment. Keycloak then
+resolves `${GOOGLE_CLIENT_ID}` in the realm file against that environment, while
+reading the file — but only when `keycloak.migration.replace-placeholders` is
+set. `kc.sh import` sets it on its own; `start --import-realm` does not, which
+is why the compose service passes it as a JVM option:
+
+```yaml
+JAVA_OPTS_APPEND: "-Dkeycloak.migration.replace-placeholders=true"
+```
+
+Drop that option and nothing breaks loudly: an unresolved placeholder is left in
+place as a literal string, the realm imports clean, and the first Google login
+fails with `invalid_client` from Google. The canary is the client id, which the
+admin API returns in the clear while it masks the secret:
+
+```bash
+TOKEN=$(curl -s -d grant_type=password -d client_id=admin-cli \
+  -d username=admin -d password=admin \
+  http://localhost:8180/realms/master/protocol/openid-connect/token | jq -r .access_token)
+
+curl -s -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8180/admin/realms/tennis-wire/identity-provider/instances/google \
+  | jq -r .config.clientId
+```
+
+A real id means both substitutions worked. `not-set` means `.env` is missing or
+empty. A literal `${GOOGLE_CLIENT_ID}` means the JVM option did not arrive.
+
+Google side: create an OAuth client of type *Web application* and give it one
+authorized redirect URI, `http://localhost:8180/realms/tennis-wire/broker/google/endpoint`.
+The path is fixed by Keycloak — `/realms/{realm}/broker/{alias}/endpoint`, alias
+`google` — and Google matches it exactly, so the port has to be the one the
+browser uses. Plain HTTP is accepted for `localhost` and nothing else; a
+deployed realm needs its own Google project, its own client and an https URI.
+
 #### Session lengths
 
 Staff and readers get different session lengths out of the same realm. The SSO
