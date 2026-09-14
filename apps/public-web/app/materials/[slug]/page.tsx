@@ -1,12 +1,17 @@
-export default function MaterialPage({ params: _params }: { params: Promise<{ slug: string }> }) {
-    return (
-        <div>
-            <h1 style={{ fontFamily: 'var(--tw-font-display)', fontSize: 28 }}>
-                Страница материала
-            </h1>
-            <p style={{ color: 'var(--tw-text-muted)', fontSize: 14 }}>
-                Динамическая страница /materials/[slug]
-            </p>
-        </div>
-    )
+import type { Metadata } from 'next'
+
+import ArticlePage from '@/components/content/ArticlePage'
+import { fetchArticle } from '@/lib/content/articles'
+
+type Props = { params: Promise<{ slug: string }> }
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+    const { slug } = await params
+    const article = await fetchArticle(slug)
+    return { title: article ? `${article.title} — Tennis Wire` : 'Tennis Wire' }
+}
+
+export default async function MaterialPage({ params }: Props) {
+    const { slug } = await params
+    return <ArticlePage slug={slug} type="article" />
 }
