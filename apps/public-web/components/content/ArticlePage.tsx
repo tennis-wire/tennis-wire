@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 
+import Comments from '@/components/discussion/Comments'
 import { fetchArticle, type ArticleType } from '@/lib/content/articles'
 import { sanitizeArticle } from '@/lib/content/sanitize'
 
@@ -19,6 +20,7 @@ export default async function ArticlePage({ slug, type }: { slug: string; type: 
                 className="tw-article-body"
                 dangerouslySetInnerHTML={{ __html: sanitizeArticle(article.content) }}
             />
+            <Comments subjectType="publication" subjectId={article.id} />
         </article>
     )
 }

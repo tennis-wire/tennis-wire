@@ -1,0 +1,28 @@
+// Reader-facing wording of the comments block, as discussion-rules.md fixes it. Russian only for
+// now; the bilingual front is a later step, and this is the one file it will touch here.
+export const strings = {
+    heading: 'Комментарии',
+    loading: 'Загрузка…',
+    none: 'Пока нет комментариев',
+    loadFailed: 'Не удалось загрузить комментарии',
+    offline: 'Нет подключения к интернету',
+    retry: 'Повторить',
+    more: 'Показать ещё',
+    moreFailed: 'Не удалось загрузить',
+    showReplies: (count: number) => `Показать ответы (${count})`,
+    moreReplies: 'Показать ещё ответы',
+    repliesFailed: 'Не удалось загрузить ответы',
+    noRepliesLeft: 'Ответов больше нет',
+    ignoring: 'Вы игнорируете автора',
+    reveal: 'Показать',
+    hidden: 'Скрытый комментарий',
+    deleted: 'Комментарий удалён',
+    removed: 'Комментарий удалён модерацией',
+    // instead of the name, for an author under a restriction (§2.8)
+    restricted: 'заблокирован',
+    // a visible comment whose author user-service does not know
+    nobody: 'Пользователь',
+    allComments: 'Ко всем комментариям',
+    missing: 'Комментарий не найден',
+    inReplyTo: 'В ответ на',
+}

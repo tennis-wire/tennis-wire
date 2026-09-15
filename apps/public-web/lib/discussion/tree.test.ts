@@ -1,0 +1,150 @@
+import { describe, expect, it } from 'vitest'
+
+import { initial, reduce, type State } from './tree'
+import type { Comment } from './types'
+
+let seq = 0
+function comment(over: Partial<Comment> = {}): Comment {
+    seq += 1
+    return {
+        id: `c${seq}`,
+        subjectType: 'publication',
+        subjectId: 'p1',
+        inReplyToId: null,
+        rootId: `c${seq}`,
+        author: { id: 'a1', displayName: 'alice', avatarUrl: null },
+        body: `body ${seq}`,
+        visibility: 'visible',
+        replyCount: 0,
+        repliesTruncated: false,
+        createdAt: '2026-09-15T10:00:00Z',
+        updatedAt: '2026-09-15T10:00:00Z',
+        replies: [],
+        ...over,
+    }
+}
+
+function listed(items: Comment[], nextCursor: string | null = null): State {
+    return reduce(initial, { type: 'list', page: { items, nextCursor } })
+}
+
+function items(state: State) {
+    if (state.phase !== 'ready' || state.view.kind !== 'list') throw new Error('not a list')
+    return state.view.items
+}
+
+describe('reduce', () => {
+    it('lists top-level comments with their replies not yet on show', () => {
+        const state = listed([comment({ replyCount: 3 })], 'next')
+
+        expect(items(state)[0].replies).toBeNull()
+        expect(items(state)[0].hasMore).toBe(false)
+        if (state.phase === 'ready' && state.view.kind === 'list')
+            expect(state.view.nextCursor).toBe('next')
+    })
+
+    it('appends the next page and keeps its cursor', () => {
+        const first = comment()
+        const second = comment()
+        let state = listed([first], 'next')
+        state = reduce(state, { type: 'more', status: 'loading' })
+        state = reduce(state, { type: 'more-loaded', page: { items: [second], nextCursor: null } })
+
+        expect(items(state).map((node) => node.comment.id)).toEqual([first.id, second.id])
+        if (state.phase === 'ready' && state.view.kind === 'list') {
+            expect(state.view.nextCursor).toBeNull()
+            expect(state.view.more).toBe('idle')
+        }
+    })
+
+    it('draws only the first level of a branch and marks a cut prefix', () => {
+        const top = comment({ replyCount: 2 })
+        const deep = comment({ inReplyToId: 'r', rootId: top.id })
+        const reply = comment({
+            inReplyToId: top.id,
+            rootId: top.id,
+            replyCount: 1,
+            replies: [deep],
+        })
+        let state = listed([top])
+        state = reduce(state, { type: 'replies-loading', id: top.id })
+        expect(items(state)[0].loading).toBe(true)
+
+        state = reduce(state, {
+            type: 'branch-loaded',
+            id: top.id,
+            root: { ...top, repliesTruncated: true, replies: [reply] },
+        })
+
+        const node = items(state)[0]
+        expect(node.loading).toBe(false)
+        expect(node.hasMore).toBe(true)
+        expect(node.cursor).toBeUndefined()
+        expect(node.replies?.map((child) => child.comment.id)).toEqual([reply.id])
+        // the grandchild is not drawn here: it waits for a re-root on the reply
+        expect(node.replies?.[0].replies).toBeNull()
+    })
+
+    it('reads the first /replies page in place of the prefix and follows the cursor after', () => {
+        const top = comment({ replyCount: 40 })
+        const a = comment({ inReplyToId: top.id })
+        const b = comment({ inReplyToId: top.id })
+        const c = comment({ inReplyToId: top.id })
+        let state = listed([top])
+        state = reduce(state, {
+            type: 'branch-loaded',
+            id: top.id,
+            root: { ...top, repliesTruncated: true, replies: [a] },
+        })
+
+        state = reduce(state, {
+            type: 'replies-loaded',
+            id: top.id,
+            page: { items: [a, b], nextCursor: 'k' },
+        })
+        expect(items(state)[0].replies?.map((node) => node.comment.id)).toEqual([a.id, b.id])
+        expect(items(state)[0].cursor).toBe('k')
+
+        state = reduce(state, {
+            type: 'replies-loaded',
+            id: top.id,
+            page: { items: [c], nextCursor: null },
+        })
+        expect(items(state)[0].replies?.map((node) => node.comment.id)).toEqual([a.id, b.id, c.id])
+        expect(items(state)[0].hasMore).toBe(false)
+    })
+
+    it('re-roots on a comment with its chain above and its first level below', () => {
+        const top = comment()
+        const target = comment({ inReplyToId: top.id, rootId: top.id, replyCount: 1 })
+        const under = comment({ inReplyToId: target.id, rootId: top.id })
+
+        const state = reduce(listed([top]), {
+            type: 'rooted',
+            chain: [top, target],
+            root: { ...target, replies: [under] },
+        })
+
+        if (state.phase !== 'ready' || state.view.kind !== 'rooted') throw new Error('not rooted')
+        expect(state.view.chain.map((node) => node.id)).toEqual([top.id, target.id])
+        expect(state.view.root.comment.id).toBe(target.id)
+        expect(state.view.root.replies?.map((node) => node.comment.id)).toEqual([under.id])
+    })
+
+    it('marks a failed load on the node alone', () => {
+        const first = comment({ replyCount: 1 })
+        const second = comment({ replyCount: 1 })
+        let state = listed([first, second])
+        state = reduce(state, { type: 'replies-failed', id: second.id })
+
+        expect(items(state)[0].failed).toBe(false)
+        expect(items(state)[1].failed).toBe(true)
+    })
+
+    it('reveals a collapsed comment', () => {
+        const hidden = comment({ visibility: 'soft_hidden' })
+        const state = reduce(listed([hidden]), { type: 'reveal', id: hidden.id })
+
+        expect(items(state)[0].revealed).toBe(true)
+    })
+})
