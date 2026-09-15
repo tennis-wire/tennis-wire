@@ -4,7 +4,8 @@ import { freshSession } from '@/lib/auth/refresh'
 import { SESSION_COOKIE, readSession, sealSession, sessionCookieOptions } from '@/lib/auth/session'
 import { fetchProfile } from '@/lib/gateway/client'
 
-// What the header needs to draw itself, and nothing else. No token leaves here.
+// What the header and the comments need to draw themselves, and nothing else. No token leaves
+// here. The id is the reader's own, and it is public anyway: every comment carries its author's.
 const NO_STORE = { 'cache-control': 'no-store' }
 
 export async function GET(request: NextRequest) {
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
     const response = NextResponse.json(
         {
             authenticated: true,
+            userId: profile?.userId ?? null,
             displayName: profile?.displayName ?? null,
             // Unknown means do not nag: a user-service that did not answer is
             // no reason to send the reader to the rename screen.

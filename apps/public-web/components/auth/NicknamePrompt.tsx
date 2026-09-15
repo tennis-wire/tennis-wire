@@ -74,6 +74,7 @@ export default function NicknamePrompt() {
         const profile = await response.json()
         setSession({
             authenticated: true,
+            userId: profile.userId,
             displayName: profile.displayName,
             displayNameChosen: true,
         })
