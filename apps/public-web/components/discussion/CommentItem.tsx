@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReportReason } from '@/lib/discussion/reasons'
 import type { Node } from '@/lib/discussion/tree'
 import type { Author, Comment } from '@/lib/discussion/types'
 
@@ -30,6 +31,7 @@ export type Ctx = {
     onPromote: (text: string) => void
     onSessionExpired: () => void
     onRemove: (id: string) => Promise<void>
+    onReport: (id: string, reason: ReportReason) => Promise<void>
 }
 
 type Props = {
@@ -112,7 +114,9 @@ export default function CommentItem({ node, inline, ctx }: Props) {
                         <CommentMenu
                             comment={comment}
                             own={own}
+                            signedIn={ctx.signedIn}
                             onRemove={() => ctx.onRemove(comment.id)}
+                            onReport={(reason) => ctx.onReport(comment.id, reason)}
                             onSessionExpired={ctx.onSessionExpired}
                         />
                     </div>

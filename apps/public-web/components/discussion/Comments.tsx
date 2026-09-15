@@ -90,6 +90,7 @@ export default function Comments({ subjectType, subjectId }: Props) {
         onPromote: discussion.promote,
         onSessionExpired,
         onRemove: discussion.remove,
+        onReport: discussion.report,
     }
 
     return (

@@ -11,7 +11,10 @@ import {
     deleteComment,
     listTopLevel,
     replies,
+    reportComment,
 } from '@/lib/discussion/endpoints'
+import type { ReportReason } from '@/lib/discussion/reasons'
+import { markReported } from '@/lib/discussion/reported'
 import { initial, reduce, type State } from '@/lib/discussion/tree'
 
 import type { Seed } from './ComposeForm'
@@ -58,6 +61,9 @@ export type Discussion = {
     remove: (id: string) => Promise<void>
     // a comment the server no longer has, met on the way: out of the tree
     drop: (id: string) => void
+    // a report on someone else's comment; throws for the caller to explain. A comment that is
+    // no longer there is dropped from the tree and nothing is said (§8.17)
+    report: (id: string, reason: ReportReason) => Promise<void>
 }
 
 export function useDiscussion(subjectType: string, subjectId: string): Discussion {
@@ -207,6 +213,19 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
 
     const drop = useCallback((id: string) => dispatch({ type: 'vanished', id }), [])
 
+    const report = useCallback(async (id: string, reason: ReportReason) => {
+        try {
+            await reportComment(id, reason)
+        } catch (error) {
+            if (error instanceof DiscussionError && error.status === 404) {
+                dispatch({ type: 'vanished', id })
+                return
+            }
+            throw error
+        }
+        markReported(id)
+    }, [])
+
     useEffect(() => {
         const onHash = () => load()
         window.addEventListener('hashchange', onHash)
@@ -241,5 +260,6 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
         promote,
         remove,
         drop,
+        report,
     }
 }

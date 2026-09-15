@@ -1,3 +1,5 @@
+import type { ReportReason } from '@/lib/discussion/reasons'
+
 // Reader-facing wording of the comments block, as discussion-rules.md fixes it. Russian only for
 // now; the bilingual front is a later step, and this is the one file it will touch here.
 export const strings = {
@@ -55,4 +57,22 @@ export const strings = {
     confirmRemoveReplies: 'Ответы останутся, а вместо текста будет „Комментарий удалён“',
     removeFailed: 'Не удалось удалить',
     gone: 'Комментарий удалён',
+
+    // reporting (§10)
+    report: 'Пожаловаться',
+    reportReason: 'Причина',
+    reasons: {
+        spam: 'Спам',
+        insult: 'Оскорбления',
+        hate: 'Разжигание ненависти',
+        illegal: 'Противоправное',
+        personal_data: 'Личные данные',
+        other: 'Другое',
+    } satisfies Record<ReportReason, string>,
+    reported: 'Жалоба отправлена',
+    reportFailed: 'Не удалось отправить',
+    tooManyReports: 'Слишком много жалоб, попробуйте позже',
+    alreadyRemoved: 'Комментарий уже удалён модерацией',
+    signInToReport: 'Войдите, чтобы пожаловаться',
+    close: 'Закрыть',
 }

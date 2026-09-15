@@ -1,5 +1,6 @@
 import { read, write } from './api'
 import { readQueue } from './queue'
+import type { ReportReason } from './reasons'
 import type { Ancestry, Branch, CommentCreated, CommentPage } from './types'
 
 const COMMENTS = '/api/discussion/comments'
@@ -39,4 +40,9 @@ export function createReply(parentId: string, body: string) {
 
 export function deleteComment(id: string) {
     return write<void>('DELETE', `${COMMENTS}/${id}`)
+}
+
+// Always 204 when taken: filed, already filed and taken-but-not-queued are one answer (§10.12–13)
+export function reportComment(id: string, reason: ReportReason) {
+    return write<void>('POST', `${COMMENTS}/${id}/reports`, { reason })
 }
