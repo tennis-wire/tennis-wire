@@ -1,139 +1,99 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { PALETTES, type PaletteKey, type PaletteColors } from './palettes'
-import { FONT_PAIRS, type FontPairKey } from './fonts'
+import { createContext, useCallback, useContext, useEffect, useSyncExternalStore } from 'react'
 
-interface ThemeState {
-    palette: PaletteKey
-    fontPair: FontPairKey
-    isDark: boolean
-}
+import { FONT_PAIRS, type FontPairKey } from './fonts'
+import type { PaletteKey } from './palettes'
+import {
+    serverTheme,
+    storeTheme,
+    storedTheme,
+    subscribeToStored,
+    type ThemeMode,
+    type ThemeState,
+} from './state'
 
 interface ThemeContextValue extends ThemeState {
-    colors: PaletteColors
-    fonts: { display: string; body: string }
+    // what `mode` comes to right now: under 'system' it is the device's answer
+    isDark: boolean
     setPalette: (key: PaletteKey) => void
     setFontPair: (key: FontPairKey) => void
-    toggleDark: () => void
-}
-
-const STORAGE_KEY = 'tw-theme'
-
-const DEFAULTS: ThemeState = {
-    palette: 'courtGreen',
-    fontPair: 'editorialClassic',
-    isDark: false,
+    setMode: (mode: ThemeMode) => void
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
-function loadFromStorage(): ThemeState {
-    if (typeof window === 'undefined') return DEFAULTS
-    try {
-        const stored = localStorage.getItem(STORAGE_KEY)
-        if (!stored) return DEFAULTS
-        const parsed = JSON.parse(stored)
-        return { ...DEFAULTS, ...parsed }
-    } catch {
-        return DEFAULTS
+const DARK_QUERY = '(prefers-color-scheme: dark)'
+
+function subscribeToSystem(onChange: () => void) {
+    const query = window.matchMedia(DARK_QUERY)
+    query.addEventListener('change', onChange)
+    return () => query.removeEventListener('change', onChange)
+}
+
+function systemIsDark() {
+    return window.matchMedia(DARK_QUERY).matches
+}
+
+// The face files still arrive after the page: the boot script picks the family, the browser
+// falls back until the sheet lands
+function loadFontUrls(key: FontPairKey) {
+    const pair = FONT_PAIRS[key]
+    for (const url of [pair.displayUrl, pair.bodyUrl]) {
+        if (document.querySelector(`link[href="${url}"]`)) continue
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        document.head.appendChild(link)
     }
-}
-
-function saveToStorage(state: ThemeState) {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-    } catch {
-        // localStorage недоступен
-    }
-}
-
-function applyColors(colors: PaletteColors) {
-    const root = document.documentElement
-    root.style.setProperty('--tw-bg', colors.bg)
-    root.style.setProperty('--tw-bg-alt', colors.bgAlt)
-    root.style.setProperty('--tw-surface', colors.surface)
-    root.style.setProperty('--tw-primary', colors.primary)
-    root.style.setProperty('--tw-primary-dark', colors.primaryDark)
-    root.style.setProperty('--tw-primary-light', colors.primaryLight)
-    root.style.setProperty('--tw-accent', colors.accent)
-    root.style.setProperty('--tw-accent-soft', colors.accentSoft)
-    root.style.setProperty('--tw-text', colors.text)
-    root.style.setProperty('--tw-text-secondary', colors.textSecondary)
-    root.style.setProperty('--tw-text-muted', colors.textMuted)
-    root.style.setProperty('--tw-border', colors.border)
-    root.style.setProperty('--tw-live', colors.live)
-    root.style.setProperty('--tw-live-bg', colors.liveBg)
-    root.style.setProperty('--tw-tag', colors.tag)
-    root.style.setProperty('--tw-card-shadow', colors.cardShadow)
-}
-
-function applyFonts(fontPairKey: FontPairKey) {
-    const pair = FONT_PAIRS[fontPairKey]
-    const root = document.documentElement
-    root.style.setProperty('--tw-font-display', pair.display)
-    root.style.setProperty('--tw-font-body', pair.body)
-}
-
-function loadFontUrls(fontPairKey: FontPairKey) {
-    const pair = FONT_PAIRS[fontPairKey]
-    const urls = [pair.displayUrl, pair.bodyUrl]
-
-    urls.forEach((url) => {
-        const existing = document.querySelector(`link[href="${url}"]`)
-        if (!existing) {
-            const link = document.createElement('link')
-            link.rel = 'stylesheet'
-            link.href = url
-            document.head.appendChild(link)
-        }
-    })
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    // Lazy initializer — reads localStorage once, no setState in effect
-    const [state, setState] = useState<ThemeState>(() => loadFromStorage())
+    const state = useSyncExternalStore(subscribeToStored, storedTheme, serverTheme)
+    const systemDark = useSyncExternalStore(subscribeToSystem, systemIsDark, () => false)
 
-    // Apply theme to DOM whenever state changes
+    // Under 'system' the device has the last word, and it can change its mind mid-session.
+    // Read here rather than from the hook above: on the hydration render that value is still
+    // the server's `false`, and writing it would undo what the boot script put on <html>.
     useEffect(() => {
-        const palette = PALETTES[state.palette]
-        const colors = state.isDark ? palette.darkColors : palette.colors
+        if (state.mode !== 'system') return
+        const query = window.matchMedia(DARK_QUERY)
+        const apply = () => {
+            document.documentElement.dataset.mode = query.matches ? 'dark' : 'light'
+        }
+        apply()
+        query.addEventListener('change', apply)
+        return () => query.removeEventListener('change', apply)
+    }, [state.mode])
 
-        applyColors(colors)
-        applyFonts(state.fontPair)
-        loadFontUrls(state.fontPair)
-        saveToStorage(state)
-    }, [state])
+    useEffect(() => loadFontUrls(state.fontPair), [state.fontPair])
 
-    const setPalette = useCallback((key: PaletteKey) => {
-        setState((prev) => ({ ...prev, palette: key }))
+    // Everything else onto <html> is written here, where a reader asked for it — so the only
+    // writer before that is the boot script, and the two never race
+    const change = useCallback((next: ThemeState) => {
+        const root = document.documentElement
+        root.dataset.palette = next.palette
+        root.dataset.fonts = next.fontPair
+        root.dataset.mode = next.mode === 'system' ? (systemIsDark() ? 'dark' : 'light') : next.mode
+        storeTheme(next)
     }, [])
 
-    const setFontPair = useCallback((key: FontPairKey) => {
-        setState((prev) => ({ ...prev, fontPair: key }))
-    }, [])
+    const setPalette = useCallback(
+        (palette: PaletteKey) => change({ ...storedTheme(), palette }),
+        [change]
+    )
+    const setFontPair = useCallback(
+        (fontPair: FontPairKey) => change({ ...storedTheme(), fontPair }),
+        [change]
+    )
+    const setMode = useCallback((mode: ThemeMode) => change({ ...storedTheme(), mode }), [change])
 
-    const toggleDark = useCallback(() => {
-        setState((prev) => ({ ...prev, isDark: !prev.isDark }))
-    }, [])
-
-    const palette = PALETTES[state.palette]
-    const colors = state.isDark ? palette.darkColors : palette.colors
-    const fontPair = FONT_PAIRS[state.fontPair]
+    const isDark = state.mode === 'system' ? systemDark : state.mode === 'dark'
 
     return (
-        <ThemeContext.Provider
-            value={{
-                ...state,
-                colors,
-                fonts: { display: fontPair.display, body: fontPair.body },
-                setPalette,
-                setFontPair,
-                toggleDark,
-            }}
-        >
+        <ThemeContext value={{ ...state, isDark, setPalette, setFontPair, setMode }}>
             {children}
-        </ThemeContext.Provider>
+        </ThemeContext>
     )
 }
 

@@ -20,7 +20,7 @@ const SECTIONS = [{ label: 'Треш-зона', href: '/sections/trash' }]
 
 export default function Header() {
     const pathname = usePathname()
-    const { isDark, toggleDark } = useTheme()
+    const { isDark, setMode } = useTheme()
     const [sectionsOpen, setSectionsOpen] = useState(false)
 
     return (
@@ -182,7 +182,7 @@ export default function Header() {
 
                 {/* Theme toggle */}
                 <button
-                    onClick={toggleDark}
+                    onClick={() => setMode(isDark ? 'light' : 'dark')}
                     style={{
                         width: 36,
                         height: 36,
