@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
             // Unknown means do not nag: a user-service that did not answer is
             // no reason to send the reader to the rename screen.
             displayNameChosen: profile?.displayNameChosen ?? true,
+            createdAt: profile?.createdAt ?? null,
         },
         { headers: NO_STORE }
     )

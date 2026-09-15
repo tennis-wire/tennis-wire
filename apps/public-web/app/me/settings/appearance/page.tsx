@@ -1,24 +1,24 @@
 'use client'
 
 import { useTheme, PALETTES, FONT_PAIRS } from '@/theme'
-import type { PaletteKey, FontPairKey } from '@/theme'
+import type { PaletteKey, FontPairKey, ThemeMode } from '@/theme'
 
-export default function SettingsPage() {
-    const { palette, fontPair, isDark, setPalette, setFontPair, toggleDark } = useTheme()
+const MODES: { value: ThemeMode; label: string; icon: string; hint: string }[] = [
+    { value: 'light', label: 'Светлая', icon: '☀️', hint: 'По умолчанию' },
+    { value: 'dark', label: 'Тёмная', icon: '🌙', hint: 'Для вечерних матчей' },
+    { value: 'system', label: 'Как в системе', icon: '🖥️', hint: 'Переключается сама' },
+]
+
+export default function AppearancePage() {
+    const { palette, fontPair, mode, isDark, setPalette, setFontPair, setMode } = useTheme()
 
     return (
-        <div style={{ maxWidth: 640 }}>
-            <h1
-                style={{
-                    fontFamily: 'var(--tw-font-display)',
-                    fontSize: 28,
-                    marginBottom: 4,
-                }}
-            >
-                Настройки
+        <div>
+            <h1 style={{ fontFamily: 'var(--tw-font-display)', fontSize: 22, margin: '0 0 4px' }}>
+                Внешний вид
             </h1>
-            <p style={{ color: 'var(--tw-text-muted)', fontSize: 14, marginBottom: 32 }}>
-                Внешний вид сайта. Настройки сохраняются в браузере.
+            <p style={{ color: 'var(--tw-text-muted)', fontSize: 14, margin: '0 0 28px' }}>
+                Настройки хранятся в этом браузере и работают без входа.
             </p>
 
             {/* theme */}
@@ -33,40 +33,55 @@ export default function SettingsPage() {
                     Тема
                 </h2>
                 <div style={{ display: 'flex', gap: 10 }}>
-                    {[
-                        { label: 'Светлая', value: false, icon: '☀️' },
-                        { label: 'Тёмная', value: true, icon: '🌙' },
-                    ].map((option) => (
-                        <button
-                            key={option.label}
-                            onClick={() => {
-                                if (isDark !== option.value) toggleDark()
-                            }}
-                            style={{
-                                flex: 1,
-                                padding: '14px 16px',
-                                borderRadius: 12,
-                                border:
-                                    isDark === option.value
+                    {MODES.map((option) => {
+                        const isActive = mode === option.value
+
+                        return (
+                            <button
+                                key={option.value}
+                                onClick={() => setMode(option.value)}
+                                style={{
+                                    flex: 1,
+                                    padding: '14px 16px',
+                                    borderRadius: 12,
+                                    border: isActive
                                         ? '2px solid var(--tw-primary)'
                                         : '1px solid var(--tw-border)',
-                                background:
-                                    isDark === option.value ? 'var(--tw-tag)' : 'var(--tw-surface)',
-                                cursor: 'pointer',
-                                fontFamily: 'var(--tw-font-body)',
-                                fontSize: 14,
-                                color: 'var(--tw-text)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 10,
-                            }}
-                        >
-                            <span style={{ fontSize: 20 }}>{option.icon}</span>
-                            <span style={{ fontWeight: isDark === option.value ? 600 : 400 }}>
-                                {option.label}
-                            </span>
-                        </button>
-                    ))}
+                                    background: isActive ? 'var(--tw-tag)' : 'var(--tw-surface)',
+                                    cursor: 'pointer',
+                                    fontFamily: 'var(--tw-font-body)',
+                                    fontSize: 14,
+                                    color: 'var(--tw-text)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 10,
+                                    textAlign: 'left',
+                                }}
+                            >
+                                <span style={{ fontSize: 20 }}>{option.icon}</span>
+                                <span>
+                                    <span
+                                        style={{
+                                            display: 'block',
+                                            fontWeight: isActive ? 600 : 400,
+                                        }}
+                                    >
+                                        {option.label}
+                                    </span>
+                                    <span
+                                        style={{
+                                            display: 'block',
+                                            fontSize: 12,
+                                            color: 'var(--tw-text-muted)',
+                                            marginTop: 2,
+                                        }}
+                                    >
+                                        {option.hint}
+                                    </span>
+                                </span>
+                            </button>
+                        )
+                    })}
                 </div>
             </section>
 

@@ -1,3 +1,5 @@
 export { ThemeProvider, useTheme } from './ThemeContext'
+export { themeCss, bootScript } from './css'
+export { type ThemeMode, type ThemeState } from './state'
 export { PALETTES, type PaletteKey, type PaletteColors, type Palette } from './palettes'
 export { FONT_PAIRS, type FontPairKey, type FontPair } from './fonts'

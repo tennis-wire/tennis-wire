@@ -3,12 +3,12 @@
 import { useState } from 'react'
 
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
+import { loginHere } from '@/lib/auth/loginHref'
 import { DiscussionError } from '@/lib/discussion/api'
 import { REPORT_REASONS, type ReportReason } from '@/lib/discussion/reasons'
 import { wasReported } from '@/lib/discussion/reported'
 import type { Comment } from '@/lib/discussion/types'
 
-import { loginHref } from './format'
 import { strings } from './strings'
 import { linkButton, muted } from './styles'
 
@@ -181,7 +181,7 @@ export default function CommentMenu({
             {panel.kind === 'sign-in' && (
                 <p style={{ ...box, ...muted }}>
                     {strings.signInToReport} ·{' '}
-                    <a href={loginHref()} style={{ color: 'var(--tw-primary)' }}>
+                    <a href={loginHere()} style={{ color: 'var(--tw-primary)' }}>
                         {strings.signIn}
                     </a>
                 </p>

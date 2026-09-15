@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useTheme } from '@/theme'
 import { useState } from 'react'
 import Search from '@/components/Search'
 import ReaderMenu from '@/components/auth/ReaderMenu'
@@ -20,7 +19,6 @@ const SECTIONS = [{ label: 'Треш-зона', href: '/sections/trash' }]
 
 export default function Header() {
     const pathname = usePathname()
-    const { isDark, toggleDark } = useTheme()
     const [sectionsOpen, setSectionsOpen] = useState(false)
 
     return (
@@ -180,51 +178,7 @@ export default function Header() {
                 {/* Search */}
                 <Search />
 
-                {/* Theme toggle */}
-                <button
-                    onClick={toggleDark}
-                    style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: '50%',
-                        border: '1px solid var(--tw-border)',
-                        background: 'var(--tw-surface)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 16,
-                        marginLeft: 8,
-                        flexShrink: 0,
-                    }}
-                    title={isDark ? 'Светлая тема' : 'Тёмная тема'}
-                >
-                    {isDark ? '☀️' : '🌙'}
-                </button>
-
                 <ReaderMenu />
-
-                {/* Profile avatar */}
-                <Link
-                    href="/settings"
-                    style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: '50%',
-                        background: 'var(--tw-bg-alt)',
-                        border: '1px solid var(--tw-border)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        textDecoration: 'none',
-                        fontSize: 14,
-                        color: 'var(--tw-text-muted)',
-                        flexShrink: 0,
-                        marginLeft: 4,
-                    }}
-                >
-                    👤
-                </Link>
             </div>
         </header>
     )

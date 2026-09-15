@@ -1,5 +1,6 @@
 'use client'
 
+import { loginHere } from '@/lib/auth/loginHref'
 import type { ReportReason } from '@/lib/discussion/reasons'
 import type { Node } from '@/lib/discussion/tree'
 import type { Author, Comment } from '@/lib/discussion/types'
@@ -7,7 +8,7 @@ import type { Author, Comment } from '@/lib/discussion/types'
 import CommentBody, { Placeholder, placeholderFor } from './CommentBody'
 import CommentMenu from './CommentMenu'
 import ComposeForm from './ComposeForm'
-import { formatWhen, loginHref } from './format'
+import { formatWhen } from './format'
 import { strings } from './strings'
 import { linkButton, muted } from './styles'
 
@@ -157,7 +158,7 @@ export default function CommentItem({ node, inline, ctx }: Props) {
                     ) : (
                         <p style={{ ...muted, margin: 0 }}>
                             {strings.signInToReply} ·{' '}
-                            <a href={loginHref()} style={{ color: 'var(--tw-primary)' }}>
+                            <a href={loginHere()} style={{ color: 'var(--tw-primary)' }}>
                                 {strings.signIn}
                             </a>
                         </p>
