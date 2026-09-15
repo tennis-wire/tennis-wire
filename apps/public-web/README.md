@@ -1,36 +1,98 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# public-web
 
-## Getting Started
+Читательский сайт: Next.js (App Router), порт 3000. Что здесь есть и где лежит. Как это
+запускать вместе с остальным — `docs/DEVELOPMENT.md`; сессия и прокси — `architecture/auth.md` §4.
 
-First, run the development server:
+## Запуск
 
 ```bash
+cp .env.example .env.local      # заполнить SESSION_PASSWORD: openssl rand -base64 32
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Проверки те же, что в CI: `npx prettier . --check`, `npm run lint`, `npm test`, `npm run build`.
+Тесты — vitest в node, без DOM: правила прокси, редьюсер дерева, черновики, нормализация текста.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Где что
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `app/` — маршруты. Страницы контента статические или ISR и сессию не читают: `cookies()`
+  сделал бы их динамическими. `app/api/auth/*` — вход, выход, `/api/auth/session`;
+  `app/api/discussion/[...path]` и `app/api/users/[...path]` — BFF-прокси в gateway.
+- `lib/auth`, `lib/gateway` — кука сессии, обновление токена, прокси с allowlist заголовков,
+  лимит анонимных чтений.
+- `lib/content` — статья из `content-service`: `fetchArticle` (серверный `fetch` в gateway,
+  ISR минута) и `sanitizeArticle`.
+- `lib/discussion` — клиент обсуждений без React: `api.ts` (`read` и `write`), `queue.ts`,
+  `endpoints.ts`, `tree.ts` (состояние островка и редьюсер), `compose.ts` (правила текста),
+  `drafts.ts`, `reported.ts`, `text.ts` (ссылки в тексте).
+- `components/discussion` — островок: `Comments` (точка входа, `#c=`), `useDiscussion`
+  (загрузка и действия), `CommentItem`, `CommentMenu`, `ComposeForm`, `strings.ts` — **все**
+  надписи островка, по `discussion-rules.md`. Двуязычность придёт сюда.
+- `components/auth` — шапка, провайдер сессии, выбор ника.
 
-## Learn More
+Стили — inline с переменными `--tw-*` из `app/globals.css`; в `globals.css` только то, что
+рендерит не это приложение (тело статьи из редактора).
 
-To learn more about Next.js, take a look at the following resources:
+## Страница статьи
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`/news/[slug]` и `/materials/[slug]` читают `GET /api/public/articles/{slug}` на сервере и
+рисуют заголовок и тело — остальное (обложка, теги, дата) придёт с шагом, который займётся
+вёрсткой материала. Страница нужна островку: без настоящего `article.id` комментариям не на
+чем висеть. Слаг не того типа (новость под `/materials`) — 404.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Тело приходит из TipTap как HTML и проходит `sanitize-html` с allowlist под то, что пишет
+редактор: StarterKit, `img`, `video`, embed-`div`, `iframe` только с `youtube.com`,
+`youtube-nocookie.com` и `t.me`. `style`, `target` и обработчики событий выкидываются, чужой
+`iframe` — целиком. Источник — редакция, но скрипт на этой странице ходил бы через прокси с
+сессией читателя, а редакторский аккаунт — один фишинг от чужих рук.
 
-## Deploy on Vercel
+## Комментарии
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Островок клиентский, на сервере не рендерится: аутентифицированный список учитывает игнор
+зрителя, анонимный SSR показал бы другое дерево.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Загрузка.** За экран до блока (`IntersectionObserver`), по ссылке `#c=` — сразу. Верхний
+уровень по 20, «Показать ещё» по курсору. Только «Старые»: другого порядка у сервиса нет.
+
+**Дерево.** Верхний уровень и первый уровень ответов рисуются на месте; глубже — re-root:
+`#c=<id>` в URL → `ancestry` даёт цепочку контекста, `branch` — поддерево, из которого
+снова рисуется первый уровень. Постоянная ссылка на комментарий — тот же механизм, кнопка
+«Назад» работает в обе стороны. Из ветки глубиной пять уровней сайт берёт один; остальное
+для `mobile` и на будущее. `repliesTruncated` → первая страница `/replies` заменяет префикс
+ветки, дальше курсор.
+
+**Чтения** — `read()`: таймаут 10 с, один тихий повтор через 3 с на сеть, таймаут, 5xx и 429;
+4xx — ответ. Уходят по два одновременно (`queue.ts`), чтобы столбик «Показать ответы» не
+выбирал 5/с прокси и gateway. **Записи** — `write()`: таймаут и ни одного повтора: у сервиса
+нет ключа идемпотентности, повтор после таймаута может положить комментарий дважды.
+«Повторить» — только рукой читателя.
+
+**Форма.** 1–2000 символов (UTF-16, как считает сервер), не больше трёх ссылок, края и
+лишние пустые строки убираются перед отправкой. Черновик в `localStorage`:
+`tw-draft:<userId>:<subjectId>:<parentId|top>`, 7 дней, пустое поле стирает; при выходе
+стираются все черновики этого `userId`. Форма ответа одна открытая. Ответ на комментарий
+первого уровня после отправки делает re-root на родителя и подсвечивает ответ.
+
+**Ошибки при отправке** — по `discussion-rules.md` §4.18–22 и §5.5–6: 401 → «Сессия истекла»
+и сессия в контексте сброшена (текст остаётся в черновике под тем же `userId`); 403
+`COMMENTING_RESTRICTED` → плашка бана с датой, текст readonly; 409 `PARENT_DELETED` →
+«Опубликовать как новый комментарий» переносит текст в верхнюю форму; сеть и 5xx →
+«Не удалось отправить · Повторить»; `mutedByRecipient` → плашка под родителем один раз.
+
+**Меню «···».** На своём — «Удалить» с подтверждением §8.2; есть ответы — заглушка
+`deleted`, нет — узел уходит и счётчик родителя уменьшается. На чужом — «Пожаловаться»,
+шесть причин (коды из `discussion.report.reasons` сервиса); id отправленных — `tw-reported`
+на устройстве, последние 500. 409 `COMMENT_ALREADY_REMOVED` → «Комментарий уже удалён
+модерацией»; 404 на любом действии — комментарий тихо уходит из дерева.
+
+**Состояния видимости** — пять: `visible`, `soft_hidden` («Вы игнорируете автора ·
+Показать»), `gravestone` («Скрытый комментарий»), `deleted` («Комментарий удалён»), `removed`
+(«Комментарий удалён модерацией»). Автор под ограничением — «заблокирован» вместо имени.
+
+## Чего после B3 нет
+
+Сортировки кроме «Старые», счётчика «Комментарии (N)», реакций, правки, игнора (B4:
+игнор-лист в кабинете, пункт меню, «Игнорировать автора?» после жалобы), уведомлений,
+живого обновления, плашки бана при загрузке (только при отправке), идемпотентной отправки.
+Список — `readers.md` §5.
