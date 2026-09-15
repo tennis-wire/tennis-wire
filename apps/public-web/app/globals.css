@@ -70,3 +70,27 @@ a {
 a:hover {
     color: var(--tw-primary-dark);
 }
+
+/* Markup this app does not render: the article body arrives from the editor as HTML */
+.tw-article-body {
+    font-size: 18px;
+    line-height: 1.6;
+}
+
+.tw-article-body a {
+    color: var(--tw-primary);
+}
+
+.tw-article-body img,
+.tw-article-body video,
+.tw-article-body iframe {
+    max-width: 100%;
+    height: auto;
+}
+
+.tw-article-body blockquote {
+    margin: 0;
+    padding-left: 16px;
+    border-left: 3px solid var(--tw-border);
+    color: var(--tw-text-secondary);
+}

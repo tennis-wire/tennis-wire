@@ -453,10 +453,15 @@ The rest of the file has working local defaults. Nothing there is secret except
 that password, and `.env.local` is git-ignored anyway.
 
 Signing in needs Keycloak; anything the reader does afterwards needs the gateway
-and `user-service` behind it, so the useful local set is `postgres` and
-`keycloak` in compose plus `api-gateway` and `user-service` from the IDE. With
-the gateway down the site still renders — the header just falls back to a
-sign-in link, and `/api/auth/session` answers with no name.
+and `user-service` behind it. Article pages read `content-service` through the
+gateway, and the comments under them read `discussion-service`, which in turn
+needs `user-service` for the names. So the useful local set is `postgres`,
+`keycloak` and `redis` in compose plus `api-gateway`, `content-service`,
+`user-service` and `discussion-service` from the IDE. Each failure stays where
+it happens: with the gateway down the home page still renders and the header
+falls back to a sign-in link, an article page answers with Next's error page,
+and a comments block shows "не удалось загрузить" with a retry while the article
+above it stays put.
 
 The session lives in cookies the browser cannot read and the server never hands
 out: `tw_session` holds the tokens, `tw_idt` the id_token for the logout hint,

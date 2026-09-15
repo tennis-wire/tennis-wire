@@ -8,6 +8,7 @@ import com.tenniswire.discussion_service.repository.CommentRepository;
 import com.tenniswire.discussion_service.service.CommentService;
 import com.tenniswire.discussion_service.service.ReportService;
 import com.tenniswire.discussion_service.service.Visibility;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,7 +61,39 @@ class RemovedCommentVisibilityIT {
                 .listTopLevel("publication", subjectId, null, null, null)
                 .items();
         assertThat(listed).hasSize(1);
-        assertThat(listed.getFirst().visibility()).isEqualTo(Visibility.DELETED);
+        // and says who took it down, which a deletion by the author does not
+        assertThat(listed.getFirst().visibility()).isEqualTo(Visibility.REMOVED);
+    }
+
+    @Test
+    void aBotRemovalReadsTheSameAsAModeratorOne() {
+        var comment = commentService
+                .create(alice, "publication", subjectId, "removed")
+                .comment();
+        commentService.reply(bob, comment.id(), "reply");
+
+        commentService.hideByBot(comment.id());
+
+        var listed = commentService
+                .listTopLevel("publication", subjectId, null, null, null)
+                .items();
+        assertThat(listed.getFirst().visibility()).isEqualTo(Visibility.REMOVED);
+    }
+
+    @Test
+    void anErasedAuthorLeavesTheRemovalMarkAlone() {
+        var comment = commentService
+                .create(alice, "publication", subjectId, "removed")
+                .comment();
+        commentService.reply(bob, comment.id(), "reply");
+        commentService.hideByModerator(comment.id(), moderator);
+
+        commentRepository.anonymize(List.of(comment.id()));
+
+        var listed = commentService
+                .listTopLevel("publication", subjectId, null, null, null)
+                .items();
+        assertThat(listed.getFirst().visibility()).isEqualTo(Visibility.REMOVED);
     }
 
     @Test

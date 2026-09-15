@@ -46,13 +46,14 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
 применяются блокировки зрителя.
 
 `visibility` у коммента: `visible` | `soft_hidden` (body и author есть, клиент сворачивает) |
-`gravestone` (нет ни того, ни другого) | `deleted` (то же, ответы на месте).
+`gravestone` (нет ни того, ни другого) | `deleted` (то же, ответы на месте; снял автор) |
+`removed` (то же; сняла модерация — надпись выбирает клиент, автору отдаётся то же, что всем).
 
 `author` — в двух формах: `{id, displayName, avatarUrl}` у обычного автора (`avatarUrl` всегда
 `null`, аватары не в v1) и `{id, restricted: true}`, если у автора действует ограничение на
 комментирование. Во второй форме имени нет вовсе, а слово («заблокирован», «banned») выбирает
 клиент: строка в API была бы непереводимой при двуязычном фронте. Поля нет совсем, когда
-автора показывать нечего: `gravestone`, `deleted` или профиля нет в user-service.
+автора показывать нечего: `gravestone`, `deleted`, `removed` или профиля нет в user-service.
 
 Ошибки — `{error, message, violations?, details?, timestamp}`; отказ гейта — 403
 `COMMENTING_RESTRICTED` с `details.restrictedUntil` (`null` = бессрочно); недоступность

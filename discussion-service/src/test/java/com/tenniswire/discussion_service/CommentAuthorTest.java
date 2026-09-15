@@ -144,6 +144,37 @@ class CommentAuthorTest {
     }
 
     @Test
+    void aCommentRemovedByModerationSaysSoAndHasNoAuthor() throws Exception {
+        var comment =
+                commentService.create(alice, "publication", subjectId, "gone").comment();
+        commentService.reply(bob, comment.id(), "still here");
+        commentService.hideByModerator(comment.id(), UUID.randomUUID());
+
+        // the author included: he is shown what everyone is shown (rules §11.12)
+        when(resolver.resolve(any())).thenReturn(alice);
+        mvc.perform(listing().with(reader()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].visibility").value("removed"))
+                .andExpect(jsonPath("$.items[0].body").doesNotExist())
+                .andExpect(jsonPath("$.items[0].author").doesNotExist());
+    }
+
+    @Test
+    void aBodyLongerThanTheRulesAllowIsRefused() throws Exception {
+        when(resolver.resolve(any())).thenReturn(alice);
+
+        mvc.perform(post(COMMENTS)
+                        .with(reader())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentBody("x".repeat(2001))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.violations[0].field").value("body"));
+
+        assertThat(commentRepository.findTopLevelFirstPage("publication", subjectId, 10))
+                .isEmpty();
+    }
+
+    @Test
     void anAuthorUserServiceDoesNotKnowIsLeftOut() throws Exception {
         commentService.create(UUID.randomUUID(), "publication", subjectId, "orphan");
 

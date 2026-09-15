@@ -9,4 +9,5 @@ import java.util.UUID;
 public record CreateCommentRequest(
         @NotBlank @Size(max = 100) String subjectType,
         @NotNull UUID subjectId,
-        @NotBlank @Size(max = 10_000) String body) {}
+        // 2000 by the rules (discussion-rules §4.3); the schema itself holds more
+        @NotBlank @Size(max = 2000) String body) {}

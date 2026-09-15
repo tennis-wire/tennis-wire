@@ -4,7 +4,13 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 
 export type ReaderSession =
     | { authenticated: false }
-    | { authenticated: true; displayName: string | null; displayNameChosen: boolean }
+    | {
+          authenticated: true
+          // null when user-service did not answer: signed in, but nothing to compare an author to
+          userId: string | null
+          displayName: string | null
+          displayNameChosen: boolean
+      }
 
 type Store = {
     // null while the answer is on its way
