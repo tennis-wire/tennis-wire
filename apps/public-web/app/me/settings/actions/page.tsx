@@ -1,5 +1,6 @@
 'use client'
 
+import DeleteAccount from '@/components/auth/DeleteAccount'
 import NicknameForm from '@/components/auth/NicknameForm'
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
 import { loginHere } from '@/lib/auth/loginHref'
@@ -58,5 +59,10 @@ function Body({ session }: { session: ReturnType<typeof useReaderSession>['sessi
         )
     }
 
-    return <NicknameForm displayName={session.displayName} chosen={session.displayNameChosen} />
+    return (
+        <>
+            <NicknameForm displayName={session.displayName} chosen={session.displayNameChosen} />
+            <DeleteAccount displayName={session.displayName} userId={session.userId} />
+        </>
+    )
 }
