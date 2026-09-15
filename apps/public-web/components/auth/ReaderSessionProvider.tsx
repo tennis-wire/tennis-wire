@@ -10,6 +10,8 @@ export type ReaderSession =
           userId: string | null
           displayName: string | null
           displayNameChosen: boolean
+          // when the profile was made — null on the same terms as the name
+          createdAt: string | null
       }
 
 type Store = {

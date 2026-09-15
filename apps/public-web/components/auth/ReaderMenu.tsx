@@ -19,9 +19,21 @@ const trigger: React.CSSProperties = {
     background: 'none',
     cursor: 'pointer',
     flexShrink: 0,
+    position: 'relative',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+}
+
+const dot: React.CSSProperties = {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderRadius: '50%',
+    background: 'var(--tw-accent)',
+    border: '2px solid var(--tw-surface)',
 }
 
 const panel: React.CSSProperties = {
@@ -79,6 +91,8 @@ export default function ReaderMenu() {
 
     const signedIn = session?.authenticated === true
     const displayName = session?.authenticated ? session.displayName : null
+    // The cabinet is where a name is chosen now, so the icon is what says it is worth opening
+    const unnamed = session?.authenticated === true && !session.displayNameChosen
 
     return (
         <div ref={box} style={{ position: 'relative' }}>
@@ -91,6 +105,7 @@ export default function ReaderMenu() {
                 style={trigger}
             >
                 <Avatar name={displayName} size={36} />
+                {unnamed && <span aria-hidden style={dot} />}
             </button>
 
             {open && (
@@ -127,7 +142,7 @@ function Anonymous({ onNavigate }: { onNavigate: () => void }) {
             <a href={loginHere()} role="menuitem" style={{ ...item, fontWeight: 600 }}>
                 Войти
             </a>
-            <Link href="/me" role="menuitem" style={item} onClick={onNavigate}>
+            <Link href="/me/settings/appearance" role="menuitem" style={item} onClick={onNavigate}>
                 Внешний вид
             </Link>
         </>

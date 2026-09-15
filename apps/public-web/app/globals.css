@@ -94,3 +94,41 @@ a:hover {
     border-left: 3px solid var(--tw-border);
     color: var(--tw-text-secondary);
 }
+
+/* The cabinet: tabs over a column of sections beside the section being read, everything under
+   everything else on a phone. Inline styles cannot hold a media query, and this is the only
+   place that needs one. */
+.tw-tabs {
+    display: flex;
+    gap: 24px;
+    padding: 0 28px;
+    border-top: 1px solid var(--tw-border);
+    border-bottom: 1px solid var(--tw-border);
+    overflow-x: auto;
+}
+
+.tw-settings {
+    display: grid;
+    grid-template-columns: 216px 1fr;
+}
+
+.tw-settings-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 18px 14px;
+    border-right: 1px solid var(--tw-border);
+}
+
+@media (max-width: 720px) {
+    .tw-settings {
+        grid-template-columns: 1fr;
+    }
+
+    .tw-settings-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        border-right: none;
+        border-bottom: 1px solid var(--tw-border);
+    }
+}

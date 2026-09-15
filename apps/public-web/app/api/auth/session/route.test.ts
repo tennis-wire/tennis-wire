@@ -54,6 +54,7 @@ describe('GET /api/auth/session', () => {
             userId: 'user-1',
             displayName: 'reader-3fa9c2d1',
             displayNameChosen: false,
+            createdAt: '2026-09-01T10:00:00Z',
         })
 
         const response = await GET(request('signed-in'))
@@ -65,6 +66,7 @@ describe('GET /api/auth/session', () => {
             userId: 'user-1',
             displayName: 'reader-3fa9c2d1',
             displayNameChosen: false,
+            createdAt: '2026-09-01T10:00:00Z',
         })
         expect(JSON.stringify(body)).not.toContain('token')
         expect(response.headers.get('cache-control')).toBe('no-store')
@@ -80,6 +82,7 @@ describe('GET /api/auth/session', () => {
             userId: null,
             displayName: null,
             displayNameChosen: true,
+            createdAt: null,
         })
     })
 })

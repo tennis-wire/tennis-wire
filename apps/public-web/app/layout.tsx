@@ -4,7 +4,6 @@ import { ThemeProvider, bootScript, themeCss } from '@/theme'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import ReaderSessionProvider from '@/components/auth/ReaderSessionProvider'
-import NicknamePrompt from '@/components/auth/NicknamePrompt'
 
 export const metadata: Metadata = {
     title: 'Tennis Wire',
@@ -24,7 +23,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <ThemeProvider>
                     <ReaderSessionProvider>
                         <Header />
-                        <NicknamePrompt />
                         <main
                             style={{
                                 maxWidth: 1200,

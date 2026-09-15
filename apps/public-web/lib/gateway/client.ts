@@ -8,6 +8,7 @@ export type Profile = {
     userId: string
     displayName: string
     displayNameChosen: boolean
+    createdAt: string
 }
 
 // The first call also creates the profile: user-service resolves the identity
