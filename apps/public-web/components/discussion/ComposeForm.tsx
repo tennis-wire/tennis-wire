@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 
+import Avatar from '@/components/Avatar'
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
 import { DiscussionError, NetworkError } from '@/lib/discussion/api'
 import { MAX_LENGTH, MAX_LINKS, normalize, problem } from '@/lib/discussion/compose'
@@ -9,7 +10,7 @@ import { clearDraft, readDraft, saveDraft } from '@/lib/discussion/drafts'
 
 import { formatUntil } from './format'
 import { strings } from './strings'
-import { linkButton, muted } from './styles'
+import { action, linkButton, muted } from './styles'
 
 type Props = {
     // null: nothing to key a draft by (the session carries no user id), so none is kept
@@ -34,27 +35,55 @@ type Failure =
 
 const DRAFT_DELAY_MS = 300
 
+// The box is the form; the field inside it carries no border of its own, so what the reader sees
+// is one place to write rather than a control sitting on the page.
+const box: React.CSSProperties = {
+    border: '1px solid var(--tw-border)',
+    borderRadius: 10,
+    background: 'var(--tw-surface)',
+    padding: '10px 12px',
+}
+
 const field: React.CSSProperties = {
     display: 'block',
     width: '100%',
-    minHeight: 88,
-    padding: 8,
+    minHeight: 64,
+    padding: 0,
     font: 'inherit',
     fontSize: 15,
     lineHeight: 1.5,
     color: 'var(--tw-text)',
-    background: 'var(--tw-surface)',
-    border: '1px solid var(--tw-border)',
-    borderRadius: 6,
+    background: 'transparent',
+    border: 'none',
+    outline: 'none',
     resize: 'vertical',
     boxSizing: 'border-box',
+}
+
+// The same rail a comment stands on, so what the reader is about to write lines up with what he
+// is writing under
+const row: React.CSSProperties = {
+    display: 'flex',
+    gap: 12,
+    alignItems: 'flex-start',
+}
+
+const footer: React.CSSProperties = {
+    display: 'flex',
+    gap: 12,
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTop: '1px solid var(--tw-border)',
+    flexWrap: 'wrap',
 }
 
 const button: React.CSSProperties = {
     font: 'inherit',
     fontSize: 14,
-    padding: '6px 14px',
-    borderRadius: 6,
+    fontWeight: 600,
+    padding: '8px 20px',
+    borderRadius: 20,
     border: '1px solid var(--tw-primary)',
     background: 'var(--tw-primary)',
     color: '#fff',
@@ -90,7 +119,7 @@ export default function ComposeForm({
     onParentDeleted,
     onSessionExpired,
 }: Props) {
-    const { setSession } = useReaderSession()
+    const { session, setSession } = useReaderSession()
     const [text, setText] = useState(() => (draftKey ? (readDraft(draftKey) ?? '') : ''))
     const [sending, setSending] = useState(false)
     const [failure, setFailure] = useState<Failure | null>(null)
@@ -171,89 +200,108 @@ export default function ComposeForm({
         )
     }
 
+    const mine = session?.authenticated ? session.displayName : null
+
     return (
-        <div>
-            <textarea
-                value={text}
-                onChange={(event) => setText(event.target.value)}
-                placeholder={placeholder}
-                aria-label={placeholder}
-                autoFocus={autoFocus}
-                disabled={sending}
-                maxLength={MAX_LENGTH * 2}
-                style={field}
-            />
-            <div
-                style={{
-                    display: 'flex',
-                    gap: 12,
-                    alignItems: 'center',
-                    marginTop: 6,
-                    flexWrap: 'wrap',
-                }}
-            >
-                <button
-                    type="button"
-                    style={button}
-                    disabled={sending || issue !== null}
-                    onClick={submit}
-                >
-                    {sending ? strings.sending : strings.send}
-                </button>
-                {onCancel && (
-                    <button type="button" style={linkButton} disabled={sending} onClick={onCancel}>
-                        {strings.cancel}
-                    </button>
-                )}
-                <span
-                    style={{ ...muted, color: issue === 'long' ? 'var(--tw-live)' : muted.color }}
-                >
-                    {strings.counter(length, MAX_LENGTH)}
-                </span>
-                {issue === 'long' && (
-                    <span style={{ fontSize: 13, color: 'var(--tw-live)' }}>
-                        {strings.tooLong(MAX_LENGTH)}
-                    </span>
-                )}
-                {issue === 'links' && (
-                    <span style={{ fontSize: 13, color: 'var(--tw-live)' }}>
-                        {strings.tooManyLinks(MAX_LINKS)}
-                    </span>
-                )}
-            </div>
-            {failure && (
-                <p style={{ ...muted, margin: '8px 0 0' }}>
-                    {failure.kind === 'network' && (
-                        <>
-                            {strings.sendFailed}{' '}
-                            <button type="button" style={linkButton} onClick={submit}>
-                                {strings.retry}
-                            </button>
-                        </>
-                    )}
-                    {failure.kind === 'rate' && strings.tooOften}
-                    {failure.kind === 'parent' && (
-                        <>
-                            {strings.parentDeleted}{' '}
-                            {onParentDeleted && (
+        <div style={row}>
+            <Avatar name={mine} size={36} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={box}>
+                    <textarea
+                        value={text}
+                        onChange={(event) => setText(event.target.value)}
+                        placeholder={placeholder}
+                        aria-label={placeholder}
+                        autoFocus={autoFocus}
+                        disabled={sending}
+                        maxLength={MAX_LENGTH * 2}
+                        style={field}
+                    />
+                    <div style={footer}>
+                        {issue === 'long' && (
+                            <span style={{ fontSize: 13, color: 'var(--tw-live)' }}>
+                                {strings.tooLong(MAX_LENGTH)}
+                            </span>
+                        )}
+                        {issue === 'links' && (
+                            <span style={{ fontSize: 13, color: 'var(--tw-live)' }}>
+                                {strings.tooManyLinks(MAX_LINKS)}
+                            </span>
+                        )}
+                        {/* The count is only worth the reader's attention as the limit comes up */}
+                        {length > MAX_LENGTH - 200 && (
+                            <span
+                                style={{
+                                    ...muted,
+                                    color: issue === 'long' ? 'var(--tw-live)' : muted.color,
+                                }}
+                            >
+                                {strings.counter(length, MAX_LENGTH)}
+                            </span>
+                        )}
+                        <span
+                            style={{
+                                marginLeft: 'auto',
+                                display: 'flex',
+                                gap: 12,
+                                alignItems: 'center',
+                            }}
+                        >
+                            {onCancel && (
                                 <button
                                     type="button"
-                                    style={linkButton}
-                                    onClick={() => {
-                                        // the text moves to the other form, draft and all
-                                        sent.current = true
-                                        if (draftKey) clearDraft(draftKey)
-                                        onParentDeleted(text)
-                                    }}
+                                    style={action}
+                                    disabled={sending}
+                                    onClick={onCancel}
                                 >
-                                    {strings.postAsNew}
+                                    {strings.cancel}
                                 </button>
                             )}
-                        </>
-                    )}
-                    {failure.kind === 'other' && failure.message}
-                </p>
-            )}
+                            <button
+                                type="button"
+                                style={button}
+                                disabled={sending || issue !== null}
+                                onClick={submit}
+                            >
+                                {sending ? strings.sending : strings.send}
+                            </button>
+                        </span>
+                    </div>
+                </div>
+                {failure && (
+                    <p style={{ ...muted, margin: '8px 0 0' }}>
+                        {failure.kind === 'network' && (
+                            <>
+                                {strings.sendFailed}{' '}
+                                <button type="button" style={linkButton} onClick={submit}>
+                                    {strings.retry}
+                                </button>
+                            </>
+                        )}
+                        {failure.kind === 'rate' && strings.tooOften}
+                        {failure.kind === 'parent' && (
+                            <>
+                                {strings.parentDeleted}{' '}
+                                {onParentDeleted && (
+                                    <button
+                                        type="button"
+                                        style={linkButton}
+                                        onClick={() => {
+                                            // the text moves to the other form, draft and all
+                                            sent.current = true
+                                            if (draftKey) clearDraft(draftKey)
+                                            onParentDeleted(text)
+                                        }}
+                                    >
+                                        {strings.postAsNew}
+                                    </button>
+                                )}
+                            </>
+                        )}
+                        {failure.kind === 'other' && failure.message}
+                    </p>
+                )}
+            </div>
         </div>
     )
 }

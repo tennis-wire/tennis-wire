@@ -11,16 +11,39 @@ import CommentItem, { AuthorName, type Ctx } from './CommentItem'
 import ComposeForm from './ComposeForm'
 import { formatWhen } from './format'
 import { strings } from './strings'
-import { linkButton, muted } from './styles'
+import { action, linkButton, muted } from './styles'
 import { rootedId, useDiscussion } from './useDiscussion'
 
 type Props = { subjectType: string; subjectId: string }
 
-const section: React.CSSProperties = { maxWidth: 760, margin: '40px auto 0' }
+const section: React.CSSProperties = {
+    maxWidth: 760,
+    margin: '48px auto 0',
+    paddingTop: 28,
+    borderTop: '1px solid var(--tw-border)',
+}
+
 const heading: React.CSSProperties = {
     fontFamily: 'var(--tw-font-display)',
     fontSize: 24,
-    margin: '0 0 12px',
+    margin: '0 0 20px',
+}
+
+// Stands where the form would be, so the block does not start with a line of fine print
+const invitation: React.CSSProperties = {
+    margin: 0,
+    padding: '14px 16px',
+    border: '1px solid var(--tw-border)',
+    borderRadius: 10,
+    fontSize: 14,
+    color: 'var(--tw-text-secondary)',
+}
+
+// The chain that led to the comment being read: quoted, so it does not read as the thread itself
+const quote: React.CSSProperties = {
+    borderLeft: '2px solid var(--tw-border)',
+    paddingLeft: 14,
+    marginBottom: 12,
 }
 
 // The comments block. Loads when the reader is about a screen away from it, or at once when the
@@ -158,20 +181,14 @@ function Body({ discussion, ctx, sessionKnown, sessionExpired, draftKey }: BodyP
         const context = view.chain.slice(0, -1)
         return (
             <div>
-                <p style={{ margin: '0 0 12px' }}>
-                    <button type="button" style={linkButton} onClick={backToAll}>
+                <p style={{ margin: '0 0 16px' }}>
+                    <button type="button" style={action} onClick={backToAll}>
                         ← {strings.allComments}
                     </button>
                 </p>
                 {/* Context only: a collapsed comment stays collapsed here, name and all (§9.11) */}
                 {context.length > 0 && (
-                    <div
-                        style={{
-                            borderLeft: '3px solid var(--tw-border)',
-                            paddingLeft: 12,
-                            marginBottom: 8,
-                        }}
-                    >
+                    <div style={quote}>
                         <p style={{ ...muted, margin: '0 0 4px' }}>{strings.inReplyTo}</p>
                         {context.map((comment) => (
                             <div key={comment.id} style={{ padding: '6px 0' }}>
@@ -220,7 +237,7 @@ function Body({ discussion, ctx, sessionKnown, sessionExpired, draftKey }: BodyP
             {/* The form waits for the session to be known: a signed-in reader should not see
                 the invitation to sign in flash first */}
             {sessionKnown && (
-                <div style={{ marginBottom: 16 }}>
+                <div style={{ marginBottom: 24 }}>
                     {ctx.signedIn ? (
                         <ComposeForm
                             draftKey={draftKey}
@@ -230,7 +247,7 @@ function Body({ discussion, ctx, sessionKnown, sessionExpired, draftKey }: BodyP
                             onSessionExpired={ctx.onSessionExpired}
                         />
                     ) : (
-                        <p style={{ ...muted, margin: 0, fontSize: 14 }}>
+                        <p style={invitation}>
                             {sessionExpired ? strings.sessionExpired : strings.signInToComment} ·{' '}
                             <a href={loginHere()} style={{ color: 'var(--tw-primary)' }}>
                                 {strings.signIn}
