@@ -79,6 +79,7 @@ export default function Comments({ subjectType, subjectId }: Props) {
         mutedUnder: discussion.mutedUnder,
         draftKeyFor,
         signedIn,
+        userId,
         onShowReplies: discussion.showReplies,
         onMoreReplies: discussion.moreReplies,
         onReveal: discussion.reveal,
@@ -88,6 +89,7 @@ export default function Comments({ subjectType, subjectId }: Props) {
         onReply: discussion.reply,
         onPromote: discussion.promote,
         onSessionExpired,
+        onRemove: discussion.remove,
     }
 
     return (
@@ -125,6 +127,15 @@ function Body({ discussion, ctx, sessionKnown, sessionExpired, draftKey }: BodyP
                     {state.offline ? strings.offline : strings.loadFailed}{' '}
                     <button type="button" style={linkButton} onClick={load}>
                         {strings.retry}
+                    </button>
+                </p>
+            )
+        case 'gone':
+            return (
+                <p style={muted}>
+                    {strings.gone}{' '}
+                    <button type="button" style={linkButton} onClick={backToAll}>
+                        {strings.allComments}
                     </button>
                 </p>
             )

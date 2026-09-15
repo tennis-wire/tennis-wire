@@ -47,4 +47,12 @@ export const strings = {
     mutedByRecipient: 'Автор комментария вас игнорирует — ваш ответ у него скрыт',
     restrictedUntil: (when: string) => `Вы не можете комментировать до ${when}`,
     restrictedIndefinitely: 'Комментирование недоступно',
+
+    // the comment menu (§8)
+    actions: 'Действия',
+    remove: 'Удалить',
+    confirmRemove: 'Удалить комментарий? Отменить нельзя',
+    confirmRemoveReplies: 'Ответы останутся, а вместо текста будет „Комментарий удалён“',
+    removeFailed: 'Не удалось удалить',
+    gone: 'Комментарий удалён',
 }

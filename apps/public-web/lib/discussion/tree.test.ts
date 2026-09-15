@@ -197,6 +197,51 @@ describe('reduce', () => {
         if (byPost.phase === 'ready') expect(byPost.highlight).toBe('new')
     })
 
+    it('takes a deleted comment out when nothing stands under it, and counts it off the parent', () => {
+        const top = comment({ replyCount: 2 })
+        const a = comment({ inReplyToId: top.id, rootId: top.id })
+        const b = comment({ inReplyToId: top.id, rootId: top.id })
+        let state = reduce(listed([top]), {
+            type: 'branch-loaded',
+            id: top.id,
+            root: { ...top, replies: [a, b] },
+        })
+
+        state = reduce(state, { type: 'deleted', id: a.id })
+
+        expect(items(state)[0].replies?.map((node) => node.comment.id)).toEqual([b.id])
+        expect(items(state)[0].comment.replyCount).toBe(1)
+    })
+
+    it('leaves a placeholder where a deleted comment still has replies', () => {
+        const top = comment({ replyCount: 1 })
+        const state = reduce(listed([top]), { type: 'deleted', id: top.id })
+
+        const node = items(state)[0]
+        expect(node.comment.visibility).toBe('deleted')
+        expect(node.comment.body).toBeUndefined()
+        expect(node.comment.author).toBeUndefined()
+        expect(node.comment.replyCount).toBe(1)
+    })
+
+    it('says a re-rooted comment is gone when the reader deleted it childless', () => {
+        const top = comment()
+        const state = reduce(reduce(initial, { type: 'rooted', chain: [top], root: top }), {
+            type: 'deleted',
+            id: top.id,
+        })
+
+        expect(state.phase).toBe('gone')
+    })
+
+    it('drops a vanished comment without a word', () => {
+        const first = comment({ replyCount: 3 })
+        const second = comment()
+        const state = reduce(listed([first, second]), { type: 'vanished', id: first.id })
+
+        expect(items(state).map((node) => node.comment.id)).toEqual([second.id])
+    })
+
     it('reveals a collapsed comment', () => {
         const hidden = comment({ visibility: 'soft_hidden' })
         const state = reduce(listed([hidden]), { type: 'reveal', id: hidden.id })

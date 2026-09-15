@@ -8,6 +8,7 @@ import {
     branch,
     createComment,
     createReply,
+    deleteComment,
     listTopLevel,
     replies,
 } from '@/lib/discussion/endpoints'
@@ -53,6 +54,10 @@ export type Discussion = {
     // text taken from a reply whose parent is gone, for the top-level form (§5.5)
     seed: Seed | null
     promote: (text: string) => void
+    // the reader's own comment taken down; throws for the caller to explain
+    remove: (id: string) => Promise<void>
+    // a comment the server no longer has, met on the way: out of the tree
+    drop: (id: string) => void
 }
 
 export function useDiscussion(subjectType: string, subjectId: string): Discussion {
@@ -189,6 +194,19 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
         [backToAll]
     )
 
+    const remove = useCallback(async (id: string) => {
+        try {
+            await deleteComment(id)
+        } catch (error) {
+            // already gone, by another tab or by moderation: the outcome is the one asked for
+            if (!(error instanceof DiscussionError && error.status === 404)) throw error
+        }
+        setReplyingTo((open) => (open === id ? null : open))
+        dispatch({ type: 'deleted', id })
+    }, [])
+
+    const drop = useCallback((id: string) => dispatch({ type: 'vanished', id }), [])
+
     useEffect(() => {
         const onHash = () => load()
         window.addEventListener('hashchange', onHash)
@@ -221,5 +239,7 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
         mutedUnder,
         seed,
         promote,
+        remove,
+        drop,
     }
 }

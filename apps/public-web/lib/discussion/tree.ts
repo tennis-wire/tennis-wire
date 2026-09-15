@@ -32,6 +32,8 @@ export type State =
     | { phase: 'failed'; offline: boolean }
     // the comment the URL points at is not there for this viewer
     | { phase: 'missing' }
+    // the comment the view was rooted on is gone, and the reader saw it go (§8.19)
+    | { phase: 'gone' }
     // highlight: the comment the reader was brought to — by a link, or by posting it (§3.29, §4.11)
     | { phase: 'ready'; view: View; highlight: string | null }
 
@@ -52,6 +54,11 @@ export type Action =
     | { type: 'posted'; comment: Comment }
     // the reader's own reply, just accepted, under a comment whose replies are drawn here
     | { type: 'replied'; parentId: string; comment: Comment }
+    // the reader's own comment, just taken down: a placeholder while replies stand under it,
+    // gone otherwise (§8.5–6)
+    | { type: 'deleted'; id: string }
+    // a comment the server no longer has: out of the tree, no word said (§8.17)
+    | { type: 'vanished'; id: string }
 
 export const initial: State = { phase: 'idle' }
 
@@ -80,6 +87,55 @@ function withBranch(node: Node, root: Comment): Node {
         loading: false,
         failed: false,
     }
+}
+
+// A comment taken down with replies still under it: what everyone is shown from then on
+function placeholder(node: Node): Node {
+    const { body: _body, author: _author, ...rest } = node.comment
+    return { ...node, comment: { ...rest, visibility: 'deleted' } }
+}
+
+// A reply counted off a comment
+function lessOne(node: Node, kept: Node[]): Node {
+    const counted = node.replies !== null && kept.length < node.replies.length
+    return {
+        ...node,
+        replies: kept,
+        comment: counted
+            ? { ...node.comment, replyCount: Math.max(0, node.comment.replyCount - 1) }
+            : node.comment,
+    }
+}
+
+// The node out of the forest
+function dropNode(nodes: Node[], id: string): Node[] {
+    if (nodes.some((node) => node.comment.id === id))
+        return nodes.filter((node) => node.comment.id !== id)
+    return nodes.map((node) => {
+        if (node.replies === null) return node
+        const kept = dropNode(node.replies, id)
+        return kept === node.replies ? node : lessOne(node, kept)
+    })
+}
+
+function dropFromView(view: View, id: string): View {
+    if (view.kind === 'list') return { ...view, items: dropNode(view.items, id) }
+    if (view.root.replies === null) return view
+    const kept = dropNode(view.root.replies, id)
+    return kept === view.root.replies ? view : { ...view, root: lessOne(view.root, kept) }
+}
+
+function findNode(view: View, id: string): Node | null {
+    const walk = (nodes: Node[]): Node | null => {
+        for (const node of nodes) {
+            if (node.comment.id === id) return node
+            const below = node.replies === null ? null : walk(node.replies)
+            if (below) return below
+        }
+        return null
+    }
+    if (view.kind === 'list') return walk(view.items)
+    return view.root.comment.id === id ? view.root : walk(view.root.replies ?? [])
 }
 
 function mapNodes(nodes: Node[], id: string, change: (node: Node) => Node): Node[] {
@@ -190,5 +246,19 @@ export function reduce(state: State, action: Action): State {
             }))
             return next.phase === 'ready' ? { ...next, highlight: action.comment.id } : next
         }
+        case 'deleted': {
+            if (state.phase !== 'ready') return state
+            const node = findNode(state.view, action.id)
+            if (!node) return state
+            if (node.comment.replyCount > 0) return inView(state, action.id, placeholder)
+            if (state.view.kind === 'rooted' && state.view.root.comment.id === action.id)
+                return { phase: 'gone' }
+            return { ...state, view: dropFromView(state.view, action.id) }
+        }
+        case 'vanished':
+            if (state.phase !== 'ready') return state
+            if (state.view.kind === 'rooted' && state.view.root.comment.id === action.id)
+                return { phase: 'gone' }
+            return { ...state, view: dropFromView(state.view, action.id) }
     }
 }

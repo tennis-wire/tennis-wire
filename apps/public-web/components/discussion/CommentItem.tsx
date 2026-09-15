@@ -4,6 +4,7 @@ import type { Node } from '@/lib/discussion/tree'
 import type { Author, Comment } from '@/lib/discussion/types'
 
 import CommentBody, { Placeholder, placeholderFor } from './CommentBody'
+import CommentMenu from './CommentMenu'
 import ComposeForm from './ComposeForm'
 import { formatWhen, loginHref } from './format'
 import { strings } from './strings'
@@ -17,6 +18,8 @@ export type Ctx = {
     // the reader's draft key for a form under this comment, or null when none can be kept
     draftKeyFor: (parentId: string) => string | null
     signedIn: boolean
+    // the reader's own id, to tell his comments from the rest; null while unknown
+    userId: string | null
     onShowReplies: (id: string) => void
     onMoreReplies: (id: string, cursor: string | null | undefined) => void
     onReveal: (id: string) => void
@@ -26,6 +29,7 @@ export type Ctx = {
     onReply: (parentId: string, body: string, inline: boolean) => Promise<void>
     onPromote: (text: string) => void
     onSessionExpired: () => void
+    onRemove: (id: string) => Promise<void>
 }
 
 type Props = {
@@ -53,6 +57,7 @@ const byline: React.CSSProperties = {
     display: 'flex',
     gap: 10,
     alignItems: 'baseline',
+    flexWrap: 'wrap',
     fontSize: 13,
 }
 
@@ -84,6 +89,7 @@ export default function CommentItem({ node, inline, ctx }: Props) {
     const readable =
         comment.visibility === 'visible' || (comment.visibility === 'soft_hidden' && node.revealed)
     const replying = ctx.replyingTo === comment.id
+    const own = ctx.userId !== null && comment.author?.id === ctx.userId
 
     return (
         <div id={elementId(comment)} style={ctx.highlight === comment.id ? highlighted : card}>
@@ -103,6 +109,12 @@ export default function CommentItem({ node, inline, ctx }: Props) {
                     <div style={byline}>
                         <AuthorName author={comment.author} />
                         <span style={muted}>{formatWhen(comment.createdAt)}</span>
+                        <CommentMenu
+                            comment={comment}
+                            own={own}
+                            onRemove={() => ctx.onRemove(comment.id)}
+                            onSessionExpired={ctx.onSessionExpired}
+                        />
                     </div>
                     {comment.body !== undefined && <CommentBody body={comment.body} />}
                     <p style={{ margin: '6px 0 0' }}>

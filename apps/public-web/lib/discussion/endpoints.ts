@@ -36,3 +36,7 @@ export function createComment(subjectType: string, subjectId: string, body: stri
 export function createReply(parentId: string, body: string) {
     return write<CommentCreated>('POST', `${COMMENTS}/${parentId}/replies`, { body })
 }
+
+export function deleteComment(id: string) {
+    return write<void>('DELETE', `${COMMENTS}/${id}`)
+}
