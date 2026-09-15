@@ -11,7 +11,7 @@ import CommentMenu from './CommentMenu'
 import ComposeForm from './ComposeForm'
 import { formatWhen } from './format'
 import { strings } from './strings'
-import { linkButton, muted } from './styles'
+import { action, linkButton, muted } from './styles'
 
 // What every comment on the page shares: who is reading, what is open, and the handlers
 export type Ctx = {
@@ -58,11 +58,27 @@ const highlighted: React.CSSProperties = {
 }
 
 // A comment is a rail and a column: the author's circle on the left, everything he wrote on the
-// right. The rail is what the reply thread will hang off.
+// right. Where replies are drawn under it, a thread runs down the rail past them, so the eye can
+// tell a reply to this comment from the next comment along.
 const row: React.CSSProperties = {
     display: 'flex',
     gap: 12,
-    alignItems: 'flex-start',
+    alignItems: 'stretch',
+}
+
+const rail: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    flexShrink: 0,
+}
+
+const thread: React.CSSProperties = {
+    flex: 1,
+    width: 2,
+    marginTop: 8,
+    borderRadius: 1,
+    background: 'var(--tw-border)',
 }
 
 const column: React.CSSProperties = {
@@ -84,13 +100,6 @@ const blank: React.CSSProperties = {
     flexShrink: 0,
     borderRadius: '50%',
     border: '1px dashed var(--tw-border)',
-}
-
-// The circle plus the gap: everything under a comment lines up with its text, not with its author
-const RAIL = 48
-
-const tail: React.CSSProperties = {
-    paddingLeft: RAIL,
 }
 
 const notice: React.CSSProperties = {
@@ -133,18 +142,23 @@ export default function CommentItem({ node, inline, ctx }: Props) {
         comment.visibility === 'visible' || (comment.visibility === 'soft_hidden' && node.revealed)
     const replying = ctx.replyingTo === comment.id
     const own = ctx.userId !== null && comment.author?.id === ctx.userId
+    // a line down to a button would say there is a thread where there is only an offer to load one
+    const threaded = (replying && readable) || (node.replies?.length ?? 0) > 0
 
     return (
         <div id={elementId(comment)} style={ctx.highlight === comment.id ? highlighted : card}>
             <div style={row}>
-                {collapsed || !readable ? <span style={blank} /> : authorFace(comment.author)}
+                <div style={rail}>
+                    {collapsed || !readable ? <span style={blank} /> : authorFace(comment.author)}
+                    {threaded && <span style={thread} />}
+                </div>
                 <div style={column}>
                     {collapsed ? (
                         <p style={{ ...muted, margin: 0, fontSize: 14, minHeight: 36 }}>
                             {strings.ignoring} ·{' '}
                             <button
                                 type="button"
-                                style={linkButton}
+                                style={action}
                                 onClick={() => ctx.onReveal(comment.id)}
                             >
                                 {strings.reveal}
@@ -165,10 +179,10 @@ export default function CommentItem({ node, inline, ctx }: Props) {
                                 />
                             </div>
                             {comment.body !== undefined && <CommentBody body={comment.body} />}
-                            <p style={{ margin: '8px 0 0' }}>
+                            <p style={{ margin: '10px 0 0' }}>
                                 <button
                                     type="button"
-                                    style={linkButton}
+                                    style={action}
                                     onClick={() => ctx.onOpenReply(comment.id)}
                                 >
                                     {strings.reply}
@@ -187,36 +201,35 @@ export default function CommentItem({ node, inline, ctx }: Props) {
                             </Placeholder>
                         </>
                     )}
+                    {replying && readable && (
+                        <div style={{ marginTop: 8 }}>
+                            {ctx.signedIn ? (
+                                <ComposeForm
+                                    draftKey={ctx.draftKeyFor(comment.id)}
+                                    placeholder={strings.yourReply}
+                                    autoFocus
+                                    onSubmit={(body) => ctx.onReply(comment.id, body, inline)}
+                                    onCancel={ctx.onCloseReply}
+                                    onParentDeleted={ctx.onPromote}
+                                    onSessionExpired={ctx.onSessionExpired}
+                                />
+                            ) : (
+                                <p style={{ ...muted, margin: 0 }}>
+                                    {strings.signInToReply} ·{' '}
+                                    <a href={loginHere()} style={{ color: 'var(--tw-primary)' }}>
+                                        {strings.signIn}
+                                    </a>
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {ctx.mutedUnder === comment.id && (
+                        <p style={notice}>{strings.mutedByRecipient}</p>
+                    )}
+
+                    <Replies node={node} inline={inline} ctx={ctx} />
                 </div>
-            </div>
-
-            <div style={tail}>
-                {replying && readable && (
-                    <div style={{ marginTop: 8 }}>
-                        {ctx.signedIn ? (
-                            <ComposeForm
-                                draftKey={ctx.draftKeyFor(comment.id)}
-                                placeholder={strings.yourReply}
-                                autoFocus
-                                onSubmit={(body) => ctx.onReply(comment.id, body, inline)}
-                                onCancel={ctx.onCloseReply}
-                                onParentDeleted={ctx.onPromote}
-                                onSessionExpired={ctx.onSessionExpired}
-                            />
-                        ) : (
-                            <p style={{ ...muted, margin: 0 }}>
-                                {strings.signInToReply} ·{' '}
-                                <a href={loginHere()} style={{ color: 'var(--tw-primary)' }}>
-                                    {strings.signIn}
-                                </a>
-                            </p>
-                        )}
-                    </div>
-                )}
-
-                {ctx.mutedUnder === comment.id && <p style={notice}>{strings.mutedByRecipient}</p>}
-
-                <Replies node={node} inline={inline} ctx={ctx} />
             </div>
         </div>
     )
@@ -245,7 +258,7 @@ function Replies({ node, inline, ctx }: Props) {
                         <span style={muted}>{strings.repliesFailed}</span>{' '}
                         <button
                             type="button"
-                            style={linkButton}
+                            style={action}
                             onClick={() => ctx.onShowReplies(comment.id)}
                         >
                             {strings.retry}
@@ -278,7 +291,7 @@ function Replies({ node, inline, ctx }: Props) {
                     {node.failed && <span style={muted}>{strings.repliesFailed} </span>}
                     <button
                         type="button"
-                        style={linkButton}
+                        style={node.failed ? action : linkButton}
                         disabled={node.loading}
                         onClick={() => ctx.onMoreReplies(comment.id, node.cursor)}
                     >
