@@ -9,7 +9,7 @@ const MODES: { value: ThemeMode; label: string; icon: string; hint: string }[] =
     { value: 'system', label: 'Как в системе', icon: '🖥️', hint: 'Переключается сама' },
 ]
 
-export default function SettingsPage() {
+export default function CabinetPage() {
     const { palette, fontPair, mode, isDark, setPalette, setFontPair, setMode } = useTheme()
 
     return (

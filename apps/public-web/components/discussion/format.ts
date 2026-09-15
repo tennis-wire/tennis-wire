@@ -21,10 +21,3 @@ export function formatWhen(iso: string): string {
 export function formatUntil(iso: string): string {
     return until.format(new Date(iso))
 }
-
-// Where to come back to after signing in: this page, comment and all
-export function loginHref(): string {
-    if (typeof window === 'undefined') return '/api/auth/login'
-    const here = window.location.pathname + window.location.search + window.location.hash
-    return `/api/auth/login?returnTo=${encodeURIComponent(here)}`
-}

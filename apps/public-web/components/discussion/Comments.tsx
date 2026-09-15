@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
+import { loginHere } from '@/lib/auth/loginHref'
 import { draftKey, sweepDrafts } from '@/lib/discussion/drafts'
 
 import CommentBody, { Placeholder, placeholderFor } from './CommentBody'
 import CommentItem, { AuthorName, type Ctx } from './CommentItem'
 import ComposeForm from './ComposeForm'
-import { formatWhen, loginHref } from './format'
+import { formatWhen } from './format'
 import { strings } from './strings'
 import { linkButton, muted } from './styles'
 import { rootedId, useDiscussion } from './useDiscussion'
@@ -231,7 +232,7 @@ function Body({ discussion, ctx, sessionKnown, sessionExpired, draftKey }: BodyP
                     ) : (
                         <p style={{ ...muted, margin: 0, fontSize: 14 }}>
                             {sessionExpired ? strings.sessionExpired : strings.signInToComment} ·{' '}
-                            <a href={loginHref()} style={{ color: 'var(--tw-primary)' }}>
+                            <a href={loginHere()} style={{ color: 'var(--tw-primary)' }}>
                                 {strings.signIn}
                             </a>
                         </p>
