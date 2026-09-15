@@ -1,5 +1,6 @@
 'use client'
 
+import Avatar from '@/components/Avatar'
 import { loginHere } from '@/lib/auth/loginHref'
 import type { ReportReason } from '@/lib/discussion/reasons'
 import type { Node } from '@/lib/discussion/tree'
@@ -44,7 +45,7 @@ type Props = {
 }
 
 const card: React.CSSProperties = {
-    padding: '12px 0',
+    padding: '14px 0',
     borderTop: '1px solid var(--tw-border)',
 }
 
@@ -52,16 +53,45 @@ const highlighted: React.CSSProperties = {
     ...card,
     background: 'color-mix(in srgb, var(--tw-accent-soft) 35%, transparent)',
     margin: '0 -12px',
-    padding: '12px 12px',
+    padding: '14px 12px',
     borderRadius: 6,
+}
+
+// A comment is a rail and a column: the author's circle on the left, everything he wrote on the
+// right. The rail is what the reply thread will hang off.
+const row: React.CSSProperties = {
+    display: 'flex',
+    gap: 12,
+    alignItems: 'flex-start',
+}
+
+const column: React.CSSProperties = {
+    flex: 1,
+    minWidth: 0,
 }
 
 const byline: React.CSSProperties = {
     display: 'flex',
     gap: 10,
-    alignItems: 'baseline',
+    alignItems: 'center',
     flexWrap: 'wrap',
-    fontSize: 13,
+    minHeight: 24,
+}
+
+// Nobody to draw: a placeholder is not signed, and §8.6 means it never was
+const blank: React.CSSProperties = {
+    width: 36,
+    height: 36,
+    flexShrink: 0,
+    borderRadius: '50%',
+    border: '1px dashed var(--tw-border)',
+}
+
+// The circle plus the gap: everything under a comment lines up with its text, not with its author
+const RAIL = 48
+
+const tail: React.CSSProperties = {
+    paddingLeft: RAIL,
 }
 
 const notice: React.CSSProperties = {
@@ -72,13 +102,24 @@ const notice: React.CSSProperties = {
     fontSize: 13,
 }
 
-const name: React.CSSProperties = { fontWeight: 600, color: 'var(--tw-text)' }
+const name: React.CSSProperties = {
+    fontWeight: 600,
+    fontSize: 15,
+    color: 'var(--tw-text)',
+}
 
 export function AuthorName({ author }: { author?: Author }) {
     if (!author) return <span style={name}>{strings.nobody}</span>
+    // §2.8: the label stands instead of the name, and the server sends no name at all
     if ('restricted' in author)
-        return <span style={{ ...muted, fontStyle: 'italic' }}>{strings.restricted}</span>
+        return <span style={{ ...name, color: 'var(--tw-text-muted)' }}>{strings.restricted}</span>
     return <span style={name}>{author.displayName}</span>
+}
+
+// The same circle the header draws, and the same emptiness where there is no author
+function authorFace(author?: Author) {
+    if (!author || 'restricted' in author) return <Avatar size={36} />
+    return <Avatar name={author.displayName} size={36} />
 }
 
 function elementId(comment: Comment) {
@@ -96,79 +137,90 @@ export default function CommentItem({ node, inline, ctx }: Props) {
 
     return (
         <div id={elementId(comment)} style={ctx.highlight === comment.id ? highlighted : card}>
-            {collapsed ? (
-                <p style={{ ...muted, margin: 0, fontSize: 14 }}>
-                    {strings.ignoring} ·{' '}
-                    <button
-                        type="button"
-                        style={linkButton}
-                        onClick={() => ctx.onReveal(comment.id)}
-                    >
-                        {strings.reveal}
-                    </button>
-                </p>
-            ) : readable ? (
-                <>
-                    <div style={byline}>
-                        <AuthorName author={comment.author} />
-                        <span style={muted}>{formatWhen(comment.createdAt)}</span>
-                        <CommentMenu
-                            comment={comment}
-                            own={own}
-                            signedIn={ctx.signedIn}
-                            onRemove={() => ctx.onRemove(comment.id)}
-                            onReport={(reason) => ctx.onReport(comment.id, reason)}
-                            onSessionExpired={ctx.onSessionExpired}
-                        />
-                    </div>
-                    {comment.body !== undefined && <CommentBody body={comment.body} />}
-                    <p style={{ margin: '6px 0 0' }}>
-                        <button
-                            type="button"
-                            style={linkButton}
-                            onClick={() => ctx.onOpenReply(comment.id)}
-                        >
-                            {strings.reply}
-                        </button>
-                    </p>
-                </>
-            ) : (
-                <>
-                    <div style={byline}>
-                        <span style={muted}>{formatWhen(comment.createdAt)}</span>
-                    </div>
-                    <Placeholder>
-                        {placeholderFor(comment.visibility as 'gravestone' | 'deleted' | 'removed')}
-                    </Placeholder>
-                </>
-            )}
-
-            {replying && readable && (
-                <div style={{ marginTop: 8 }}>
-                    {ctx.signedIn ? (
-                        <ComposeForm
-                            draftKey={ctx.draftKeyFor(comment.id)}
-                            placeholder={strings.yourReply}
-                            autoFocus
-                            onSubmit={(body) => ctx.onReply(comment.id, body, inline)}
-                            onCancel={ctx.onCloseReply}
-                            onParentDeleted={ctx.onPromote}
-                            onSessionExpired={ctx.onSessionExpired}
-                        />
-                    ) : (
-                        <p style={{ ...muted, margin: 0 }}>
-                            {strings.signInToReply} ·{' '}
-                            <a href={loginHere()} style={{ color: 'var(--tw-primary)' }}>
-                                {strings.signIn}
-                            </a>
+            <div style={row}>
+                {collapsed || !readable ? <span style={blank} /> : authorFace(comment.author)}
+                <div style={column}>
+                    {collapsed ? (
+                        <p style={{ ...muted, margin: 0, fontSize: 14, minHeight: 36 }}>
+                            {strings.ignoring} ·{' '}
+                            <button
+                                type="button"
+                                style={linkButton}
+                                onClick={() => ctx.onReveal(comment.id)}
+                            >
+                                {strings.reveal}
+                            </button>
                         </p>
+                    ) : readable ? (
+                        <>
+                            <div style={byline}>
+                                <AuthorName author={comment.author} />
+                                <span style={muted}>{formatWhen(comment.createdAt)}</span>
+                                <span style={{ marginLeft: 'auto' }}>
+                                    <CommentMenu
+                                        comment={comment}
+                                        own={own}
+                                        signedIn={ctx.signedIn}
+                                        onRemove={() => ctx.onRemove(comment.id)}
+                                        onReport={(reason) => ctx.onReport(comment.id, reason)}
+                                        onSessionExpired={ctx.onSessionExpired}
+                                    />
+                                </span>
+                            </div>
+                            {comment.body !== undefined && <CommentBody body={comment.body} />}
+                            <p style={{ margin: '8px 0 0' }}>
+                                <button
+                                    type="button"
+                                    style={linkButton}
+                                    onClick={() => ctx.onOpenReply(comment.id)}
+                                >
+                                    {strings.reply}
+                                </button>
+                            </p>
+                        </>
+                    ) : (
+                        <>
+                            <div style={byline}>
+                                <span style={muted}>{formatWhen(comment.createdAt)}</span>
+                            </div>
+                            <Placeholder>
+                                {placeholderFor(
+                                    comment.visibility as 'gravestone' | 'deleted' | 'removed'
+                                )}
+                            </Placeholder>
+                        </>
                     )}
                 </div>
-            )}
+            </div>
 
-            {ctx.mutedUnder === comment.id && <p style={notice}>{strings.mutedByRecipient}</p>}
+            <div style={tail}>
+                {replying && readable && (
+                    <div style={{ marginTop: 8 }}>
+                        {ctx.signedIn ? (
+                            <ComposeForm
+                                draftKey={ctx.draftKeyFor(comment.id)}
+                                placeholder={strings.yourReply}
+                                autoFocus
+                                onSubmit={(body) => ctx.onReply(comment.id, body, inline)}
+                                onCancel={ctx.onCloseReply}
+                                onParentDeleted={ctx.onPromote}
+                                onSessionExpired={ctx.onSessionExpired}
+                            />
+                        ) : (
+                            <p style={{ ...muted, margin: 0 }}>
+                                {strings.signInToReply} ·{' '}
+                                <a href={loginHere()} style={{ color: 'var(--tw-primary)' }}>
+                                    {strings.signIn}
+                                </a>
+                            </p>
+                        )}
+                    </div>
+                )}
 
-            <Replies node={node} inline={inline} ctx={ctx} />
+                {ctx.mutedUnder === comment.id && <p style={notice}>{strings.mutedByRecipient}</p>}
+
+                <Replies node={node} inline={inline} ctx={ctx} />
+            </div>
         </div>
     )
 }
@@ -217,7 +269,7 @@ function Replies({ node, inline, ctx }: Props) {
     }
 
     return (
-        <div style={{ marginLeft: 20, marginTop: 4 }}>
+        <div style={{ marginTop: 4 }}>
             {node.replies.length === 0 && comment.replyCount > 0 && (
                 <p style={{ ...muted, margin: '8px 0 0' }}>{strings.noRepliesLeft}</p>
             )}
