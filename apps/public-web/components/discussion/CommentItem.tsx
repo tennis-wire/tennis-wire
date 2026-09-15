@@ -74,7 +74,6 @@ const byline: React.CSSProperties = {
     display: 'flex',
     gap: 10,
     alignItems: 'center',
-    flexWrap: 'wrap',
     minHeight: 24,
 }
 
@@ -156,16 +155,14 @@ export default function CommentItem({ node, inline, ctx }: Props) {
                             <div style={byline}>
                                 <AuthorName author={comment.author} />
                                 <span style={muted}>{formatWhen(comment.createdAt)}</span>
-                                <span style={{ marginLeft: 'auto' }}>
-                                    <CommentMenu
-                                        comment={comment}
-                                        own={own}
-                                        signedIn={ctx.signedIn}
-                                        onRemove={() => ctx.onRemove(comment.id)}
-                                        onReport={(reason) => ctx.onReport(comment.id, reason)}
-                                        onSessionExpired={ctx.onSessionExpired}
-                                    />
-                                </span>
+                                <CommentMenu
+                                    comment={comment}
+                                    own={own}
+                                    signedIn={ctx.signedIn}
+                                    onRemove={() => ctx.onRemove(comment.id)}
+                                    onReport={(reason) => ctx.onReport(comment.id, reason)}
+                                    onSessionExpired={ctx.onSessionExpired}
+                                />
                             </div>
                             {comment.body !== undefined && <CommentBody body={comment.body} />}
                             <p style={{ margin: '8px 0 0' }}>
