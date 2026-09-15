@@ -32,3 +32,7 @@ export type Comment = {
 export type CommentPage = { items: Comment[]; nextCursor: string | null }
 export type Branch = { root: Comment }
 export type Ancestry = { chain: Comment[] }
+
+// What a POST answers: the comment as its author sees it, and whether the author of the comment
+// replied to ignores him (§5.6)
+export type CommentCreated = { comment: Comment; mutedByRecipient: boolean }

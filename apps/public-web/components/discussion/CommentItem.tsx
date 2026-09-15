@@ -4,20 +4,36 @@ import type { Node } from '@/lib/discussion/tree'
 import type { Author, Comment } from '@/lib/discussion/types'
 
 import CommentBody, { Placeholder, placeholderFor } from './CommentBody'
-import { formatWhen } from './format'
+import ComposeForm from './ComposeForm'
+import { formatWhen, loginHref } from './format'
 import { strings } from './strings'
 import { linkButton, muted } from './styles'
+
+// What every comment on the page shares: who is reading, what is open, and the handlers
+export type Ctx = {
+    highlight: string | null
+    replyingTo: string | null
+    mutedUnder: string | null
+    // the reader's draft key for a form under this comment, or null when none can be kept
+    draftKeyFor: (parentId: string) => string | null
+    signedIn: boolean
+    onShowReplies: (id: string) => void
+    onMoreReplies: (id: string, cursor: string | null | undefined) => void
+    onReveal: (id: string) => void
+    onReroot: (id: string) => void
+    onOpenReply: (id: string) => void
+    onCloseReply: () => void
+    onReply: (parentId: string, body: string, inline: boolean) => Promise<void>
+    onPromote: (text: string) => void
+    onSessionExpired: () => void
+}
 
 type Props = {
     node: Node
     // whether the direct replies are drawn under this comment. Where they are not, the reader
     // gets there by re-rooting on it (readers.md: the first level inline, deeper by re-root)
     inline: boolean
-    highlighted?: boolean
-    onShowReplies: (id: string) => void
-    onMoreReplies: (id: string, cursor: string | null | undefined) => void
-    onReveal: (id: string) => void
-    onReroot: (id: string) => void
+    ctx: Ctx
 }
 
 const card: React.CSSProperties = {
@@ -25,7 +41,7 @@ const card: React.CSSProperties = {
     borderTop: '1px solid var(--tw-border)',
 }
 
-const highlight: React.CSSProperties = {
+const highlighted: React.CSSProperties = {
     ...card,
     background: 'color-mix(in srgb, var(--tw-accent-soft) 35%, transparent)',
     margin: '0 -12px',
@@ -37,6 +53,14 @@ const byline: React.CSSProperties = {
     display: 'flex',
     gap: 10,
     alignItems: 'baseline',
+    fontSize: 13,
+}
+
+const notice: React.CSSProperties = {
+    margin: '8px 0 0',
+    padding: '6px 10px',
+    borderRadius: 6,
+    background: 'var(--tw-bg-alt)',
     fontSize: 13,
 }
 
@@ -53,26 +77,24 @@ function elementId(comment: Comment) {
     return `comment-${comment.id}`
 }
 
-export default function CommentItem({
-    node,
-    inline,
-    highlighted = false,
-    onShowReplies,
-    onMoreReplies,
-    onReveal,
-    onReroot,
-}: Props) {
+export default function CommentItem({ node, inline, ctx }: Props) {
     const { comment } = node
     const collapsed = comment.visibility === 'soft_hidden' && !node.revealed
+    // a live comment: the one kind that takes a reply (§5.2)
     const readable =
         comment.visibility === 'visible' || (comment.visibility === 'soft_hidden' && node.revealed)
+    const replying = ctx.replyingTo === comment.id
 
     return (
-        <div id={elementId(comment)} style={highlighted ? highlight : card}>
+        <div id={elementId(comment)} style={ctx.highlight === comment.id ? highlighted : card}>
             {collapsed ? (
                 <p style={{ ...muted, margin: 0, fontSize: 14 }}>
                     {strings.ignoring} ·{' '}
-                    <button type="button" style={linkButton} onClick={() => onReveal(comment.id)}>
+                    <button
+                        type="button"
+                        style={linkButton}
+                        onClick={() => ctx.onReveal(comment.id)}
+                    >
                         {strings.reveal}
                     </button>
                 </p>
@@ -83,6 +105,15 @@ export default function CommentItem({
                         <span style={muted}>{formatWhen(comment.createdAt)}</span>
                     </div>
                     {comment.body !== undefined && <CommentBody body={comment.body} />}
+                    <p style={{ margin: '6px 0 0' }}>
+                        <button
+                            type="button"
+                            style={linkButton}
+                            onClick={() => ctx.onOpenReply(comment.id)}
+                        >
+                            {strings.reply}
+                        </button>
+                    </p>
                 </>
             ) : (
                 <>
@@ -95,34 +126,45 @@ export default function CommentItem({
                 </>
             )}
 
-            <Replies
-                node={node}
-                inline={inline}
-                onShowReplies={onShowReplies}
-                onMoreReplies={onMoreReplies}
-                onReveal={onReveal}
-                onReroot={onReroot}
-            />
+            {replying && readable && (
+                <div style={{ marginTop: 8 }}>
+                    {ctx.signedIn ? (
+                        <ComposeForm
+                            draftKey={ctx.draftKeyFor(comment.id)}
+                            placeholder={strings.yourReply}
+                            autoFocus
+                            onSubmit={(body) => ctx.onReply(comment.id, body, inline)}
+                            onCancel={ctx.onCloseReply}
+                            onParentDeleted={ctx.onPromote}
+                            onSessionExpired={ctx.onSessionExpired}
+                        />
+                    ) : (
+                        <p style={{ ...muted, margin: 0 }}>
+                            {strings.signInToReply} ·{' '}
+                            <a href={loginHref()} style={{ color: 'var(--tw-primary)' }}>
+                                {strings.signIn}
+                            </a>
+                        </p>
+                    )}
+                </div>
+            )}
+
+            {ctx.mutedUnder === comment.id && <p style={notice}>{strings.mutedByRecipient}</p>}
+
+            <Replies node={node} inline={inline} ctx={ctx} />
         </div>
     )
 }
 
-function Replies({
-    node,
-    inline,
-    onShowReplies,
-    onMoreReplies,
-    onReveal,
-    onReroot,
-}: Omit<Props, 'highlighted'>) {
+function Replies({ node, inline, ctx }: Props) {
     const { comment } = node
     if (comment.replyCount === 0 && node.replies === null) return null
 
-    // Not drawn here: one control, and it re-roots (§ layout)
+    // Not drawn here: one control, and it re-roots
     if (!inline) {
         return (
             <p style={{ margin: '8px 0 0' }}>
-                <button type="button" style={linkButton} onClick={() => onReroot(comment.id)}>
+                <button type="button" style={linkButton} onClick={() => ctx.onReroot(comment.id)}>
                     {strings.showReplies(comment.replyCount)}
                 </button>
             </p>
@@ -138,7 +180,7 @@ function Replies({
                         <button
                             type="button"
                             style={linkButton}
-                            onClick={() => onShowReplies(comment.id)}
+                            onClick={() => ctx.onShowReplies(comment.id)}
                         >
                             {strings.retry}
                         </button>
@@ -148,7 +190,7 @@ function Replies({
                         type="button"
                         style={linkButton}
                         disabled={node.loading}
-                        onClick={() => onShowReplies(comment.id)}
+                        onClick={() => ctx.onShowReplies(comment.id)}
                     >
                         {node.loading ? strings.loading : strings.showReplies(comment.replyCount)}
                     </button>
@@ -163,15 +205,7 @@ function Replies({
                 <p style={{ ...muted, margin: '8px 0 0' }}>{strings.noRepliesLeft}</p>
             )}
             {node.replies.map((reply) => (
-                <CommentItem
-                    key={reply.comment.id}
-                    node={reply}
-                    inline={false}
-                    onShowReplies={onShowReplies}
-                    onMoreReplies={onMoreReplies}
-                    onReveal={onReveal}
-                    onReroot={onReroot}
-                />
+                <CommentItem key={reply.comment.id} node={reply} inline={false} ctx={ctx} />
             ))}
             {node.hasMore && (
                 <p style={{ margin: '8px 0 0' }}>
@@ -180,7 +214,7 @@ function Replies({
                         type="button"
                         style={linkButton}
                         disabled={node.loading}
-                        onClick={() => onMoreReplies(comment.id, node.cursor)}
+                        onClick={() => ctx.onMoreReplies(comment.id, node.cursor)}
                     >
                         {node.loading
                             ? strings.loading

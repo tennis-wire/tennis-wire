@@ -141,6 +141,62 @@ describe('reduce', () => {
         expect(items(state)[1].failed).toBe(true)
     })
 
+    it("puts the reader's own comment first and lights it up", () => {
+        const older = comment()
+        const mine = comment()
+        const state = reduce(listed([older]), { type: 'posted', comment: mine })
+
+        expect(items(state).map((node) => node.comment.id)).toEqual([mine.id, older.id])
+        if (state.phase === 'ready') expect(state.highlight).toBe(mine.id)
+    })
+
+    it("adds the reader's own reply and counts it", () => {
+        const top = comment({ replyCount: 2 })
+        const mine = comment({ inReplyToId: top.id, rootId: top.id })
+        const state = reduce(listed([top]), { type: 'replied', parentId: top.id, comment: mine })
+
+        const node = items(state)[0]
+        expect(node.comment.replyCount).toBe(3)
+        expect(node.replies?.map((reply) => reply.comment.id)).toEqual([mine.id])
+        // the two older ones are still to be read
+        expect(node.hasMore).toBe(true)
+        expect(node.cursor).toBeUndefined()
+        if (state.phase === 'ready') expect(state.highlight).toBe(mine.id)
+    })
+
+    it("appends the reader's own reply to replies already on show", () => {
+        const top = comment({ replyCount: 1 })
+        const older = comment({ inReplyToId: top.id, rootId: top.id })
+        const mine = comment({ inReplyToId: top.id, rootId: top.id })
+        let state = reduce(listed([top]), {
+            type: 'branch-loaded',
+            id: top.id,
+            root: { ...top, replies: [older] },
+        })
+        state = reduce(state, { type: 'replied', parentId: top.id, comment: mine })
+
+        expect(items(state)[0].replies?.map((reply) => reply.comment.id)).toEqual([
+            older.id,
+            mine.id,
+        ])
+        expect(items(state)[0].hasMore).toBe(false)
+    })
+
+    it('lights up the root of a re-rooted view, or the comment it was asked to', () => {
+        const top = comment()
+        const target = comment({ inReplyToId: top.id, rootId: top.id })
+        const byLink = reduce(initial, { type: 'rooted', chain: [top, target], root: target })
+        const byPost = reduce(initial, {
+            type: 'rooted',
+            chain: [top, target],
+            root: target,
+            highlight: 'new',
+        })
+
+        if (byLink.phase === 'ready') expect(byLink.highlight).toBe(target.id)
+        if (byPost.phase === 'ready') expect(byPost.highlight).toBe('new')
+    })
+
     it('reveals a collapsed comment', () => {
         const hidden = comment({ visibility: 'soft_hidden' })
         const state = reduce(listed([hidden]), { type: 'reveal', id: hidden.id })

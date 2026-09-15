@@ -1,10 +1,14 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
+import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
+import { draftKey, sweepDrafts } from '@/lib/discussion/drafts'
 
 import CommentBody, { Placeholder, placeholderFor } from './CommentBody'
-import CommentItem, { AuthorName } from './CommentItem'
-import { formatWhen } from './format'
+import CommentItem, { AuthorName, type Ctx } from './CommentItem'
+import ComposeForm from './ComposeForm'
+import { formatWhen, loginHref } from './format'
 import { strings } from './strings'
 import { linkButton, muted } from './styles'
 import { rootedId, useDiscussion } from './useDiscussion'
@@ -22,10 +26,14 @@ const heading: React.CSSProperties = {
 // URL points at a comment; the article above it does not wait for any of this (§3.1–2).
 export default function Comments({ subjectType, subjectId }: Props) {
     const discussion = useDiscussion(subjectType, subjectId)
+    const { session } = useReaderSession()
     const { state, load } = discussion
     const anchor = useRef<HTMLElement>(null)
+    // the last write met a session that was no longer there (§4.19)
+    const [sessionExpired, setSessionExpired] = useState(false)
 
     useEffect(() => {
+        sweepDrafts()
         if (rootedId(window.location.hash)) {
             load()
             return
@@ -50,25 +58,62 @@ export default function Comments({ subjectType, subjectId }: Props) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [subjectId])
 
-    // The comment the URL points at goes into view once it is drawn
-    const rootId =
-        state.phase === 'ready' && state.view.kind === 'rooted' ? state.view.root.comment.id : null
+    // The comment the reader was brought to goes into view once it is drawn
+    const highlight = state.phase === 'ready' ? state.highlight : null
     useEffect(() => {
-        if (rootId)
-            document.getElementById(`comment-${rootId}`)?.scrollIntoView({ block: 'center' })
-    }, [rootId])
+        if (highlight)
+            document.getElementById(`comment-${highlight}`)?.scrollIntoView({ block: 'center' })
+    }, [highlight])
+
+    const signedIn = session?.authenticated === true
+    const userId = session?.authenticated ? session.userId : null
+    const draftKeyFor = useCallback(
+        (parentId: string | null) => (userId ? draftKey(userId, subjectId, parentId) : null),
+        [userId, subjectId]
+    )
+    const onSessionExpired = useCallback(() => setSessionExpired(true), [])
+
+    const ctx: Ctx = {
+        highlight,
+        replyingTo: discussion.replyingTo,
+        mutedUnder: discussion.mutedUnder,
+        draftKeyFor,
+        signedIn,
+        onShowReplies: discussion.showReplies,
+        onMoreReplies: discussion.moreReplies,
+        onReveal: discussion.reveal,
+        onReroot: discussion.reroot,
+        onOpenReply: discussion.openReply,
+        onCloseReply: discussion.closeReply,
+        onReply: discussion.reply,
+        onPromote: discussion.promote,
+        onSessionExpired,
+    }
 
     return (
         <section ref={anchor} id="comments" style={section} aria-live="polite">
             <h2 style={heading}>{strings.heading}</h2>
-            <Body discussion={discussion} />
+            <Body
+                discussion={discussion}
+                ctx={ctx}
+                sessionKnown={session !== null}
+                sessionExpired={sessionExpired}
+                draftKey={draftKeyFor(null)}
+            />
         </section>
     )
 }
 
-function Body({ discussion }: { discussion: ReturnType<typeof useDiscussion> }) {
-    const { state, load, loadMore, showReplies, moreReplies, reveal, reroot, backToAll } =
-        discussion
+type BodyProps = {
+    discussion: ReturnType<typeof useDiscussion>
+    ctx: Ctx
+    sessionKnown: boolean
+    sessionExpired: boolean
+    draftKey: string | null
+}
+
+function Body({ discussion, ctx, sessionKnown, sessionExpired, draftKey }: BodyProps) {
+    const { state, load, loadMore, reroot, backToAll, post, seed } = discussion
 
     switch (state.phase) {
         case 'idle':
@@ -95,12 +140,6 @@ function Body({ discussion }: { discussion: ReturnType<typeof useDiscussion> }) 
     }
 
     const { view } = state
-    const handlers = {
-        onShowReplies: showReplies,
-        onMoreReplies: moreReplies,
-        onReveal: reveal,
-        onReroot: reroot,
-    }
 
     if (view.kind === 'rooted') {
         const context = view.chain.slice(0, -1)
@@ -158,18 +197,42 @@ function Body({ discussion }: { discussion: ReturnType<typeof useDiscussion> }) 
                         ))}
                     </div>
                 )}
-                <CommentItem node={view.root} inline highlighted {...handlers} />
+                <CommentItem node={view.root} inline ctx={ctx} />
             </div>
         )
     }
 
-    if (view.items.length === 0) return <p style={muted}>{strings.none}</p>
-
     return (
         <div>
-            {view.items.map((node) => (
-                <CommentItem key={node.comment.id} node={node} inline {...handlers} />
-            ))}
+            {/* The form waits for the session to be known: a signed-in reader should not see
+                the invitation to sign in flash first */}
+            {sessionKnown && (
+                <div style={{ marginBottom: 16 }}>
+                    {ctx.signedIn ? (
+                        <ComposeForm
+                            draftKey={draftKey}
+                            seed={seed}
+                            placeholder={strings.yourComment}
+                            onSubmit={post}
+                            onSessionExpired={ctx.onSessionExpired}
+                        />
+                    ) : (
+                        <p style={{ ...muted, margin: 0, fontSize: 14 }}>
+                            {sessionExpired ? strings.sessionExpired : strings.signInToComment} ·{' '}
+                            <a href={loginHref()} style={{ color: 'var(--tw-primary)' }}>
+                                {strings.signIn}
+                            </a>
+                        </p>
+                    )}
+                </div>
+            )}
+            {view.items.length === 0 ? (
+                <p style={muted}>{strings.none}</p>
+            ) : (
+                view.items.map((node) => (
+                    <CommentItem key={node.comment.id} node={node} inline ctx={ctx} />
+                ))
+            )}
             {view.nextCursor && (
                 <p style={{ margin: '12px 0 0' }}>
                     {view.more === 'failed' && <span style={muted}>{strings.moreFailed} </span>}

@@ -1,5 +1,7 @@
 'use client'
 
+import { clearDraftsOf } from '@/lib/discussion/drafts'
+
 import { useReaderSession } from './ReaderSessionProvider'
 
 const slot: React.CSSProperties = {
@@ -43,8 +45,18 @@ export default function ReaderMenu() {
         )
     }
 
+    // Drafts leave with the reader (§4.15 on a shared computer); the form goes on to the
+    // server as before, JS or not
+    const userId = session.userId
     return (
-        <form method="post" action="/api/auth/logout" style={slot}>
+        <form
+            method="post"
+            action="/api/auth/logout"
+            style={slot}
+            onSubmit={() => {
+                if (userId) clearDraftsOf(userId)
+            }}
+        >
             <span style={{ ...link, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {session.displayName ?? 'Читатель'}
             </span>

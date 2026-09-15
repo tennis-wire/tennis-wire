@@ -1,6 +1,5 @@
 // The one place a request to the discussion proxy is made from. Reads get a timeout and a single
-// silent retry; there is deliberately no write here yet — a write must not be retried by the
-// client, since the service has no idempotency key and a retry after a timeout can land twice.
+// silent retry; writes get the timeout only.
 
 export const TIMEOUT_MS = 10_000
 export const RETRY_AFTER_MS = 3_000
@@ -88,4 +87,11 @@ export async function read<T>(path: string): Promise<T> {
         await sleep(RETRY_AFTER_MS)
         return once<T>('GET', path)
     }
+}
+
+// A write: one request and no retry. The service has no idempotency key, so a second try after a
+// timeout can land the same comment twice; a retry is the reader's decision, by hand (§4.12 is
+// a debt in readers.md §5 for that reason).
+export function write<T>(method: 'POST' | 'DELETE', path: string, body?: unknown): Promise<T> {
+    return once<T>(method, path, body)
 }

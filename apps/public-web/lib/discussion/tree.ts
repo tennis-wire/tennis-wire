@@ -32,7 +32,8 @@ export type State =
     | { phase: 'failed'; offline: boolean }
     // the comment the URL points at is not there for this viewer
     | { phase: 'missing' }
-    | { phase: 'ready'; view: View }
+    // highlight: the comment the reader was brought to — by a link, or by posting it (§3.29, §4.11)
+    | { phase: 'ready'; view: View; highlight: string | null }
 
 export type Action =
     | { type: 'loading' }
@@ -41,12 +42,16 @@ export type Action =
     | { type: 'list'; page: CommentPage }
     | { type: 'more'; status: Status }
     | { type: 'more-loaded'; page: CommentPage }
-    | { type: 'rooted'; chain: Comment[]; root: Comment }
+    | { type: 'rooted'; chain: Comment[]; root: Comment; highlight?: string }
     | { type: 'replies-loading'; id: string }
     | { type: 'replies-failed'; id: string }
     | { type: 'branch-loaded'; id: string; root: Comment }
     | { type: 'replies-loaded'; id: string; page: CommentPage }
     | { type: 'reveal'; id: string }
+    // the reader's own top-level comment, just accepted: first, whatever the order (§3.15)
+    | { type: 'posted'; comment: Comment }
+    // the reader's own reply, just accepted, under a comment whose replies are drawn here
+    | { type: 'replied'; parentId: string; comment: Comment }
 
 export const initial: State = { phase: 'idle' }
 
@@ -110,6 +115,7 @@ export function reduce(state: State, action: Action): State {
         case 'list':
             return {
                 phase: 'ready',
+                highlight: null,
                 view: {
                     kind: 'list',
                     items: action.page.items.map(leaf),
@@ -134,6 +140,7 @@ export function reduce(state: State, action: Action): State {
         case 'rooted':
             return {
                 phase: 'ready',
+                highlight: action.highlight ?? action.root.id,
                 view: {
                     kind: 'rooted',
                     chain: action.chain,
@@ -161,5 +168,27 @@ export function reduce(state: State, action: Action): State {
             }))
         case 'reveal':
             return inView(state, action.id, (node) => ({ ...node, revealed: true }))
+        case 'posted':
+            if (state.phase !== 'ready' || state.view.kind !== 'list') return state
+            return {
+                ...state,
+                highlight: action.comment.id,
+                view: { ...state.view, items: [leaf(action.comment), ...state.view.items] },
+            }
+        case 'replied': {
+            if (state.phase !== 'ready') return state
+            const next = inView(state, action.parentId, (node) => ({
+                ...node,
+                comment: { ...node.comment, replyCount: node.comment.replyCount + 1 },
+                // Replies not on show yet: the reader's own goes up alone, the older ones stay
+                // behind "show more", which reads them from the first page (§3.15 for replies)
+                replies:
+                    node.replies === null
+                        ? [leaf(action.comment)]
+                        : [...node.replies, leaf(action.comment)],
+                hasMore: node.replies === null ? node.comment.replyCount > 0 : node.hasMore,
+            }))
+            return next.phase === 'ready' ? { ...next, highlight: action.comment.id } : next
+        }
     }
 }
