@@ -185,22 +185,34 @@ export default function ComposeForm({
         }
     }
 
+    const mine = session?.authenticated ? session.displayName : null
+
     if (restrictedUntil !== undefined) {
         return (
-            <div>
-                <p style={plate}>
-                    {restrictedUntil
-                        ? strings.restrictedUntil(formatUntil(restrictedUntil))
-                        : strings.restrictedIndefinitely}
-                </p>
-                {text !== '' && (
-                    <textarea readOnly value={text} style={field} aria-label={placeholder} />
-                )}
+            <div style={row}>
+                <Avatar name={mine} size={36} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={plate}>
+                        {restrictedUntil
+                            ? strings.restrictedUntil(formatUntil(restrictedUntil))
+                            : strings.restrictedIndefinitely}
+                    </p>
+                    {/* §4.22 — what he had written stays in front of him, in the box it was
+                        written in, just not editable */}
+                    {text !== '' && (
+                        <div style={box}>
+                            <textarea
+                                readOnly
+                                value={text}
+                                style={field}
+                                aria-label={placeholder}
+                            />
+                        </div>
+                    )}
+                </div>
             </div>
         )
     }
-
-    const mine = session?.authenticated ? session.displayName : null
 
     return (
         <div style={row}>
