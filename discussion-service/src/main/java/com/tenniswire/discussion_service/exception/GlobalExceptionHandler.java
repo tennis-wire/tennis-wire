@@ -18,6 +18,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse.of("NOT_FOUND", ex.getMessage()));
     }
 
+    @ExceptionHandler(HiddenByBlockException.class)
+    public ResponseEntity<ErrorResponse> handleHiddenByBlock(HiddenByBlockException ex) {
+        // 404, so a client reading only the status still says "not found"; the ids tell a client
+        // that knows better whose block to offer to change
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse(
+                        "HIDDEN_BY_BLOCK",
+                        ex.getMessage(),
+                        null,
+                        Map.of("blockedIds", ex.blockedIds()),
+                        Instant.now()));
+    }
+
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException ex) {
         // Not NOT_FOUND: on the same path that means there is no block, here the person is missing
