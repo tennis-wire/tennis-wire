@@ -1,3 +1,4 @@
+import type { BlockMode } from '@/lib/discussion/modes'
 import type { ReportReason } from '@/lib/discussion/reasons'
 
 // Reader-facing wording of the comments block, as discussion-rules.md fixes it. Russian only for
@@ -75,4 +76,39 @@ export const strings = {
     alreadyRemoved: 'Комментарий уже удалён модерацией',
     signInToReport: 'Войдите, чтобы пожаловаться',
     close: 'Закрыть',
+
+    // ignoring (§9)
+    modes: {
+        soft: 'Сворачивать',
+        gravestone: 'Скрывать',
+        subtree_removal: 'Убирать с ветками',
+    } satisfies Record<BlockMode, string>,
+    modeHints: {
+        soft: 'Комментарий свёрнут, его можно раскрыть',
+        gravestone: 'Вместо комментария — «Скрытый комментарий»',
+        subtree_removal: 'Не видно ни комментария, ни ответов под ним',
+    } satisfies Record<BlockMode, string>,
+    ignoreMode: 'Режим игнора',
+    // §9.12
+    subtreeWarning: 'Пропадут и ответы на комментарии этого автора, включая ваши',
+    save: 'Сохранить',
+    saving: 'Сохраняем…',
+    saveFailed: 'Не удалось сохранить',
+    ignoreListFull: 'Игнор-лист заполнен: уберите из него кого-нибудь',
+
+    // the ignore list in the cabinet (§9.5, §9.7)
+    ignoreList: 'Игнор-лист',
+    ignoreListAbout:
+        'Люди, чьи комментарии вы сворачиваете, скрываете или не видите вовсе. Они об этом не узнают.',
+    ignoreListEmpty:
+        'Вы никого не игнорируете. Игнорировать автора можно из меню «···» у его комментария.',
+    ignoreListFailed: 'Не удалось загрузить игнор-лист',
+    signInToIgnoreList: 'Войдите, чтобы увидеть свой игнор-лист',
+    ignoringSince: (day: string) => `с ${day}`,
+    changeMode: 'Изменить',
+    unignore: 'Не игнорировать',
+    unignoreFailed: 'Не удалось снять игнор',
+    notIgnoring: 'Больше не игнорируете',
+    restore: 'Вернуть',
+    restoreFailed: 'Не удалось вернуть',
 }

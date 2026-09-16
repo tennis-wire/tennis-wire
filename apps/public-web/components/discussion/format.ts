@@ -14,10 +14,21 @@ const until = new Intl.DateTimeFormat('ru-RU', {
     minute: '2-digit',
 })
 
+// «16 сентября 2026 г.» — a day, where the hour says nothing
+const day = new Intl.DateTimeFormat('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+})
+
 export function formatWhen(iso: string): string {
     return dateTime.format(new Date(iso))
 }
 
 export function formatUntil(iso: string): string {
     return until.format(new Date(iso))
+}
+
+export function formatDay(iso: string): string {
+    return day.format(new Date(iso))
 }
