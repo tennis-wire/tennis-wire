@@ -242,6 +242,16 @@ describe('reduce', () => {
         expect(items(state).map((node) => node.comment.id)).toEqual([second.id])
     })
 
+    it('turns a view rooted on a comment found hidden by the ignore into the message', () => {
+        const top = comment({ replyCount: 1 })
+        const target = comment({ inReplyToId: top.id, rootId: top.id })
+        const rooted = reduce(listed([top]), { type: 'rooted', chain: [top, target], root: target })
+
+        const state = reduce(rooted, { type: 'vanished', id: target.id, blockedIds: ['u1'] })
+
+        expect(state).toEqual({ phase: 'hidden', blockedIds: ['u1'] })
+    })
+
     it('says whose blocks hide a branch a link leads into, and lets the view go', () => {
         const state = reduce(listed([comment()]), { type: 'hidden', blockedIds: ['u1', 'u2'] })
 

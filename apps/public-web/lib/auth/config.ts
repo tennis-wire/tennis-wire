@@ -21,7 +21,7 @@ let discovered: Promise<client.Configuration> | undefined
 /**
  * Discovery is a network call to Keycloak; the result serves the whole process.
  * The promise is cached rather than the value, so concurrent first requests
- * share one call — but a rejected one is dropped, or a Keycloak that was slow
+ * share one call. A rejected one is dropped, though, or a Keycloak that was slow
  * to start would keep the app broken until it restarts.
  */
 export function oidcConfig(): Promise<client.Configuration> {

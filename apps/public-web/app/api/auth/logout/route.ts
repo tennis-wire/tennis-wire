@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const session = await readSession(request.cookies.get(SESSION_COOKIE)?.value)
 
     if (session) {
-        // Ending the Keycloak session does not touch an offline token — that is
+        // Ending the Keycloak session does not touch an offline token: that is
         // the point of one. Without this the reader logs out and the refresh
         // token in the cookie they just dropped keeps working for thirty days.
         try {

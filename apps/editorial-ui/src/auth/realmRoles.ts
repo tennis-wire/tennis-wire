@@ -2,7 +2,7 @@
 //
 // The id token is the one issued to this client, so its claims are a contract
 // with it. Realm roles also travel in the access token, but that one is
-// addressed to the services and this app has no business opening it — see the
+// addressed to the services and this app has no business opening it. See the
 // realm-roles-in-id-token mapper on the editorial-ui client.
 //
 // None of this is a control. It decides what to offer, never what is allowed:

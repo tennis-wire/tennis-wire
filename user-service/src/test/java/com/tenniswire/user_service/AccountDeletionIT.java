@@ -57,7 +57,7 @@ class AccountDeletionIT {
         deletions.request(userId);
 
         verify(keycloak).stripAndDisable(subject);
-        // the rules promise the comments disappear at once, not when the job gets round to it —
+        // the rules promise the comments disappear at once, not when the job gets round to it:
         // started here and not waited on, so it is watched for rather than asserted outright
         verify(traces, timeout(5_000)).erase(userId);
         var record = pending.findById(userId).orElseThrow();

@@ -36,7 +36,7 @@ async function loadUpTo(page: number): Promise<Loaded> {
 }
 
 // The queue, deliberately plain: a flat list, no layout work. What it does have
-// to get right is which decisions it offers — a comment its author deleted can
+// to get right is which decisions it offers: a comment its author deleted can
 // be counted against him or let go, but not removed a second time
 export default function ModerationPage() {
     const [entries, setEntries] = useState<QueueEntry[]>([])

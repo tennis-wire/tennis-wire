@@ -11,8 +11,7 @@ public enum Visibility {
     DELETED("deleted"),
     /**
      * Taken down by moderation. The same placeholder as a deletion, told apart so the client can
-     * say which it was (discussion-rules §11.8); the author gets no other view of it than anyone
-     * else (§11.12).
+     * say which it was; the author gets no other view of it than anyone else.
      */
     REMOVED("removed");
 

@@ -37,7 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class CommentService {
 
-    /** What the listing hands out when the caller names no size of its own (readers.md §1.7). */
+    /** What the listing hands out when the caller names no size of its own. */
     private static final int DEFAULT_LIMIT = 50;
 
     // A ceiling rather than a rejection: the parameter arrives from outside, and without one a
@@ -103,9 +103,8 @@ public class CommentService {
         assertMayComment(authorId);
         var parent = findOrThrow(parentId);
         // A gravestone is kept to hold up what is already under it, not to gather more. It has no
-        // reply button (discussion-rules §5.2), so this is someone whose form was open while the
-        // comment came down - and letting it through would keep alive a node that was about to
-        // collapse under §8.7.
+        // reply button, so this is someone whose form was open while the comment came down - and
+        // letting it through would keep alive a node that was about to collapse.
         if (parent.isDeleted()) {
             throw new ParentDeletedException(parentId);
         }
@@ -285,7 +284,7 @@ public class CommentService {
         // down straight from the comment endpoint, with no card ever opened.
         reports.closeOpen(comment.id(), ReportResolution.HIDDEN, moderatorId);
         // The row stays, pinned by the very column that records the removal, but the reader stops
-        // being shown it once nothing is left underneath (§11.7). The collapse is what carries that
+        // being shown it once nothing is left underneath. The collapse is what carries that
         // upward: the counts come down, and a placeholder above that held nothing else goes with it.
         comments.flush();
         collapse.of(List.of(comment), Set.of(comment.id()));

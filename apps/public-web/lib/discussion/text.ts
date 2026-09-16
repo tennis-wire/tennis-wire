@@ -1,4 +1,4 @@
-// Comment text is plain; the one thing drawn in it is a link (discussion-rules §4.6).
+// Comment text is plain; the one thing drawn in it is a link.
 
 const URL_PATTERN = /https?:\/\/[^\s<>"']+/g
 // what a sentence leaves stuck to the end of a URL

@@ -68,7 +68,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => loadFontUrls(state.fontPair), [state.fontPair])
 
-    // Everything else onto <html> is written here, where a reader asked for it — so the only
+    // Everything else onto <html> is written here, where a reader asked for it, so the only
     // writer before that is the boot script, and the two never race
     const change = useCallback((next: ThemeState) => {
         const root = document.documentElement

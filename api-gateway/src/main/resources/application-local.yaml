@@ -1,7 +1,7 @@
 # Debugging profile: exposes the gateway endpoint, which lists every route,
 # predicate and filter. Not for a deployed environment.
 #
-# Exposure is only half of it — the endpoint also requires the admin role
+# Exposure is only half of it: the endpoint also requires the admin role
 # (SecurityConfig), so a token from Keycloak is needed to read it.
 management:
   endpoints:

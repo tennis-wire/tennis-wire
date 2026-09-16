@@ -39,7 +39,7 @@ public class SecurityConfig {
                         .permitAll()
                         .pathMatchers(EDITORIAL_PATHS)
                         .hasRole(Roles.AUTHOR)
-                        // Discussion (auth.md §6): reads anonymous, writes need user, moderation
+                        // Discussion: reads anonymous, writes need user, moderation
                         // needs a moderator or the bot. The service repeats and refines these.
                         .pathMatchers(HttpMethod.GET, "/api/discussion/comments/**")
                         .permitAll()
@@ -47,7 +47,7 @@ public class SecurityConfig {
                         .hasAnyRole(Roles.MODERATOR, Roles.MODERATOR_BOT)
                         .pathMatchers("/api/discussion/**")
                         .hasRole(Roles.USER)
-                        // Users (readers.md §2): a reader may only ever address themselves. Scoped
+                        // Users: a reader may only ever address themselves. Scoped
                         // to /me rather than /api/users/** so that DELETE /api/users/{id}, which is
                         // admin-only, has to declare itself rather than inherit this rule.
                         .pathMatchers("/api/users/me/**")
@@ -74,7 +74,7 @@ public class SecurityConfig {
         return new ReactiveJwtAuthenticationConverterAdapter(KeycloakJwtAuthenticationConverter.create());
     }
 
-    // CORS config applied at Security filter level — ensures preflight gets headers
+    // CORS config applied at Security filter level: ensures preflight gets headers
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         var config = new CorsConfiguration();

@@ -18,7 +18,7 @@ import {
 import type { BlockMode } from '@/lib/discussion/modes'
 import type { ReportReason } from '@/lib/discussion/reasons'
 import { markReported } from '@/lib/discussion/reported'
-import { initial, reduce, type State } from '@/lib/discussion/tree'
+import { initial, reduce, type Action, type State } from '@/lib/discussion/tree'
 
 import type { Seed } from './ComposeForm'
 
@@ -40,6 +40,15 @@ const isOffline = (error: unknown) => error instanceof NetworkError && error.rea
 function blockedIdsOf(error: DiscussionError): string[] {
     const ids = error.details.blockedIds
     return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : []
+}
+
+// A 404 while reading replies: the comment is not there for this reader any more, whether it came
+// down or his own ignore, set in another tab, hides it. It leaves the tree as it does on an action
+function vanishedOn(error: unknown, id: string): Action | null {
+    if (!(error instanceof DiscussionError) || error.status !== 404) return null
+    if (error.code === 'HIDDEN_BY_BLOCK')
+        return { type: 'vanished', id, blockedIds: blockedIdsOf(error) }
+    return { type: 'vanished', id }
 }
 
 export type Discussion = {
@@ -159,8 +168,8 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
         try {
             const { root } = await branch(id)
             dispatch({ type: 'branch-loaded', id, root })
-        } catch {
-            dispatch({ type: 'replies-failed', id })
+        } catch (error) {
+            dispatch(vanishedOn(error, id) ?? { type: 'replies-failed', id })
         }
     }, [])
 
@@ -169,8 +178,8 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
         try {
             const page = await replies(id, cursor)
             dispatch({ type: 'replies-loaded', id, page })
-        } catch {
-            dispatch({ type: 'replies-failed', id })
+        } catch (error) {
+            dispatch(vanishedOn(error, id) ?? { type: 'replies-failed', id })
         }
     }, [])
 

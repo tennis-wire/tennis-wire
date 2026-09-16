@@ -53,7 +53,7 @@ public class ReportService {
 
     // The classifier's own filing. No reader stands behind it, so there is no hash to store and no
     // ignore list to consult: only the state of the comment decides. A moderator does not file
-    // here — someone who can act on a comment has no use for putting it in his own queue.
+    // here: someone who can act on a comment has no use for putting it in his own queue.
     public void reportAsBot(UUID commentId, String reason) {
         var comment = reportable(commentId, reason);
         if (settledAndUnedited(comment)) {
@@ -75,7 +75,7 @@ public class ReportService {
         if (comment.hasNoAuthor()) {
             // Erased along with its author: no text to judge and no one for a violation to count
             // against. The node is only still there to carry the replies under it, so whoever is
-            // filing is told what a reader sees — that the comment is gone.
+            // filing is told what a reader sees: that the comment is gone.
             throw new ResourceNotFoundException("Comment", commentId);
         }
         // A comment its own author deleted stays reportable: the text is still there to be judged,

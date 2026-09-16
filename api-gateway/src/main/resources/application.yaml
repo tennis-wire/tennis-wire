@@ -36,7 +36,7 @@ spring:
               predicates:
                 - Path=/api/ai/**
               metadata:
-                response-timeout: 120000  # 2 min — SSE streaming from Claude
+                response-timeout: 120000  # 2 min: SSE streaming from Claude
                 connect-timeout: 5000
 
             - id: editorial-bff-translate
@@ -138,8 +138,8 @@ spring:
             #   predicates:
             #     - Path=/api/aggregator/**
 
-# Short windows only. The per-account ceilings — 40 comments an hour, 8 reports an hour, and the
-# rest of discussion-rules §15.5 — are not expressible as one token bucket and need what the
+# Short windows only. The per-account ceilings (40 comments an hour, 8 reports an hour and the
+# rest of the rules' anti-spam limits) are not expressible as one token bucket and need what the
 # gateway does not have: the reader's account age and the text he is about to post. They belong in
 # discussion-service and are not part of this.
 #
@@ -163,7 +163,7 @@ gateway:
       burst-capacity: 10
       requested-tokens: 5
 
-# Actuator — health check and info
+# Actuator: health check and info
 management:
   endpoints:
     web:
@@ -171,8 +171,8 @@ management:
         include: health, info
   health:
     redis:
-      # Off deliberately. The rate limiter fails open — a request the limiter cannot count goes
-      # through — so Redis being unreachable costs the counting and nothing else. Left on, it would
+      # Off deliberately. The rate limiter fails open (a request the limiter cannot count goes
+      # through), so Redis being unreachable costs the counting and nothing else. Left on, it would
       # turn the gateway DOWN and take the whole site out of rotation over a degraded guardrail.
       enabled: false
   endpoint:

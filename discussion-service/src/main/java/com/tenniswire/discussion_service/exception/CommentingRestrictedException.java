@@ -2,7 +2,7 @@ package com.tenniswire.discussion_service.exception;
 
 import java.time.Instant;
 
-/** The write gate of the spec §8: an active {@code user_restriction} on the comment capability. */
+/** The write gate: an active {@code user_restriction} on the comment capability. */
 public class CommentingRestrictedException extends RuntimeException {
 
     private final Instant restrictedUntil;

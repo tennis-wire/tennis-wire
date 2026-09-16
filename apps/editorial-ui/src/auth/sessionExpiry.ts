@@ -1,6 +1,6 @@
 // A one-bit store: has the session died under us?
 //
-// It lives outside React because both reporters are outside React — apiFetch
+// It lives outside React because both reporters are outside React: apiFetch
 // when a refresh fails on a 401, and the UserManager's silentRenewError event
 // when the 8 h SSO cap is reached with nobody making requests.
 

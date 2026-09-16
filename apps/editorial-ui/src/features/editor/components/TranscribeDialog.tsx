@@ -237,7 +237,7 @@ export const TranscribeDialog: React.FC<Props> = ({ open, onClose, onInsert }) =
             </DialogTitle>
 
             <DialogContent>
-                {/* Выбор источника */}
+                {/* Source */}
                 {!result && (
                     <>
                         <Tabs value={inputTab} onChange={(_, v) => setInputTab(v)} sx={{ mb: 2 }}>
@@ -304,7 +304,7 @@ export const TranscribeDialog: React.FC<Props> = ({ open, onClose, onInsert }) =
                             </Box>
                         )}
 
-                        {/* Опции */}
+                        {/* Options */}
                         <Box
                             sx={{
                                 display: 'flex',

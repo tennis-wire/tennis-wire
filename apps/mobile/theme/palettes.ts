@@ -1,10 +1,10 @@
 /**
- * Tennis Wire Mobile — Палитры
- * Синхронизировано с public-web/theme/palettes.ts
+ * Tennis Wire Mobile: palettes
+ * Kept in sync with public-web/theme/palettes.ts
  *
- * Отличия от web-версии:
- * - cardShadow: опущен (в RN используем StyleSheet shadow props)
- * - Все остальные поля и цвета идентичны
+ * Differences from the web version:
+ * - cardShadow: left out (RN uses StyleSheet shadow props)
+ * - every other field and colour is the same
  */
 
 export interface PaletteColors {

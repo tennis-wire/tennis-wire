@@ -101,7 +101,7 @@ public class AiChatService {
      * Puts the article into the system block rather than a fabricated exchange.
      *
      * <p>The previous version opened every conversation with an invented pair of
-     * turns — the article as a user message, and an assistant reply saying it was
+     * turns: the article as a user message, and an assistant reply saying it was
      * ready to work on that text. Nobody said that second line, and it framed
      * every following question as a task about the article, which is why a plain
      * greeting came back as a menu of editing services.

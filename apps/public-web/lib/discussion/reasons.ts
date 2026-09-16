@@ -1,5 +1,5 @@
 // The report reasons discussion-service accepts (`discussion.reports.reasons` in its
-// application.yaml); the wording is the client's (§10.5)
+// application.yaml); the wording is the client's
 export const REPORT_REASONS = [
     'spam',
     'insult',

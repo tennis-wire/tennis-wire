@@ -51,7 +51,7 @@ public class PendingIdentityDelete {
     private Instant traceErasedAt;
 
     // Whether a ban keeps the address taken, and until when. Held with no date is a ban with no
-    // end (discussion-rules §12.20).
+    // end.
     @Column(name = "address_held", nullable = false)
     private boolean addressHeld;
 

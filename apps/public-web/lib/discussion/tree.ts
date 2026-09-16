@@ -62,8 +62,9 @@ export type Action =
     // the reader's own comment, just taken down: a placeholder while replies stand under it,
     // gone otherwise
     | { type: 'deleted'; id: string }
-    // a comment the server no longer has: out of the tree, no word said
-    | { type: 'vanished'; id: string }
+    // a comment the server no longer has: out of the tree, no word said. With blockedIds it is
+    // there but hidden by the reader's own ignore, and a view rooted on it says so
+    | { type: 'vanished'; id: string; blockedIds?: string[] }
     // the reader has just ignored an author, or changed how, and it shows at once. Only comments
     // that carry their author can be matched: a placeholder of his stays until the next load, and
     // so does a count under replies not on show yet
@@ -337,7 +338,9 @@ export function reduce(state: State, action: Action): State {
         case 'vanished':
             if (state.phase !== 'ready') return state
             if (state.view.kind === 'rooted' && state.view.root.comment.id === action.id)
-                return { phase: 'gone' }
+                return action.blockedIds
+                    ? { phase: 'hidden', blockedIds: action.blockedIds }
+                    : { phase: 'gone' }
             return { ...state, view: dropFromView(state.view, action.id) }
         case 'ignored': {
             if (state.phase !== 'ready') return state

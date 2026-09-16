@@ -3,7 +3,7 @@ package com.tenniswire.discussion_service.event;
 import java.time.Instant;
 import java.util.UUID;
 
-/** {@code comment.created} — what moderation and notifications will consume, spec §9 step 5. */
+/** {@code comment.created}: what moderation and notifications will consume. */
 public record CommentCreatedEvent(
         UUID commentId,
         String subjectType,

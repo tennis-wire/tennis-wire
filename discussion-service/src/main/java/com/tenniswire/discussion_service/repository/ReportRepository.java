@@ -63,8 +63,8 @@ public interface ReportRepository extends JpaRepository<Report, UUID> {
 
     // Which of these comments carry a report at all, decided or not. Such a comment is never taken
     // away outright when its author deletes it: the queue keeps the card with a "deleted by its
-    // author" mark (discussion-rules §10.22), and the decided rows are the moderation journal
-    // (§10.24), which the comment_id foreign key would cascade away with the comment.
+    // author" mark, and the decided rows are the moderation journal, which the comment_id foreign
+    // key would cascade away with the comment.
     @Query("select distinct r.commentId from Report r where r.commentId in :commentIds")
     Set<UUID> findReportedAmong(@Param("commentIds") Collection<UUID> commentIds);
 
@@ -85,9 +85,9 @@ public interface ReportRepository extends JpaRepository<Report, UUID> {
             @Param("resolution") ReportResolution resolution,
             @Param("resolvedBy") @Nullable UUID resolvedBy);
 
-    // The batch twin of closeOpen, for a whole reader's worth of comments. Nobody decided these —
-    // an erase did — so there is no resolvedBy to record. By the time it runs, the comments nothing
-    // stood on are gone and their reports with them; what this closes is what survived (§13.16).
+    // The batch twin of closeOpen, for a whole reader's worth of comments. Nobody decided these (an
+    // erase did), so there is no resolvedBy to record. By the time it runs, the comments nothing
+    // stood on are gone and their reports with them; what this closes is what survived.
     @Modifying
     @Query("""
         update Report r

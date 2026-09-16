@@ -36,13 +36,13 @@ public class AiChatController {
 
     /**
      * Jackson 3, which is what Boot 4 auto-configures. Jackson 2 is also on the
-     * classpath — the Anthropic SDK brings it — so asking for the wrong one
+     * classpath (the Anthropic SDK brings it), so asking for the wrong one
      * compiles cleanly and only fails when the context starts.
      */
     private final JsonMapper json;
 
     /**
-     * Virtual thread executor — each streaming request gets its own lightweight
+     * Virtual thread executor: each streaming request gets its own lightweight
      * thread. The thread spends most of its time waiting for chunks from Claude,
      * so virtual threads are ideal (barely consume OS resources).
      */
@@ -65,7 +65,7 @@ public class AiChatController {
      * <ol>
      *   <li>Creates an SseEmitter and returns it (HTTP connection stays open)
      *   <li>In a virtual thread, calls Claude API via the SDK
-     *   <li>Each text chunk → a {@code delta} frame → sent to the browser
+     *   <li>Each text chunk becomes a {@code delta} frame, sent to the browser
      *   <li>When done, sends a {@code done} frame and closes the connection
      * </ol>
      */
@@ -105,7 +105,7 @@ public class AiChatController {
      * string is single-line by construction. It also removes the chance of a
      * model writing the literal sentinel and ending its own stream.
      *
-     * <p>Written as {@code text/plain} because it is already serialised — that
+     * <p>Written as {@code text/plain} because it is already serialised: that
      * pins the converter choice to StringHttpMessageConverter and rules out
      * Jackson encoding it a second time.
      */

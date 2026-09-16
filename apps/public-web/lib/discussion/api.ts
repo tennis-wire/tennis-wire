@@ -77,7 +77,7 @@ export async function once<T>(
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
-// A read: one silent retry after a pause, for what a second try can fix — no answer, a 5xx, or
+// A read: one silent retry after a pause, for what a second try can fix: no answer, a 5xx, or
 // the proxy's 429, whose bucket refills at 5/s. A 4xx is an answer and stands.
 export async function read<T>(path: string): Promise<T> {
     try {
@@ -90,8 +90,7 @@ export async function read<T>(path: string): Promise<T> {
 }
 
 // A write: one request and no retry. The service has no idempotency key, so a second try after a
-// timeout can land the same comment twice; a retry is the reader's decision, by hand (§4.12 is
-// a debt in readers.md §5 for that reason).
+// timeout can land the same comment twice; a retry is the reader's decision, by hand.
 export function write<T>(
     method: 'POST' | 'PUT' | 'DELETE',
     path: string,

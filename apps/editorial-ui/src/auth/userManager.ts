@@ -54,7 +54,7 @@ const RENEW_RETRY_DELAYS_MS = [5_000, 20_000, 60_000]
 // and retried, because oidc-client-ts stops renewing after any failure: the
 // retry timer is armed by a user load, and a failed renewal loads nobody. One
 // second without a network would otherwise disable renewal for the rest of the
-// session — and with it the property that an open tab never hits the 30 min
+// session, and with it the property that an open tab never hits the 30 min
 // idle timeout.
 function retryRenew(attempt: number): void {
     window.setTimeout(() => {

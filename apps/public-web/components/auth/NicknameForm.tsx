@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 import { useReaderSession } from './ReaderSessionProvider'
 
-// §2.2: Latin letters, digits, hyphen and underscore, 3 to 24. The server holds the same rule and
+// Latin letters, digits, hyphen and underscore, 3 to 24. The server holds the same rule and
 // the uniqueness; this only spares the reader a round trip.
 const PATTERN = /^[A-Za-z0-9_-]{3,24}$/
 
@@ -128,7 +128,7 @@ export default function NicknameForm({
                 </p>
             )}
             {saved && <p style={hint}>Имя сохранено.</p>}
-            {/* §2.4 — the name is not stamped onto a comment, it is looked up, so the old ones
+            {/* The name is not stamped onto a comment, it is looked up, so the old ones
                 change with it */}
             <p style={hint}>Новое имя появится на всех ваших комментариях, включая старые.</p>
         </section>

@@ -39,7 +39,7 @@ interface Props {
  *
  * `useEditorState` has nothing to run its selector against in that case and
  * returns null, which is a different situation from an editor that exists but
- * holds an empty document — the selector handles that one itself.
+ * holds an empty document; the selector handles that one itself.
  */
 const EMPTY_CONTEXT = { text: '', isSelection: false }
 
@@ -64,7 +64,7 @@ export const AIChatPanel: React.FC<Props> = ({ editor, isOpen, onClose }) => {
      *
      * The panel has no state of its own that changes when a selection moves, so
      * reading the selection during render left the badge showing whatever it
-     * happened to compute last — it only caught up when something unrelated,
+     * happened to compute last. It only caught up when something unrelated,
      * like saving a draft, forced a re-render.
      */
     const context =

@@ -7,8 +7,8 @@
 import { ErrorResponse } from 'oidc-client-ts'
 
 /**
- * True when the identity provider has answered and refused. Anything else — a
- * network failure, a timeout, a thrown TypeError — leaves the session's fate
+ * True when the identity provider has answered and refused. Anything else (a
+ * network failure, a timeout, a thrown TypeError) leaves the session's fate
  * unknown, and the next request will settle it.
  */
 export function isDeadSession(error: unknown): boolean {

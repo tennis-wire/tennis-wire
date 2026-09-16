@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 /**
- * The rule of discussion-rules §8.7 in one place: a comment stands while something is left under it
+ * One rule in one place: a comment stands while something is left under it
  * and goes when nothing is, and so does whatever it was the last thing holding up. Callers hand in
  * the nodes they have just taken down - one for an author's own delete, a whole account's worth for
  * an erase - and the walk continues upward through comments that need not belong to the same reader.
@@ -128,13 +128,13 @@ class CommentCollapse {
             return false;
         }
         // Nothing is kept for a reader who erased his account: the counter reads author_id and no
-        // longer finds him, and the queue is told his reports are void (§13.15, §13.16).
+        // longer finds him, and the queue is told his reports are void.
         if (node.hasNoAuthor()) {
             return true;
         }
         // hiddenAt: the counter reads that column, and the author is still there to be counted.
         // countedAt: same, for a violation counted by hand.
-        // reported: the queue card outlives the author deleting his own comment (§10.22).
+        // reported: the queue card outlives the author deleting his own comment.
         return !node.isHiddenByModeration() && node.countedAt() == null && !reported.contains(node.id());
     }
 

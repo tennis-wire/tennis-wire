@@ -1,5 +1,5 @@
-// Which comments this device has reported, so the menu item can say so and stay put (§10.7).
-// The server keeps no such thing the reader could ask for: who reported is not stored (§10.10).
+// Which comments this device has reported, so the menu item can say so and stay put.
+// The server keeps no such thing the reader could ask for: who reported is not stored.
 
 const KEY = 'tw-reported'
 // ids kept; the oldest go first once past this

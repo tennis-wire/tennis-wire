@@ -22,7 +22,7 @@ export function createApiFetch(deps: ApiFetchDeps) {
     // One refresh at a time. The transcription poller alone can put several
     // requests in flight, and each of them hitting an expired token would
     // otherwise fire its own refresh. Rotation is off in the realm, so today
-    // that is merely wasteful — see auth.md §4 before turning it on.
+    // that is merely wasteful; turning it on needs this revisited first.
     let inFlight: Promise<string | null> | null = null
 
     function refreshOnce(): Promise<string | null> {

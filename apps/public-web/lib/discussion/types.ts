@@ -1,5 +1,5 @@
 // The reader-facing wire of discussion-service, as far as this app reads it. Names match the
-// service's records; see discussion-service/README.md for the semantics.
+// service's records, and so do their meanings.
 
 import type { BlockMode } from './modes'
 
@@ -37,7 +37,7 @@ export type Branch = { root: Comment }
 export type Ancestry = { chain: Comment[] }
 
 // What a POST answers: the comment as its author sees it, and whether the author of the comment
-// replied to ignores him (§5.6)
+// replied to ignores him
 export type CommentCreated = { comment: Comment; mutedByRecipient: boolean }
 
 // A row of the reader's own ignore list. `user` takes the forms an author does and is missing when

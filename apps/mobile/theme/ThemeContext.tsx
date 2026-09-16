@@ -1,5 +1,5 @@
 /**
- * Tennis Wire Mobile — ThemeContext
+ * Tennis Wire Mobile: ThemeContext
  * Mirrors public-web/theme/ThemeContext.tsx API:
  *   colors, fonts, palette, fontPair, isDark, setPalette, setFontPair, toggleDark
  *

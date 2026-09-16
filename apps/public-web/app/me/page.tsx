@@ -17,8 +17,8 @@ const row: React.CSSProperties = {
     fontSize: 15,
 }
 
-// What the rest of the site sees. Nothing is changed from here — §13 and §2 actions live one tab
-// over, and the reader is told where.
+// What the rest of the site sees. Nothing is changed from here: deleting the account and changing
+// the name live one tab over, and the reader is told where.
 export default function ProfilePage() {
     const { session } = useReaderSession()
 

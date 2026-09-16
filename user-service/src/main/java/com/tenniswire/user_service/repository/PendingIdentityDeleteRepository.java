@@ -29,14 +29,14 @@ public interface PendingIdentityDeleteRepository extends JpaRepository<PendingId
     int markIdentityClosed(@Param("userId") UUID userId);
 
     // Due first, and only what is due. The reasons an account waits are still worked out in one
-    // place — the step itself — but the answer is kept on the row, because a row that is waiting has
+    // place (the step itself), but the answer is kept on the row, because a row that is waiting has
     // to be invisible here rather than read and put back. Some are never finished at all: a ban with
     // no end holds its address for good, and enough of those would otherwise fill this page and
     // leave nothing new ever reached.
     // The filter is written over the same expression the index is on, so one range scan serves both
     // it and the order. "Not looked at yet" needs no case of its own: a row was requested in the
     // past, so coalescing to requested_at is already due. current_timestamp rather than a parameter
-    // because requested_at is written by that clock too, and the margin here is zero — a few seconds
+    // because requested_at is written by that clock too, and the margin here is zero: a few seconds
     // of drift between the database and the JVM would make a new row look as if it were not due.
     @Query("""
         select p.userId from PendingIdentityDelete p

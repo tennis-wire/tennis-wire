@@ -17,7 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     return (
         <html lang="ru" suppressHydrationWarning>
             <body>
-                {/* Every look, and the line that picks one — both before the page is drawn */}
+                {/* Every look, and the line that picks one, both before the page is drawn */}
                 <style dangerouslySetInnerHTML={{ __html: themeCss() }} />
                 <script dangerouslySetInnerHTML={{ __html: bootScript() }} />
                 <ThemeProvider>

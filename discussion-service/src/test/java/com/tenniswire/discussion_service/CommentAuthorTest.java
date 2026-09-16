@@ -150,7 +150,7 @@ class CommentAuthorTest {
         commentService.reply(bob, comment.id(), "still here");
         commentService.hideByModerator(comment.id(), UUID.randomUUID());
 
-        // the author included: he is shown what everyone is shown (rules §11.12)
+        // the author included: he is shown what everyone is shown
         when(resolver.resolve(any())).thenReturn(alice);
         mvc.perform(listing().with(reader()))
                 .andExpect(status().isOk())

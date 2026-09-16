@@ -73,7 +73,7 @@ const separator: React.CSSProperties = {
     background: 'var(--tw-border)',
 }
 
-// The reader's one way in: signing in, the cabinet, signing out. Nothing is set from here —
+// The reader's one way in: signing in, the cabinet, signing out. Nothing is set from here:
 // settings live on their own page, which opens without a session as well.
 export default function ReaderMenu() {
     const { session } = useReaderSession()
@@ -177,7 +177,7 @@ function Account({
             <Link href="/me" role="menuitem" style={item} onClick={onNavigate}>
                 Личный кабинет
             </Link>
-            {/* Drafts leave with the reader (§4.15 on a shared computer); the form goes on to
+            {/* Drafts leave with the reader, for a shared computer; the form goes on to
                 the server as before, JS or not */}
             <form
                 method="post"

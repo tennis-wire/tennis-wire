@@ -42,7 +42,7 @@ public class KeycloakAdmin {
         }
         // Read, change, write the whole thing back. An update replaces the representation rather
         // than merging into it, so a body carrying only what changed would clear every root
-        // attribute left out of it — the address among them, which is the one thing that must stay.
+        // attribute left out of it, the address among them, which is the one thing that must stay.
         var stripped = new LinkedHashMap<>(account);
         stripped.put("enabled", false);
         stripped.put("firstName", "");

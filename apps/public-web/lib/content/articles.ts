@@ -13,7 +13,7 @@ export type Article = {
 }
 
 // Read on the server, straight from the gateway. No session and no cookie go into this, so the
-// page stays cacheable (readers.md §1.2): a minute of ISR, refreshed on the next request after.
+// page stays cacheable: a minute of ISR, refreshed on the next request after.
 export async function fetchArticle(slug: string): Promise<Article | null> {
     const response = await fetch(
         `${gatewayOrigin()}/api/public/articles/${encodeURIComponent(slug)}`,
