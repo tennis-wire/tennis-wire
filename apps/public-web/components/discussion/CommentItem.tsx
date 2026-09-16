@@ -93,7 +93,7 @@ const byline: React.CSSProperties = {
     minHeight: 24,
 }
 
-// Nobody to draw: a placeholder is not signed, and §8.6 means it never was
+// Nobody to draw: a placeholder is not signed
 const blank: React.CSSProperties = {
     width: 36,
     height: 36,
@@ -118,7 +118,7 @@ const name: React.CSSProperties = {
 
 export function AuthorName({ author }: { author?: Author }) {
     if (!author) return <span style={name}>{strings.nobody}</span>
-    // §2.8: the label stands instead of the name, and the server sends no name at all
+    // the label stands instead of the name, and the server sends no name at all
     if ('restricted' in author)
         return <span style={{ ...name, color: 'var(--tw-text-muted)' }}>{strings.restricted}</span>
     return <span style={name}>{author.displayName}</span>
@@ -137,7 +137,7 @@ function elementId(comment: Comment) {
 export default function CommentItem({ node, inline, ctx }: Props) {
     const { comment } = node
     const collapsed = comment.visibility === 'soft_hidden' && !node.revealed
-    // a live comment: the one kind that takes a reply (§5.2)
+    // a live comment: the one kind that takes a reply
     const readable =
         comment.visibility === 'visible' || (comment.visibility === 'soft_hidden' && node.revealed)
     const replying = ctx.replyingTo === comment.id

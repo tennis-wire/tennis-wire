@@ -242,6 +242,12 @@ describe('reduce', () => {
         expect(items(state).map((node) => node.comment.id)).toEqual([second.id])
     })
 
+    it('says whose blocks hide a branch a link leads into, and lets the view go', () => {
+        const state = reduce(listed([comment()]), { type: 'hidden', blockedIds: ['u1', 'u2'] })
+
+        expect(state).toEqual({ phase: 'hidden', blockedIds: ['u1', 'u2'] })
+    })
+
     it('reveals a collapsed comment', () => {
         const hidden = comment({ visibility: 'soft_hidden' })
         const state = reduce(listed([hidden]), { type: 'reveal', id: hidden.id })

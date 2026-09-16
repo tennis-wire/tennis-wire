@@ -14,7 +14,7 @@ import { linkButton, muted } from './styles'
 
 type Props = {
     comment: Comment
-    // the reader wrote it: the menu offers to take it down (§8), and nothing to report (§10.2)
+    // the reader wrote it: the menu offers to take it down, and nothing to report
     own: boolean
     signedIn: boolean
     onRemove: () => Promise<void>
@@ -97,7 +97,7 @@ export default function CommentMenu({
 }: Props) {
     const { setSession } = useReaderSession()
     const [panel, setPanel] = useState<Panel>({ kind: 'closed' })
-    // what this device already sent (§10.7); the menu is client-only, so the read is safe here
+    // what this device already sent; the menu is client-only, so the read is safe here
     const [reported, setReported] = useState(() => wasReported(comment.id))
 
     function signedOut() {

@@ -21,15 +21,15 @@ export const strings = {
     hidden: 'Скрытый комментарий',
     deleted: 'Комментарий удалён',
     removed: 'Комментарий удалён модерацией',
-    // instead of the name, for an author under a restriction (§2.8)
+    // instead of the name, for an author under a restriction
     restricted: 'заблокирован',
     // a visible comment whose author user-service does not know
     nobody: 'Пользователь',
     allComments: 'Ко всем комментариям',
     missing: 'Комментарий не найден',
+    hiddenByIgnore: 'Этот комментарий в ветке, которую скрывает ваш игнор',
+    wholeIgnoreList: 'Весь игнор-лист',
     inReplyTo: 'В ответ на',
-
-    // writing (§4, §5, §12)
     signInToComment: 'Войдите, чтобы комментировать',
     signInToReply: 'Войдите, чтобы ответить',
     sessionExpired: 'Сессия истекла, войдите снова',
@@ -51,7 +51,7 @@ export const strings = {
     restrictedUntil: (when: string) => `Вы не можете комментировать до ${when}`,
     restrictedIndefinitely: 'Комментирование недоступно',
 
-    // the comment menu (§8)
+    // the comment menu
     actions: 'Действия',
     remove: 'Удалить',
     confirmRemove: 'Удалить комментарий? Отменить нельзя',
@@ -59,7 +59,7 @@ export const strings = {
     removeFailed: 'Не удалось удалить',
     gone: 'Комментарий удалён',
 
-    // reporting (§10)
+    // reporting
     report: 'Пожаловаться',
     reportReason: 'Причина',
     reasons: {
@@ -77,7 +77,7 @@ export const strings = {
     signInToReport: 'Войдите, чтобы пожаловаться',
     close: 'Закрыть',
 
-    // ignoring (§9)
+    // ignoring
     modes: {
         soft: 'Сворачивать',
         gravestone: 'Скрывать',
@@ -89,14 +89,13 @@ export const strings = {
         subtree_removal: 'Не видно ни комментария, ни ответов под ним',
     } satisfies Record<BlockMode, string>,
     ignoreMode: 'Режим игнора',
-    // §9.12
     subtreeWarning: 'Пропадут и ответы на комментарии этого автора, включая ваши',
     save: 'Сохранить',
     saving: 'Сохраняем…',
     saveFailed: 'Не удалось сохранить',
     ignoreListFull: 'Игнор-лист заполнен: уберите из него кого-нибудь',
 
-    // the ignore list in the cabinet (§9.5, §9.7)
+    // the ignore list in the cabinet
     ignoreList: 'Игнор-лист',
     ignoreListAbout:
         'Люди, чьи комментарии вы сворачиваете, скрываете или не видите вовсе. Они об этом не узнают.',

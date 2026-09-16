@@ -6,7 +6,7 @@ import type { Ancestry, Block, BlockPage, Branch, CommentCreated, CommentPage } 
 
 const COMMENTS = '/api/discussion/comments'
 const BLOCKS = '/api/discussion/blocks'
-// Top-level and reply pages alike (discussion-rules §3.4)
+// Top-level and reply pages alike
 export const PAGE_SIZE = 20
 // A row of the ignore list is one line, so a page holds more of them
 const BLOCK_PAGE_SIZE = 50
@@ -46,7 +46,7 @@ export function deleteComment(id: string) {
     return write<void>('DELETE', `${COMMENTS}/${id}`)
 }
 
-// Always 204 when taken: filed, already filed and taken-but-not-queued are one answer (§10.12–13)
+// Always 204 when taken: filed, already filed and taken-but-not-queued are one answer
 export function reportComment(id: string, reason: ReportReason) {
     return write<void>('POST', `${COMMENTS}/${id}/reports`, { reason })
 }
@@ -56,8 +56,13 @@ export function listBlocks(cursor?: string | null) {
     return readQueue(() => read<BlockPage>(`${BLOCKS}?${page(cursor, BLOCK_PAGE_SIZE)}`))
 }
 
+// One row: for a page that met the reader's own block and offers to change it there
+export function getBlock(blockedId: string) {
+    return readQueue(() => read<Block>(`${BLOCKS}/${blockedId}`))
+}
+
 // Makes the row or changes its mode: the pair is the identity. 404 USER_NOT_FOUND for someone
-// user-service does not know, 409 BLOCK_LIST_FULL for a new person on a full list (§9.7)
+// user-service does not know, 409 BLOCK_LIST_FULL for a new person on a full list
 export function setBlock(blockedId: string, mode: BlockMode) {
     return write<Block>('PUT', `${BLOCKS}/${blockedId}`, { mode })
 }

@@ -33,6 +33,12 @@ export function hashFor(id: string): string {
 
 const isOffline = (error: unknown) => error instanceof NetworkError && error.reason === 'offline'
 
+// The ids a HIDDEN_BY_BLOCK answer names; anything else in their place is not taken for an id
+function blockedIdsOf(error: DiscussionError): string[] {
+    const ids = error.details.blockedIds
+    return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : []
+}
+
 export type Discussion = {
     state: State
     load: () => void
@@ -43,7 +49,7 @@ export type Discussion = {
     reroot: (id: string) => void
     backToAll: () => void
 
-    // one reply form open at a time (§5.1)
+    // one reply form open at a time
     replyingTo: string | null
     openReply: (id: string) => void
     closeReply: () => void
@@ -52,9 +58,9 @@ export type Discussion = {
     // inline: the parent's replies are drawn where it stands. Otherwise the block re-roots on the
     // parent, so the reader sees the reply in its place
     reply: (parentId: string, body: string, inline: boolean) => Promise<void>
-    // the parent whose author ignores the reader, told once after the reply went up (§5.6)
+    // the parent whose author ignores the reader, told once after the reply went up
     mutedUnder: string | null
-    // text taken from a reply whose parent is gone, for the top-level form (§5.5)
+    // text taken from a reply whose parent is gone, for the top-level form
     seed: Seed | null
     promote: (text: string) => void
     // the reader's own comment taken down; throws for the caller to explain
@@ -62,7 +68,7 @@ export type Discussion = {
     // a comment the server no longer has, met on the way: out of the tree
     drop: (id: string) => void
     // a report on someone else's comment; throws for the caller to explain. A comment that is
-    // no longer there is dropped from the tree and nothing is said (§8.17)
+    // no longer there is dropped from the tree and nothing is said
     report: (id: string, reason: ReportReason) => Promise<void>
 }
 
@@ -107,6 +113,10 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
             }
         } catch (error) {
             if (mine !== generation.current) return
+            if (error instanceof DiscussionError && error.code === 'HIDDEN_BY_BLOCK') {
+                dispatch({ type: 'hidden', blockedIds: blockedIdsOf(error) })
+                return
+            }
             if (error instanceof DiscussionError && error.status === 404) {
                 dispatch({ type: 'missing' })
                 return
@@ -232,7 +242,7 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
         return () => window.removeEventListener('hashchange', onHash)
     }, [load])
 
-    // Back online: the block loads itself (§3.20). Only after a failure for that reason —
+    // Back online: the block loads itself. Only after a failure for that reason —
     // a page that loaded fine does not reload on every network blip.
     const waitingForNetwork = state.phase === 'failed' && state.offline
     useEffect(() => {

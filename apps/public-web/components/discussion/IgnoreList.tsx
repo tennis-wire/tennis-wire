@@ -2,15 +2,14 @@
 
 import { useCallback, useEffect, useReducer, useState } from 'react'
 
-import Avatar from '@/components/Avatar'
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
 import { DiscussionError } from '@/lib/discussion/api'
 import { listBlocks, removeBlock, setBlock } from '@/lib/discussion/endpoints'
 import { initial, reduce, type Failure, type Reason, type Row } from '@/lib/discussion/ignoreList'
 import type { BlockMode } from '@/lib/discussion/modes'
-import type { Author } from '@/lib/discussion/types'
 
 import IgnoreModePicker from './IgnoreModePicker'
+import { PersonFace, PersonName } from './Person'
 import { formatDay } from './format'
 import { strings } from './strings'
 import { action, linkButton, muted } from './styles'
@@ -174,9 +173,9 @@ function IgnoreRow({ row, editing, onEdit, onCancel, onSave, onLift }: RowProps)
     return (
         <li style={item}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                <Face user={block.user} />
+                <PersonFace user={block.user} />
                 <div style={{ minWidth: 0, flex: '1 1 160px' }}>
-                    <Name user={block.user} />
+                    <PersonName user={block.user} />
                     <div style={{ ...muted, marginTop: 2 }}>
                         {lifted
                             ? strings.notIgnoring
@@ -247,24 +246,4 @@ function failureText({ of, reason }: Failure, lifted: boolean): string {
     if (reason === 'full') return strings.ignoreListFull
     if (of === 'lift') return strings.unignoreFailed
     return lifted ? strings.restoreFailed : strings.saveFailed
-}
-
-// The circle and the name an author gets under a comment: a restricted one has neither (§2.8)
-function Face({ user }: { user?: Author }) {
-    if (!user || 'restricted' in user) return <Avatar size={36} />
-    return <Avatar name={user.displayName} size={36} />
-}
-
-function Name({ user }: { user?: Author }) {
-    const style: React.CSSProperties = { fontSize: 15, fontWeight: 600 }
-    if (!user) return <div style={style}>{strings.nobody}</div>
-    if ('restricted' in user)
-        return <div style={{ ...style, color: 'var(--tw-text-muted)' }}>{strings.restricted}</div>
-    return (
-        <div
-            style={{ ...style, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-        >
-            {user.displayName}
-        </div>
-    )
 }

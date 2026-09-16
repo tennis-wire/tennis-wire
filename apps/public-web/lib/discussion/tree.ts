@@ -28,19 +28,23 @@ export type View = ListView | RootedView
 export type State =
     | { phase: 'idle' }
     | { phase: 'loading' }
-    // offline: no connection at all, as against no usable answer (§3.20 vs §3.19)
+    // offline: no connection at all, as against no usable answer
     | { phase: 'failed'; offline: boolean }
     // the comment the URL points at is not there for this viewer
     | { phase: 'missing' }
-    // the comment the view was rooted on is gone, and the reader saw it go (§8.19)
+    // it is there, in a branch the reader's own "remove with branches" takes out
+    // blockedIds: whose blocks, nearest the root first; empty when a placeholder is what hides it
+    | { phase: 'hidden'; blockedIds: string[] }
+    // the comment the view was rooted on is gone, and the reader saw it go
     | { phase: 'gone' }
-    // highlight: the comment the reader was brought to — by a link, or by posting it (§3.29, §4.11)
+    // highlight: the comment the reader was brought to — by a link, or by posting it
     | { phase: 'ready'; view: View; highlight: string | null }
 
 export type Action =
     | { type: 'loading' }
     | { type: 'failed'; offline: boolean }
     | { type: 'missing' }
+    | { type: 'hidden'; blockedIds: string[] }
     | { type: 'list'; page: CommentPage }
     | { type: 'more'; status: Status }
     | { type: 'more-loaded'; page: CommentPage }
@@ -50,14 +54,14 @@ export type Action =
     | { type: 'branch-loaded'; id: string; root: Comment }
     | { type: 'replies-loaded'; id: string; page: CommentPage }
     | { type: 'reveal'; id: string }
-    // the reader's own top-level comment, just accepted: first, whatever the order (§3.15)
+    // the reader's own top-level comment, just accepted: first, whatever the order
     | { type: 'posted'; comment: Comment }
     // the reader's own reply, just accepted, under a comment whose replies are drawn here
     | { type: 'replied'; parentId: string; comment: Comment }
     // the reader's own comment, just taken down: a placeholder while replies stand under it,
-    // gone otherwise (§8.5–6)
+    // gone otherwise
     | { type: 'deleted'; id: string }
-    // a comment the server no longer has: out of the tree, no word said (§8.17)
+    // a comment the server no longer has: out of the tree, no word said
     | { type: 'vanished'; id: string }
 
 export const initial: State = { phase: 'idle' }
@@ -168,6 +172,8 @@ export function reduce(state: State, action: Action): State {
             return { phase: 'failed', offline: action.offline }
         case 'missing':
             return { phase: 'missing' }
+        case 'hidden':
+            return { phase: 'hidden', blockedIds: action.blockedIds }
         case 'list':
             return {
                 phase: 'ready',
@@ -237,7 +243,7 @@ export function reduce(state: State, action: Action): State {
                 ...node,
                 comment: { ...node.comment, replyCount: node.comment.replyCount + 1 },
                 // Replies not on show yet: the reader's own goes up alone, the older ones stay
-                // behind "show more", which reads them from the first page (§3.15 for replies)
+                // behind "show more", which reads them from the first page
                 replies:
                     node.replies === null
                         ? [leaf(action.comment)]
