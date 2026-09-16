@@ -116,6 +116,8 @@ export default function Comments({ subjectType, subjectId }: Props) {
         onSessionExpired,
         onRemove: discussion.remove,
         onReport: discussion.report,
+        onIgnore: discussion.ignore,
+        onUnignore: discussion.unignore,
     }
 
     return (

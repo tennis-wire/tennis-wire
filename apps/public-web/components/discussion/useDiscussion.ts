@@ -10,9 +10,12 @@ import {
     createReply,
     deleteComment,
     listTopLevel,
+    removeBlock,
     replies,
     reportComment,
+    setBlock,
 } from '@/lib/discussion/endpoints'
+import type { BlockMode } from '@/lib/discussion/modes'
 import type { ReportReason } from '@/lib/discussion/reasons'
 import { markReported } from '@/lib/discussion/reported'
 import { initial, reduce, type State } from '@/lib/discussion/tree'
@@ -70,6 +73,11 @@ export type Discussion = {
     // a report on someone else's comment; throws for the caller to explain. A comment that is
     // no longer there is dropped from the tree and nothing is said
     report: (id: string, reason: ReportReason) => Promise<void>
+    // the reader ignores the author of a comment, or changes how, and the page shows it at once;
+    // throws for the caller to explain. An author whose account is gone takes the comment with him
+    ignore: (commentId: string, authorId: string, mode: BlockMode) => Promise<void>
+    // the reader stops ignoring the author; throws for the caller to explain
+    unignore: (authorId: string) => Promise<void>
 }
 
 export function useDiscussion(subjectType: string, subjectId: string): Discussion {
@@ -236,13 +244,31 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
         markReported(id)
     }, [])
 
+    const ignore = useCallback(async (commentId: string, authorId: string, mode: BlockMode) => {
+        try {
+            await setBlock(authorId, mode)
+        } catch (error) {
+            if (error instanceof DiscussionError && error.status === 404) {
+                dispatch({ type: 'vanished', id: commentId })
+                return
+            }
+            throw error
+        }
+        dispatch({ type: 'ignored', authorId, mode })
+    }, [])
+
+    const unignore = useCallback(async (authorId: string) => {
+        await removeBlock(authorId)
+        dispatch({ type: 'unignored', authorId })
+    }, [])
+
     useEffect(() => {
         const onHash = () => load()
         window.addEventListener('hashchange', onHash)
         return () => window.removeEventListener('hashchange', onHash)
     }, [load])
 
-    // Back online: the block loads itself. Only after a failure for that reason —
+    // Back online: the block loads itself. Only after a failure for that reason:
     // a page that loaded fine does not reload on every network blip.
     const waitingForNetwork = state.phase === 'failed' && state.offline
     useEffect(() => {
@@ -271,5 +297,7 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
         remove,
         drop,
         report,
+        ignore,
+        unignore,
     }
 }

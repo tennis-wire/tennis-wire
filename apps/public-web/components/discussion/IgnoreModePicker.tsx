@@ -8,7 +8,7 @@ import { strings } from './strings'
 import { linkButton, muted } from './styles'
 
 type Props = {
-    // what it opens on: soft for someone not ignored yet (§9.4), the current mode otherwise
+    // what it opens on: soft for someone not ignored yet, the current mode otherwise
     initial: BlockMode
     confirmLabel: string
     busy: boolean

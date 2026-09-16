@@ -248,6 +248,104 @@ describe('reduce', () => {
         expect(state).toEqual({ phase: 'hidden', blockedIds: ['u1', 'u2'] })
     })
 
+    describe('an ignore made on the page', () => {
+        const bob = { id: 'b1', displayName: 'bob', avatarUrl: null }
+
+        // a top-level comment with its first level of replies on show
+        function withReplies(top: Comment, replies: Comment[]): State {
+            return reduce(listed([top]), {
+                type: 'branch-loaded',
+                id: top.id,
+                root: { ...top, replies },
+            })
+        }
+
+        it('collapses every comment of the author on show, keeping text and name', () => {
+            const top = comment({ author: bob, replyCount: 1 })
+            const reply = comment({ inReplyToId: top.id, author: bob })
+            let state = withReplies(top, [reply])
+            state = reduce(state, { type: 'reveal', id: top.id })
+
+            state = reduce(state, { type: 'ignored', authorId: 'b1', mode: 'soft' })
+
+            const [node] = items(state)
+            expect(node.comment).toMatchObject({ visibility: 'soft_hidden', body: top.body })
+            expect(node.revealed).toBe(false)
+            expect(node.replies?.[0].comment.visibility).toBe('soft_hidden')
+        })
+
+        it('hides the text and the name under gravestone, and leaves other authors alone', () => {
+            const mine = comment()
+            const his = comment({ author: bob })
+
+            const state = reduce(listed([mine, his]), {
+                type: 'ignored',
+                authorId: 'b1',
+                mode: 'gravestone',
+            })
+
+            expect(items(state)[0].comment.visibility).toBe('visible')
+            expect(items(state)[1].comment.visibility).toBe('gravestone')
+            expect(items(state)[1].comment.body).toBeUndefined()
+            expect(items(state)[1].comment.author).toBeUndefined()
+        })
+
+        it('takes his comments out with their replies and counts them off the parent', () => {
+            const top = comment({ replyCount: 3 })
+            const his = comment({ inReplyToId: top.id, author: bob, replyCount: 2 })
+            const other = comment({ inReplyToId: top.id })
+            const hisTop = comment({ author: bob })
+            let state = reduce(withReplies(top, [his, other]), {
+                type: 'more-loaded',
+                page: { items: [hisTop], nextCursor: null },
+            })
+
+            state = reduce(state, { type: 'ignored', authorId: 'b1', mode: 'subtree_removal' })
+
+            expect(items(state).map((node) => node.comment.id)).toEqual([top.id])
+            expect(items(state)[0].replies?.map((node) => node.comment.id)).toEqual([other.id])
+            // three by the count and one of them his: the other two stay counted, on show or not
+            expect(items(state)[0].comment.replyCount).toBe(2)
+        })
+
+        it('lets a placeholder go once nothing is left under it', () => {
+            const top = comment({ visibility: 'deleted', author: undefined, body: undefined })
+            const counted = { ...top, replyCount: 1 }
+            const his = comment({ inReplyToId: top.id, author: bob })
+
+            const state = reduce(withReplies(counted, [his]), {
+                type: 'ignored',
+                authorId: 'b1',
+                mode: 'subtree_removal',
+            })
+
+            expect(items(state)).toEqual([])
+        })
+
+        it('turns a view rooted inside his branch into the message about it', () => {
+            const top = comment({ author: bob, replyCount: 1 })
+            const target = comment({ inReplyToId: top.id, rootId: top.id })
+            let state = reduce(listed([top]), {
+                type: 'rooted',
+                chain: [top, target],
+                root: target,
+            })
+
+            state = reduce(state, { type: 'ignored', authorId: 'b1', mode: 'subtree_removal' })
+
+            expect(state).toEqual({ phase: 'hidden', blockedIds: ['b1'] })
+        })
+
+        it('opens what was collapsed once the ignore is lifted', () => {
+            const his = comment({ author: bob })
+            let state = reduce(listed([his]), { type: 'ignored', authorId: 'b1', mode: 'soft' })
+
+            state = reduce(state, { type: 'unignored', authorId: 'b1' })
+
+            expect(items(state)[0].comment.visibility).toBe('visible')
+        })
+    })
+
     it('reveals a collapsed comment', () => {
         const hidden = comment({ visibility: 'soft_hidden' })
         const state = reduce(listed([hidden]), { type: 'reveal', id: hidden.id })

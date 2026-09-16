@@ -2,6 +2,7 @@
 
 import Avatar from '@/components/Avatar'
 import { loginHere } from '@/lib/auth/loginHref'
+import type { BlockMode } from '@/lib/discussion/modes'
 import type { ReportReason } from '@/lib/discussion/reasons'
 import type { Node } from '@/lib/discussion/tree'
 import type { Author, Comment } from '@/lib/discussion/types'
@@ -34,12 +35,14 @@ export type Ctx = {
     onSessionExpired: () => void
     onRemove: (id: string) => Promise<void>
     onReport: (id: string, reason: ReportReason) => Promise<void>
+    onIgnore: (commentId: string, authorId: string, mode: BlockMode) => Promise<void>
+    onUnignore: (authorId: string) => Promise<void>
 }
 
 type Props = {
     node: Node
     // whether the direct replies are drawn under this comment. Where they are not, the reader
-    // gets there by re-rooting on it (readers.md: the first level inline, deeper by re-root)
+    // gets there by re-rooting on it: the first level inline, deeper by re-root
     inline: boolean
     ctx: Ctx
 }
@@ -175,6 +178,10 @@ export default function CommentItem({ node, inline, ctx }: Props) {
                                     signedIn={ctx.signedIn}
                                     onRemove={() => ctx.onRemove(comment.id)}
                                     onReport={(reason) => ctx.onReport(comment.id, reason)}
+                                    onIgnore={(authorId, mode) =>
+                                        ctx.onIgnore(comment.id, authorId, mode)
+                                    }
+                                    onUnignore={ctx.onUnignore}
                                     onSessionExpired={ctx.onSessionExpired}
                                 />
                             </div>

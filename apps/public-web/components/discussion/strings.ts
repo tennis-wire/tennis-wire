@@ -1,8 +1,8 @@
 import type { BlockMode } from '@/lib/discussion/modes'
 import type { ReportReason } from '@/lib/discussion/reasons'
 
-// Reader-facing wording of the comments block, as discussion-rules.md fixes it. Russian only for
-// now; the bilingual front is a later step, and this is the one file it will touch here.
+// Reader-facing wording of the comments block. Russian only for now; the bilingual front is a
+// later step, and this is the one file it will touch here.
 export const strings = {
     heading: 'Комментарии',
     loading: 'Загрузка…',
@@ -78,6 +78,14 @@ export const strings = {
     close: 'Закрыть',
 
     // ignoring
+    ignore: 'Игнорировать',
+    ignoreWhom: (name: string | null) => (name ? `Игнорировать ${name}` : 'Игнорировать автора'),
+    ignoringWhom: (name: string | null) =>
+        name ? `Вы игнорируете ${name}` : 'Вы игнорируете автора',
+    // the menu item on a comment already collapsed by the reader and opened again
+    ignoredAs: (mode: string) => `Игнор: ${mode.toLowerCase()}`,
+    ignoreFailed: 'Не удалось игнорировать',
+    signInToIgnore: 'Войдите, чтобы игнорировать',
     modes: {
         soft: 'Сворачивать',
         gravestone: 'Скрывать',

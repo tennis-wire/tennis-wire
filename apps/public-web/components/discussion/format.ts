@@ -6,7 +6,7 @@ const dateTime = new Intl.DateTimeFormat('ru-RU', {
     minute: '2-digit',
 })
 
-// «14 сентября, 18:00» — the ban plate's wording (§12.5), in the reader's own time zone
+// The ban plate's wording: day, month and time, in the reader's own time zone
 const until = new Intl.DateTimeFormat('ru-RU', {
     day: 'numeric',
     month: 'long',
@@ -14,7 +14,7 @@ const until = new Intl.DateTimeFormat('ru-RU', {
     minute: '2-digit',
 })
 
-// «16 сентября 2026 г.» — a day, where the hour says nothing
+// A day without the hour, for what the hour says nothing about
 const day = new Intl.DateTimeFormat('ru-RU', {
     day: 'numeric',
     month: 'long',
