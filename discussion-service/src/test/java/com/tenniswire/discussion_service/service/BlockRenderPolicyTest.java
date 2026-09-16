@@ -94,6 +94,40 @@ class BlockRenderPolicyTest {
     }
 
     @Test
+    void theCountLeavesOutWhatTheViewerRemovesWithItsBranch() {
+        var views = render(Map.of(BOB, BlockMode.SUBTREE_REMOVAL), Map.of(root.id(), 1));
+
+        assertThat(views.getFirst().replyCount()).isZero();
+        assertThat(views.getFirst().replies()).isEmpty();
+        assertThat(views.getFirst().repliesTruncated()).isFalse();
+    }
+
+    @Test
+    void aPlaceholderWithEveryReplyRemovedIsNotThereForThatViewer() {
+        root.deletedAt(Instant.now());
+
+        assertThat(render(Map.of()).getFirst().visibility()).isEqualTo(Visibility.DELETED);
+        assertThat(render(Map.of(BOB, BlockMode.SUBTREE_REMOVAL), Map.of(root.id(), 1)))
+                .isEmpty();
+    }
+
+    @Test
+    void repliesLeftOutAreReportedOnlyWhileSomeAreStillHisToGet() {
+        // a second reply to the root exists but was not loaded, so the assembly marks the root
+        root.replyCount(2);
+
+        // the one left out is bob's too: nothing more to ask for
+        assertThat(render(Map.of(BOB, BlockMode.SUBTREE_REMOVAL), Map.of(root.id(), 2))
+                        .getFirst()
+                        .repliesTruncated())
+                .isFalse();
+        // someone else's: still there for him
+        var views = render(Map.of(BOB, BlockMode.SUBTREE_REMOVAL), Map.of(root.id(), 1));
+        assertThat(views.getFirst().replyCount()).isEqualTo(1);
+        assertThat(views.getFirst().repliesTruncated()).isTrue();
+    }
+
+    @Test
     void forestOrdersSiblingsOldestFirstWhateverTheInputOrder() {
         var later = comment(BOB, root.id(), 4);
         var forest = CommentTree.forest(List.of(later, nested, reply, root));
@@ -105,7 +139,11 @@ class BlockRenderPolicyTest {
     }
 
     private List<CommentView> render(Map<UUID, BlockMode> blocks) {
-        return BlockRenderPolicy.apply(CommentTree.forest(List.of(root, reply, nested)), blocks);
+        return render(blocks, Map.of());
+    }
+
+    private List<CommentView> render(Map<UUID, BlockMode> blocks, Map<UUID, Integer> removedReplies) {
+        return BlockRenderPolicy.apply(CommentTree.forest(List.of(root, reply, nested)), blocks, removedReplies);
     }
 
     private static CommentView replyView(List<CommentView> views) {

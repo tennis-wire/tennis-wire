@@ -14,13 +14,14 @@ import java.util.UUID;
  * user-service has no profile for the author. {@code replies} is empty on top-level listings and on
  * ancestry chains, populated on a branch.
  *
- * <p>{@code replyCount} is the raw direct-reply count and may exceed what a blocking viewer will
- * actually get back (spec §13).
+ * <p>{@code replyCount} is how many direct replies this viewer gets: the ones his own
+ * subtree_removal takes out are not counted. Only direct replies are taken off, so a reply that is
+ * a placeholder with everything under it removed for him still counts.
  *
- * <p>{@code repliesTruncated} means this response carries fewer direct replies than the comment
- * has, and says nothing about what the viewer's own blocks removed. Where it is set, the replies of
- * that node are read through {@code GET /comments/&#123;id&#125;/replies}, from its first page: the
- * branch hands out a prefix, not a position to resume from.
+ * <p>{@code repliesTruncated} means this response carries fewer direct replies than the viewer
+ * gets, so there are more to ask for. Where it is set, the replies of that node are read through
+ * {@code GET /comments/&#123;id&#125;/replies}, from its first page: the branch hands out a prefix,
+ * not a position to resume from.
  */
 public record CommentResponse(
         UUID id,
@@ -50,7 +51,7 @@ public record CommentResponse(
                 visibility.showsAuthor() ? authors.get(c.authorId()) : null,
                 showBody ? c.body() : null,
                 visibility.value(),
-                c.replyCount(),
+                view.replyCount(),
                 view.repliesTruncated(),
                 c.createdAt(),
                 c.updatedAt(),
