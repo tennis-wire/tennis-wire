@@ -120,6 +120,20 @@ limit :limit
         """)
     List<ChildTally> countChildrenOf(@Param("parentIds") Collection<UUID> parentIds);
 
+    // The same tally over replies by the given authors only: what a viewer who removes them with
+    // their branches loses from each count
+    @Query("""
+        select new com.tenniswire.discussion_service.repository.ChildTally(
+            c.inReplyToId,
+            count(c),
+            sum(case when c.deletedAt is null or c.replyCount > 0 then 1 else 0 end))
+        from Comment c
+        where c.inReplyToId in :parentIds and c.authorId in :authorIds
+        group by c.inReplyToId
+        """)
+    List<ChildTally> countChildrenByAuthorsAmong(
+            @Param("parentIds") Collection<UUID> parentIds, @Param("authorIds") Collection<UUID> authorIds);
+
     // One statement for the whole collapsed set: the foreign key is checked once it has run, by
     // which time child and parent have gone together. The context is cleared because what it still
     // holds of those rows is no longer in the database.

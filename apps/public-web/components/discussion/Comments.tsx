@@ -9,6 +9,7 @@ import { draftKey, sweepDrafts } from '@/lib/discussion/drafts'
 import CommentBody, { Placeholder, placeholderFor } from './CommentBody'
 import CommentItem, { AuthorName, type Ctx } from './CommentItem'
 import ComposeForm from './ComposeForm'
+import HiddenBranch from './HiddenBranch'
 import { formatWhen } from './format'
 import { strings } from './strings'
 import { action, linkButton, muted } from './styles'
@@ -47,13 +48,13 @@ const quote: React.CSSProperties = {
 }
 
 // The comments block. Loads when the reader is about a screen away from it, or at once when the
-// URL points at a comment; the article above it does not wait for any of this (§3.1–2).
+// URL points at a comment; the article above it does not wait for any of this
 export default function Comments({ subjectType, subjectId }: Props) {
     const discussion = useDiscussion(subjectType, subjectId)
     const { session } = useReaderSession()
     const { state, load } = discussion
     const anchor = useRef<HTMLElement>(null)
-    // the last write met a session that was no longer there (§4.19)
+    // the last write met a session that was no longer there
     const [sessionExpired, setSessionExpired] = useState(false)
 
     useEffect(() => {
@@ -115,6 +116,8 @@ export default function Comments({ subjectType, subjectId }: Props) {
         onSessionExpired,
         onRemove: discussion.remove,
         onReport: discussion.report,
+        onIgnore: discussion.ignore,
+        onUnignore: discussion.unignore,
     }
 
     return (
@@ -173,6 +176,15 @@ function Body({ discussion, ctx, sessionKnown, sessionExpired, draftKey }: BodyP
                     </button>
                 </p>
             )
+        case 'hidden':
+            return (
+                <HiddenBranch
+                    blockedIds={state.blockedIds}
+                    onChanged={load}
+                    onBack={backToAll}
+                    onSessionExpired={ctx.onSessionExpired}
+                />
+            )
     }
 
     const { view } = state
@@ -186,7 +198,7 @@ function Body({ discussion, ctx, sessionKnown, sessionExpired, draftKey }: BodyP
                         ← {strings.allComments}
                     </button>
                 </p>
-                {/* Context only: a collapsed comment stays collapsed here, name and all (§9.11) */}
+                {/* Context only: a collapsed comment stays collapsed here, name and all */}
                 {context.length > 0 && (
                     <div style={quote}>
                         <p style={{ ...muted, margin: '0 0 4px' }}>{strings.inReplyTo}</p>

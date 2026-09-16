@@ -5,20 +5,25 @@ import { useEffect, useState } from 'react'
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
 import { loginHere } from '@/lib/auth/loginHref'
 import { DiscussionError } from '@/lib/discussion/api'
+import type { BlockMode } from '@/lib/discussion/modes'
 import { REPORT_REASONS, type ReportReason } from '@/lib/discussion/reasons'
 import { wasReported } from '@/lib/discussion/reported'
-import type { Comment } from '@/lib/discussion/types'
+import type { Author, Comment } from '@/lib/discussion/types'
 
+import IgnoreModePicker from './IgnoreModePicker'
 import { strings } from './strings'
 import { linkButton, muted } from './styles'
 
 type Props = {
     comment: Comment
-    // the reader wrote it: the menu offers to take it down (§8), and nothing to report (§10.2)
+    // the reader wrote it: the menu offers to take it down, and nothing to report
     own: boolean
     signedIn: boolean
     onRemove: () => Promise<void>
     onReport: (reason: ReportReason) => Promise<void>
+    // a new ignore of the author, or a change of mode; and lifting it. Both throw to be explained
+    onIgnore: (authorId: string, mode: BlockMode) => Promise<void>
+    onUnignore: (authorId: string) => Promise<void>
     onSessionExpired: () => void
 }
 
@@ -28,9 +33,10 @@ type Panel =
     | { kind: 'closed' }
     | { kind: 'menu' }
     | { kind: 'remove'; busy: boolean; failed: boolean }
-    | { kind: 'sign-in' }
+    | { kind: 'sign-in'; to: 'report' | 'ignore' }
     | { kind: 'report'; reason: ReportReason | null; busy: boolean; failure: ReportFailure | null }
     | { kind: 'reported' }
+    | { kind: 'ignore'; busy: boolean; failure: string | null }
 
 // The panel hangs off the dots instead of standing in the byline: opened in the flow it pushed
 // the name and the date aside and moved the comment under it.
@@ -87,18 +93,36 @@ function chosen(panel: Extract<Panel, { kind: 'report' }>): ReportReason {
     return panel.reason ?? 'other'
 }
 
+// A restricted author has no name to put in the title
+function nameOf(author: Author): string | null {
+    return 'restricted' in author ? null : author.displayName
+}
+
+function ignoreFailure(error: unknown, failed: string): string {
+    if (error instanceof DiscussionError && error.status === 429) return strings.tooOften
+    if (error instanceof DiscussionError && error.code === 'BLOCK_LIST_FULL')
+        return strings.ignoreListFull
+    return failed
+}
+
 export default function CommentMenu({
     comment,
     own,
     signedIn,
     onRemove,
     onReport,
+    onIgnore,
+    onUnignore,
     onSessionExpired,
 }: Props) {
     const { setSession } = useReaderSession()
     const [panel, setPanel] = useState<Panel>({ kind: 'closed' })
-    // what this device already sent (§10.7); the menu is client-only, so the read is safe here
+    // what this device already sent; the menu is client-only, so the read is safe here
     const [reported, setReported] = useState(() => wasReported(comment.id))
+    const { author } = comment
+    // the menu is only drawn on a comment the reader can read, so a soft_hidden one here is one he
+    // collapsed by his ignore and opened again
+    const ignoring = comment.visibility === 'soft_hidden'
 
     function signedOut() {
         onSessionExpired()
@@ -139,8 +163,40 @@ export default function CommentMenu({
     }
 
     function openReport() {
-        if (!signedIn) return setPanel({ kind: 'sign-in' })
+        if (!signedIn) return setPanel({ kind: 'sign-in', to: 'report' })
         setPanel({ kind: 'report', reason: null, busy: false, failure: null })
+    }
+
+    function openIgnore() {
+        if (!signedIn) return setPanel({ kind: 'sign-in', to: 'ignore' })
+        setPanel({ kind: 'ignore', busy: false, failure: null })
+    }
+
+    async function ignore(authorId: string, mode: BlockMode) {
+        // collapsed already, and asked to stay that way
+        if (ignoring && mode === 'soft') return setPanel({ kind: 'closed' })
+        setPanel({ kind: 'ignore', busy: true, failure: null })
+        try {
+            // on success the comment collapses, hides or goes, and this menu with it
+            await onIgnore(authorId, mode)
+            setPanel({ kind: 'closed' })
+        } catch (error) {
+            if (error instanceof DiscussionError && error.status === 401) return signedOut()
+            const failed = ignoring ? strings.saveFailed : strings.ignoreFailed
+            setPanel({ kind: 'ignore', busy: false, failure: ignoreFailure(error, failed) })
+        }
+    }
+
+    async function unignore(authorId: string) {
+        setPanel({ kind: 'ignore', busy: true, failure: null })
+        try {
+            await onUnignore(authorId)
+            setPanel({ kind: 'closed' })
+        } catch (error) {
+            if (error instanceof DiscussionError && error.status === 401) return signedOut()
+            const failure = ignoreFailure(error, strings.unignoreFailed)
+            setPanel({ kind: 'ignore', busy: false, failure })
+        }
     }
 
     useEffect(() => {
@@ -170,7 +226,10 @@ export default function CommentMenu({
             {panel.kind !== 'closed' && (
                 <>
                     <span style={overlay} onClick={() => setPanel({ kind: 'closed' })} />
-                    <div role="menu" style={popover}>
+                    <div
+                        role="menu"
+                        style={panel.kind === 'ignore' ? { ...popover, minWidth: 290 } : popover}
+                    >
                         {panel.kind === 'menu' &&
                             (own ? (
                                 <button
@@ -184,15 +243,30 @@ export default function CommentMenu({
                                     {strings.remove}
                                 </button>
                             ) : (
-                                <button
-                                    type="button"
-                                    role="menuitem"
-                                    style={item}
-                                    disabled={reported}
-                                    onClick={openReport}
-                                >
-                                    {reported ? strings.reported : strings.report}
-                                </button>
+                                <>
+                                    <button
+                                        type="button"
+                                        role="menuitem"
+                                        style={item}
+                                        disabled={reported}
+                                        onClick={openReport}
+                                    >
+                                        {reported ? strings.reported : strings.report}
+                                    </button>
+                                    {/* no author, no id to ignore by: user-service had no profile */}
+                                    {author && (
+                                        <button
+                                            type="button"
+                                            role="menuitem"
+                                            style={item}
+                                            onClick={openIgnore}
+                                        >
+                                            {ignoring
+                                                ? strings.ignoredAs(strings.modes.soft)
+                                                : strings.ignore}
+                                        </button>
+                                    )}
+                                </>
                             ))}
 
                         {panel.kind === 'remove' && (
@@ -231,7 +305,10 @@ export default function CommentMenu({
 
                         {panel.kind === 'sign-in' && (
                             <p style={{ ...note, ...muted }}>
-                                {strings.signInToReport} ·{' '}
+                                {panel.to === 'report'
+                                    ? strings.signInToReport
+                                    : strings.signInToIgnore}{' '}
+                                ·{' '}
                                 <a href={loginHere()} style={{ color: 'var(--tw-primary)' }}>
                                     {strings.signIn}
                                 </a>
@@ -281,7 +358,51 @@ export default function CommentMenu({
                         )}
 
                         {panel.kind === 'reported' && (
-                            <p style={{ ...note, ...muted }}>{strings.reported}</p>
+                            <>
+                                <p style={{ ...note, ...muted }}>{strings.reported}</p>
+                                {/* not offered on a comment the reader already collapsed: he ignores
+                                    that author as it is */}
+                                {author && !ignoring && (
+                                    <button
+                                        type="button"
+                                        role="menuitem"
+                                        style={item}
+                                        onClick={openIgnore}
+                                    >
+                                        {strings.ignoreAuthor}
+                                    </button>
+                                )}
+                            </>
+                        )}
+
+                        {panel.kind === 'ignore' && author && (
+                            <div style={{ padding: '4px 10px 8px' }}>
+                                <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 600 }}>
+                                    {ignoring
+                                        ? strings.ignoringWhom(nameOf(author))
+                                        : strings.ignoreWhom(nameOf(author))}
+                                </p>
+                                <IgnoreModePicker
+                                    initial="soft"
+                                    confirmLabel={ignoring ? strings.save : strings.ignore}
+                                    busy={panel.busy}
+                                    failure={panel.failure}
+                                    onConfirm={(mode) => ignore(author.id, mode)}
+                                    onCancel={() => setPanel({ kind: 'closed' })}
+                                />
+                                {ignoring && (
+                                    <p style={{ margin: '10px 0 0' }}>
+                                        <button
+                                            type="button"
+                                            style={linkButton}
+                                            disabled={panel.busy}
+                                            onClick={() => unignore(author.id)}
+                                        >
+                                            {strings.unignore}
+                                        </button>
+                                    </p>
+                                )}
+                            </div>
                         )}
                     </div>
                 </>

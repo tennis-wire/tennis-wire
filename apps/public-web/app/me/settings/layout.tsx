@@ -7,6 +7,7 @@ import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
 
 const SECTIONS = [
     { href: '/me/settings/appearance', label: 'Внешний вид', account: false },
+    { href: '/me/settings/ignore', label: 'Игнор-лист', account: true },
     { href: '/me/settings/actions', label: 'Действия', account: true },
 ]
 

@@ -1,6 +1,8 @@
 // The reader-facing wire of discussion-service, as far as this app reads it. Names match the
 // service's records; see discussion-service/README.md for the semantics.
 
+import type { BlockMode } from './modes'
+
 export type Visibility = 'visible' | 'soft_hidden' | 'gravestone' | 'deleted' | 'removed'
 
 export type Author =
@@ -19,9 +21,10 @@ export type Comment = {
     // missing when the visibility withholds it
     body?: string
     visibility: Visibility
-    // direct replies as stored: a blocking viewer may get back fewer
+    // direct replies this reader gets: the ones his own "remove with branches" takes out are not
+    // counted
     replyCount: number
-    // this response carries fewer direct replies than there are; read them from /replies
+    // this response carries fewer direct replies than the reader gets; read them from /replies
     repliesTruncated: boolean
     createdAt: string
     updatedAt: string
@@ -36,3 +39,8 @@ export type Ancestry = { chain: Comment[] }
 // What a POST answers: the comment as its author sees it, and whether the author of the comment
 // replied to ignores him (§5.6)
 export type CommentCreated = { comment: Comment; mutedByRecipient: boolean }
+
+// A row of the reader's own ignore list. `user` takes the forms an author does and is missing when
+// user-service has no profile; `blockedId` is always there, so the row can still be lifted
+export type Block = { blockedId: string; user?: Author; mode: BlockMode; createdAt: string }
+export type BlockPage = { items: Block[]; nextCursor: string | null }

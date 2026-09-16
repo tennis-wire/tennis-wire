@@ -48,7 +48,7 @@ async function toError(response: Response): Promise<DiscussionError> {
 }
 
 export async function once<T>(
-    method: 'GET' | 'POST' | 'DELETE',
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     path: string,
     body?: unknown
 ): Promise<T> {
@@ -92,6 +92,10 @@ export async function read<T>(path: string): Promise<T> {
 // A write: one request and no retry. The service has no idempotency key, so a second try after a
 // timeout can land the same comment twice; a retry is the reader's decision, by hand (§4.12 is
 // a debt in readers.md §5 for that reason).
-export function write<T>(method: 'POST' | 'DELETE', path: string, body?: unknown): Promise<T> {
+export function write<T>(
+    method: 'POST' | 'PUT' | 'DELETE',
+    path: string,
+    body?: unknown
+): Promise<T> {
     return once<T>(method, path, body)
 }

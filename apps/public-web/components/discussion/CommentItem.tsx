@@ -2,6 +2,7 @@
 
 import Avatar from '@/components/Avatar'
 import { loginHere } from '@/lib/auth/loginHref'
+import type { BlockMode } from '@/lib/discussion/modes'
 import type { ReportReason } from '@/lib/discussion/reasons'
 import type { Node } from '@/lib/discussion/tree'
 import type { Author, Comment } from '@/lib/discussion/types'
@@ -34,12 +35,14 @@ export type Ctx = {
     onSessionExpired: () => void
     onRemove: (id: string) => Promise<void>
     onReport: (id: string, reason: ReportReason) => Promise<void>
+    onIgnore: (commentId: string, authorId: string, mode: BlockMode) => Promise<void>
+    onUnignore: (authorId: string) => Promise<void>
 }
 
 type Props = {
     node: Node
     // whether the direct replies are drawn under this comment. Where they are not, the reader
-    // gets there by re-rooting on it (readers.md: the first level inline, deeper by re-root)
+    // gets there by re-rooting on it: the first level inline, deeper by re-root
     inline: boolean
     ctx: Ctx
 }
@@ -93,7 +96,7 @@ const byline: React.CSSProperties = {
     minHeight: 24,
 }
 
-// Nobody to draw: a placeholder is not signed, and §8.6 means it never was
+// Nobody to draw: a placeholder is not signed
 const blank: React.CSSProperties = {
     width: 36,
     height: 36,
@@ -118,7 +121,7 @@ const name: React.CSSProperties = {
 
 export function AuthorName({ author }: { author?: Author }) {
     if (!author) return <span style={name}>{strings.nobody}</span>
-    // §2.8: the label stands instead of the name, and the server sends no name at all
+    // the label stands instead of the name, and the server sends no name at all
     if ('restricted' in author)
         return <span style={{ ...name, color: 'var(--tw-text-muted)' }}>{strings.restricted}</span>
     return <span style={name}>{author.displayName}</span>
@@ -137,7 +140,7 @@ function elementId(comment: Comment) {
 export default function CommentItem({ node, inline, ctx }: Props) {
     const { comment } = node
     const collapsed = comment.visibility === 'soft_hidden' && !node.revealed
-    // a live comment: the one kind that takes a reply (§5.2)
+    // a live comment: the one kind that takes a reply
     const readable =
         comment.visibility === 'visible' || (comment.visibility === 'soft_hidden' && node.revealed)
     const replying = ctx.replyingTo === comment.id
@@ -175,6 +178,10 @@ export default function CommentItem({ node, inline, ctx }: Props) {
                                     signedIn={ctx.signedIn}
                                     onRemove={() => ctx.onRemove(comment.id)}
                                     onReport={(reason) => ctx.onReport(comment.id, reason)}
+                                    onIgnore={(authorId, mode) =>
+                                        ctx.onIgnore(comment.id, authorId, mode)
+                                    }
+                                    onUnignore={ctx.onUnignore}
                                     onSessionExpired={ctx.onSessionExpired}
                                 />
                             </div>

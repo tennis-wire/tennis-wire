@@ -10,17 +10,22 @@ import com.tenniswire.discussion_service.event.CommentCreatedEvent;
 import com.tenniswire.discussion_service.event.DomainEventPublisher;
 import com.tenniswire.discussion_service.exception.CommentingRestrictedException;
 import com.tenniswire.discussion_service.exception.ForbiddenException;
+import com.tenniswire.discussion_service.exception.HiddenByBlockException;
 import com.tenniswire.discussion_service.exception.ParentDeletedException;
 import com.tenniswire.discussion_service.exception.ResolutionNotApplicableException;
 import com.tenniswire.discussion_service.exception.ResourceNotFoundException;
 import com.tenniswire.discussion_service.repository.BlockRepository;
+import com.tenniswire.discussion_service.repository.ChildTally;
 import com.tenniswire.discussion_service.repository.CommentRepository;
 import com.tenniswire.discussion_service.repository.ReportRepository;
 import com.tenniswire.discussion_service.repository.UserRestrictionRepository;
 import java.time.Instant;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -175,11 +180,12 @@ public class CommentService {
         // are applied below, and a page he has removed in full would otherwise end the listing for
         // him while comments are still waiting behind it.
         var nextCursor = more ? CommentCursor.encode(page.getLast()) : null;
-        return new CommentPage(BlockRenderPolicy.apply(CommentTree.forest(page), blocksOf(viewerId)), nextCursor);
+        return new CommentPage(render(CommentTree.forest(page), blocksOf(viewerId)), nextCursor);
     }
 
-    // The comment with as much of its subtree as one response carries, or 404 when the viewer has
-    // removed the branch head. Nodes whose replies did not fit come back marked.
+    // The comment with as much of its subtree as one response carries. NOT_FOUND when nobody is
+    // shown the head, HIDDEN_BY_BLOCK when the viewer's subtree_removal takes out the head or a
+    // comment above it. Nodes whose replies did not fit come back marked.
     @Transactional(readOnly = true)
     public CommentView branch(UUID commentId, @Nullable UUID viewerId) {
         var head = findOrThrow(commentId);
@@ -190,8 +196,10 @@ public class CommentService {
         if (tree.isEmpty()) {
             throw new ResourceNotFoundException("Comment", commentId);
         }
-        return BlockRenderPolicy.apply(tree.getFirst(), blocksOf(viewerId))
-                .orElseThrow(() -> new ResourceNotFoundException("Comment", commentId));
+        var blocks = blocksOf(viewerId);
+        assertNotRemovedFromAbove(head, blocks);
+        // Empty for a placeholder head whose every reply this viewer removes
+        return render(tree.getFirst(), blocks).orElseThrow(() -> new ResourceNotFoundException("Comment", commentId));
     }
 
     // Direct replies of one comment, a page at a time. Where a branch stops, this carries on: every
@@ -200,15 +208,12 @@ public class CommentService {
     public CommentPage replies(
             UUID parentId, @Nullable UUID viewerId, @Nullable Integer limit, @Nullable String cursor) {
         var parent = findOrThrow(parentId);
-        var blocks = blocksOf(viewerId);
-        // Gone from view, or removed by this viewer: either way there is no comment here to read
-        // the replies of, exactly as in a branch
-        var head = CommentTree.forest(List.of(parent));
-        if (head.isEmpty()) {
+        // Gone from view: there is no comment here to read the replies of, exactly as in a branch
+        if (CommentTree.forest(List.of(parent)).isEmpty()) {
             throw new ResourceNotFoundException("Comment", parentId);
         }
-        BlockRenderPolicy.apply(head.getFirst(), blocks)
-                .orElseThrow(() -> new ResourceNotFoundException("Comment", parentId));
+        var blocks = blocksOf(viewerId);
+        assertNotRemovedFromAbove(parent, blocks);
 
         var size = limit == null ? DEFAULT_LIMIT : Math.clamp(limit, MIN_LIMIT, MAX_LIMIT);
         var after = CommentCursor.decode(cursor);
@@ -219,32 +224,37 @@ public class CommentService {
         var page = more ? rows.subList(0, size) : rows;
 
         var nextCursor = more ? CommentCursor.encode(page.getLast()) : null;
-        return new CommentPage(BlockRenderPolicy.apply(CommentTree.forest(page), blocks), nextCursor);
+        return new CommentPage(render(CommentTree.forest(page), blocks), nextCursor);
     }
 
     /**
-     * Root first, the requested comment last, no replies attached. A subtree_removal block on any
-     * ancestor hides the whole chain, so the comment is 404 for that viewer, as it would be in the
-     * thread itself.
+     * Root first, the requested comment last, no replies attached. A placeholder nobody is shown
+     * anywhere on the way cuts the chain: NOT_FOUND. A subtree_removal block on the comment or any
+     * ancestor hides it from that viewer alone: HIDDEN_BY_BLOCK.
      */
     @Transactional(readOnly = true)
     public List<CommentView> ancestry(UUID commentId, @Nullable UUID viewerId) {
         var target = findOrThrow(commentId);
-        var chain = CommentTree.forest(comments.findAncestry(target.path()));
+        var rows = comments.findAncestry(target.path());
+        var chain = CommentTree.forest(rows);
         // Empty when the thread root itself is a placeholder nobody is shown, which is the whole
         // chain gone. Otherwise the ancestry is one linear tree rooted at that root.
-        if (chain.isEmpty()) {
+        if (chain.isEmpty() || !reaches(chain.getFirst(), commentId)) {
             throw new ResourceNotFoundException("Comment", commentId);
         }
+        var blocks = blocksOf(viewerId);
+        assertNotRemoved(commentId, rows, removedBy(blocks));
+
         var flat = new ArrayList<CommentView>();
-        var cursor =
-                BlockRenderPolicy.apply(chain.getFirst(), blocksOf(viewerId)).orElse(null);
+        var cursor = render(chain.getFirst(), blocks).orElse(null);
         while (cursor != null) {
             // The chain carries no replies at all, so any comment that has one is truncated here
             flat.add(new CommentView(
-                    cursor.comment(), cursor.visibility(), cursor.comment().replyCount() > 0, List.of()));
+                    cursor.comment(), cursor.visibility(), cursor.replyCount(), cursor.replyCount() > 0, List.of()));
             cursor = cursor.replies().isEmpty() ? null : cursor.replies().getFirst();
         }
+        // Everything above holds on to the next comment of the chain, so only the comment itself can
+        // drop out here: a placeholder whose every reply this viewer removes
         if (flat.isEmpty() || !flat.getLast().comment().id().equals(commentId)) {
             throw new ResourceNotFoundException("Comment", commentId);
         }
@@ -279,6 +289,77 @@ public class CommentService {
         // upward: the counts come down, and a placeholder above that held nothing else goes with it.
         comments.flush();
         collapse.of(List.of(comment), Set.of(comment.id()));
+    }
+
+    // For a comment loaded without its chain. The chain is read only if the viewer has a
+    // subtree_removal at all.
+    private void assertNotRemovedFromAbove(Comment comment, Map<UUID, BlockMode> blocks) {
+        var removed = removedBy(blocks);
+        if (!removed.isEmpty()) {
+            assertNotRemoved(comment.id(), comments.findAncestry(comment.path()), removed);
+        }
+    }
+
+    // One rule for ancestry, branch and replies: the comment is gone for a viewer who removes, with
+    // its branch, a comment of the chain. blockedIds name the authors of signed comments only: a
+    // placeholder does not give its author away, to the blocker either.
+    private static void assertNotRemoved(UUID commentId, List<Comment> chain, Set<UUID> removed) {
+        if (chain.stream().noneMatch(comment -> removed.contains(comment.authorId()))) {
+            return;
+        }
+        // The chain comes ordered by depth, so the authors do too: nearest the root first
+        var blockedIds = chain.stream()
+                .filter(comment -> !comment.isDeleted())
+                .map(Comment::authorId)
+                .filter(removed::contains)
+                .distinct()
+                .toList();
+        throw new HiddenByBlockException(commentId, blockedIds);
+    }
+
+    private List<CommentView> render(List<CommentNode> nodes, Map<UUID, BlockMode> blocks) {
+        return BlockRenderPolicy.apply(nodes, blocks, removedReplies(nodes, blocks));
+    }
+
+    private Optional<CommentView> render(CommentNode node, Map<UUID, BlockMode> blocks) {
+        return BlockRenderPolicy.apply(node, blocks, removedReplies(List.of(node), blocks));
+    }
+
+    // Per loaded comment, how many of its counted replies the viewer removes with their branches.
+    // One query for the whole tree, and none for a viewer who removes nobody.
+    private Map<UUID, Integer> removedReplies(List<CommentNode> nodes, Map<UUID, BlockMode> blocks) {
+        var removed = removedBy(blocks);
+        if (removed.isEmpty() || nodes.isEmpty()) {
+            return Map.of();
+        }
+        var ids = new ArrayList<UUID>();
+        var pending = new ArrayDeque<>(nodes);
+        while (!pending.isEmpty()) {
+            var node = pending.pop();
+            ids.add(node.comment().id());
+            pending.addAll(node.children());
+        }
+        return comments.countChildrenByAuthorsAmong(ids, removed).stream()
+                .collect(Collectors.toMap(
+                        ChildTally::parentId, tally -> tally.shown().intValue()));
+    }
+
+    // Authors whose comments the viewer takes out together with everything under them. A HashSet:
+    // an erased author is null, and an immutable set would throw on the lookup.
+    private static Set<UUID> removedBy(Map<UUID, BlockMode> blocks) {
+        return blocks.entrySet().stream()
+                .filter(block -> block.getValue() == BlockMode.SUBTREE_REMOVAL)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toCollection(HashSet::new));
+    }
+
+    // A placeholder nobody is shown is pruned from the tree and cuts the chain below it
+    private static boolean reaches(CommentNode root, UUID commentId) {
+        var node = root;
+        while (!node.children().isEmpty()) {
+            node = node.children().getFirst();
+        }
+        return node.comment().id().equals(commentId);
     }
 
     private Map<UUID, BlockMode> blocksOf(@Nullable UUID viewerId) {

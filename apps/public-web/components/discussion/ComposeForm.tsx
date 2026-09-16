@@ -15,7 +15,7 @@ import { action, linkButton, muted } from './styles'
 type Props = {
     // null: nothing to key a draft by (the session carries no user id), so none is kept
     draftKey: string | null
-    // text handed over from a reply whose parent is gone (§5.5); `at` tells one hand-over
+    // text handed over from a reply whose parent is gone; `at` tells one hand-over
     // from the next
     seed?: Seed | null
     placeholder: string
@@ -123,7 +123,7 @@ export default function ComposeForm({
     const [text, setText] = useState(() => (draftKey ? (readDraft(draftKey) ?? '') : ''))
     const [sending, setSending] = useState(false)
     const [failure, setFailure] = useState<Failure | null>(null)
-    // undefined: no restriction met; null: one with no end (§12, §4.20)
+    // undefined: no restriction met; null: one with no end
     const [restrictedUntil, setRestrictedUntil] = useState<string | null | undefined>(undefined)
     const sent = useRef(false)
     const latest = useRef({ draftKey, text })
@@ -168,7 +168,7 @@ export default function ComposeForm({
         } catch (error) {
             if (error instanceof DiscussionError && error.status === 401) {
                 // the proxy has already dropped the cookie; the text stays in the draft under
-                // this reader's id and comes back after the next sign-in (§4.19)
+                // this reader's id and comes back after the next sign-in
                 onSessionExpired?.()
                 setSession({ authenticated: false })
                 return
@@ -197,8 +197,6 @@ export default function ComposeForm({
                             ? strings.restrictedUntil(formatUntil(restrictedUntil))
                             : strings.restrictedIndefinitely}
                     </p>
-                    {/* §4.22 — what he had written stays in front of him, in the box it was
-                        written in, just not editable */}
                     {text !== '' && (
                         <div style={box}>
                             <textarea

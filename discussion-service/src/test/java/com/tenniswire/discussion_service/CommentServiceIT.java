@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.tenniswire.discussion_service.entity.BlockMode;
 import com.tenniswire.discussion_service.exception.CommentingRestrictedException;
 import com.tenniswire.discussion_service.exception.ForbiddenException;
+import com.tenniswire.discussion_service.exception.HiddenByBlockException;
 import com.tenniswire.discussion_service.exception.ParentDeletedException;
 import com.tenniswire.discussion_service.exception.ResourceNotFoundException;
 import com.tenniswire.discussion_service.repository.CommentRepository;
@@ -259,9 +260,9 @@ class CommentServiceIT {
                 .hasSize(1);
         assertThat(commentService.branch(root.id(), alice).replies()).isEmpty();
         assertThatThrownBy(() -> commentService.branch(bobReply.id(), alice))
-                .isInstanceOf(ResourceNotFoundException.class);
+                .isInstanceOf(HiddenByBlockException.class);
         assertThatThrownBy(() -> commentService.ancestry(nested.id(), alice))
-                .isInstanceOf(ResourceNotFoundException.class);
+                .isInstanceOf(HiddenByBlockException.class);
         assertThat(commentService.ancestry(nested.id(), bob)).hasSize(3);
     }
 

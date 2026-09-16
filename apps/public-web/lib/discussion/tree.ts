@@ -1,8 +1,9 @@
+import type { BlockMode } from './modes'
 import type { Comment, CommentPage } from './types'
 
 // What the island holds and how it changes. Pure: the loaders in useDiscussion feed it, the
-// components draw it. Two views share one tree shape — the page's top-level list, and one
-// comment re-rooted with its context chain above it (readers.md, the X-style layout).
+// components draw it. Two views share one tree shape: the page's top-level list, and one
+// comment re-rooted with its context chain above it.
 
 export type Node = {
     comment: Comment
@@ -11,7 +12,7 @@ export type Node = {
     // more direct replies exist than `replies` holds
     hasMore: boolean
     // where the next page of /replies starts. undefined while `replies` is still the prefix a
-    // branch handed out — /replies is then read from its first page, not resumed
+    // branch handed out; /replies is then read from its first page, not resumed
     cursor: string | null | undefined
     // a soft_hidden comment the reader chose to see
     revealed: boolean
@@ -28,19 +29,23 @@ export type View = ListView | RootedView
 export type State =
     | { phase: 'idle' }
     | { phase: 'loading' }
-    // offline: no connection at all, as against no usable answer (§3.20 vs §3.19)
+    // offline: no connection at all, as against no usable answer
     | { phase: 'failed'; offline: boolean }
     // the comment the URL points at is not there for this viewer
     | { phase: 'missing' }
-    // the comment the view was rooted on is gone, and the reader saw it go (§8.19)
+    // it is there, in a branch the reader's own "remove with branches" takes out
+    // blockedIds: whose blocks, nearest the root first; empty when a placeholder is what hides it
+    | { phase: 'hidden'; blockedIds: string[] }
+    // the comment the view was rooted on is gone, and the reader saw it go
     | { phase: 'gone' }
-    // highlight: the comment the reader was brought to — by a link, or by posting it (§3.29, §4.11)
+    // highlight: the comment the reader was brought to, by a link or by posting it
     | { phase: 'ready'; view: View; highlight: string | null }
 
 export type Action =
     | { type: 'loading' }
     | { type: 'failed'; offline: boolean }
     | { type: 'missing' }
+    | { type: 'hidden'; blockedIds: string[] }
     | { type: 'list'; page: CommentPage }
     | { type: 'more'; status: Status }
     | { type: 'more-loaded'; page: CommentPage }
@@ -50,15 +55,21 @@ export type Action =
     | { type: 'branch-loaded'; id: string; root: Comment }
     | { type: 'replies-loaded'; id: string; page: CommentPage }
     | { type: 'reveal'; id: string }
-    // the reader's own top-level comment, just accepted: first, whatever the order (§3.15)
+    // the reader's own top-level comment, just accepted: first, whatever the order
     | { type: 'posted'; comment: Comment }
     // the reader's own reply, just accepted, under a comment whose replies are drawn here
     | { type: 'replied'; parentId: string; comment: Comment }
     // the reader's own comment, just taken down: a placeholder while replies stand under it,
-    // gone otherwise (§8.5–6)
+    // gone otherwise
     | { type: 'deleted'; id: string }
-    // a comment the server no longer has: out of the tree, no word said (§8.17)
+    // a comment the server no longer has: out of the tree, no word said
     | { type: 'vanished'; id: string }
+    // the reader has just ignored an author, or changed how, and it shows at once. Only comments
+    // that carry their author can be matched: a placeholder of his stays until the next load, and
+    // so does a count under replies not on show yet
+    | { type: 'ignored'; authorId: string; mode: BlockMode }
+    // the reader has just stopped ignoring an author: what was collapsed opens
+    | { type: 'unignored'; authorId: string }
 
 export const initial: State = { phase: 'idle' }
 
@@ -93,6 +104,72 @@ function withBranch(node: Node, root: Comment): Node {
 function placeholder(node: Node): Node {
     const { body: _body, author: _author, ...rest } = node.comment
     return { ...node, comment: { ...rest, visibility: 'deleted' } }
+}
+
+const byAuthor = (comment: Comment, authorId: string) => comment.author?.id === authorId
+
+const isPlaceholder = (comment: Comment) =>
+    comment.visibility === 'deleted' || comment.visibility === 'removed'
+
+// A comment of the ignored author drawn the way the mode draws it. Removal is not drawn: the
+// comment goes, and that is the caller's to do
+function ignoredComment(comment: Comment, mode: 'soft' | 'gravestone'): Comment {
+    if (comment.visibility !== 'visible' && comment.visibility !== 'soft_hidden') return comment
+    if (mode === 'soft') return { ...comment, visibility: 'soft_hidden' }
+    const { body: _body, author: _author, ...rest } = comment
+    return { ...rest, visibility: 'gravestone' }
+}
+
+// Nodes on show after an ignore, as the server would send them: the author's comments collapse,
+// turn into hidden ones, or go with everything under them. A parent is counted down by what went
+// from under it, and a placeholder left with nothing under it goes as well
+function ignoreNodes(nodes: Node[], authorId: string, mode: BlockMode): Node[] {
+    const kept: Node[] = []
+    for (const node of nodes) {
+        if (mode === 'subtree_removal' && byAuthor(node.comment, authorId)) continue
+        const next = ignoreNode(node, authorId, mode)
+        if (isPlaceholder(next.comment) && next.comment.replyCount === 0) continue
+        kept.push(next)
+    }
+    return kept
+}
+
+function ignoreNode(node: Node, authorId: string, mode: BlockMode): Node {
+    const comment =
+        mode !== 'subtree_removal' && byAuthor(node.comment, authorId)
+            ? ignoredComment(node.comment, mode)
+            : node.comment
+    const revealed = comment === node.comment && node.revealed
+    if (node.replies === null) return { ...node, comment, revealed }
+    const replies = ignoreNodes(node.replies, authorId, mode)
+    const gone = node.replies.length - replies.length
+    return {
+        ...node,
+        revealed,
+        replies,
+        comment:
+            gone === 0
+                ? comment
+                : { ...comment, replyCount: Math.max(0, comment.replyCount - gone) },
+    }
+}
+
+function openComment(comment: Comment, authorId: string): Comment {
+    return comment.visibility === 'soft_hidden' && byAuthor(comment, authorId)
+        ? { ...comment, visibility: 'visible' }
+        : comment
+}
+
+function unignoreNodes(nodes: Node[], authorId: string): Node[] {
+    return nodes.map((node) => {
+        const comment = openComment(node.comment, authorId)
+        return {
+            ...node,
+            comment,
+            revealed: comment === node.comment && node.revealed,
+            replies: node.replies === null ? null : unignoreNodes(node.replies, authorId),
+        }
+    })
 }
 
 // A reply counted off a comment
@@ -168,6 +245,8 @@ export function reduce(state: State, action: Action): State {
             return { phase: 'failed', offline: action.offline }
         case 'missing':
             return { phase: 'missing' }
+        case 'hidden':
+            return { phase: 'hidden', blockedIds: action.blockedIds }
         case 'list':
             return {
                 phase: 'ready',
@@ -237,7 +316,7 @@ export function reduce(state: State, action: Action): State {
                 ...node,
                 comment: { ...node.comment, replyCount: node.comment.replyCount + 1 },
                 // Replies not on show yet: the reader's own goes up alone, the older ones stay
-                // behind "show more", which reads them from the first page (§3.15 for replies)
+                // behind "show more", which reads them from the first page
                 replies:
                     node.replies === null
                         ? [leaf(action.comment)]
@@ -260,5 +339,42 @@ export function reduce(state: State, action: Action): State {
             if (state.view.kind === 'rooted' && state.view.root.comment.id === action.id)
                 return { phase: 'gone' }
             return { ...state, view: dropFromView(state.view, action.id) }
+        case 'ignored': {
+            if (state.phase !== 'ready') return state
+            const { view } = state
+            const { authorId, mode } = action
+            if (view.kind === 'list')
+                return {
+                    ...state,
+                    view: { ...view, items: ignoreNodes(view.items, authorId, mode) },
+                }
+            // the rooted comment or one above it goes with its branch: the view becomes what a link
+            // into that branch shows
+            if (mode === 'subtree_removal' && view.chain.some((c) => byAuthor(c, authorId)))
+                return { phase: 'hidden', blockedIds: [authorId] }
+            const [root] = ignoreNodes([view.root], authorId, mode)
+            // a placeholder with nothing left under it is not there for this reader
+            if (!root) return { phase: 'missing' }
+            const chain =
+                mode === 'subtree_removal'
+                    ? view.chain
+                    : view.chain.map((c) => (byAuthor(c, authorId) ? ignoredComment(c, mode) : c))
+            return { ...state, view: { ...view, chain, root } }
+        }
+        case 'unignored': {
+            if (state.phase !== 'ready') return state
+            const { view } = state
+            const { authorId } = action
+            if (view.kind === 'list')
+                return { ...state, view: { ...view, items: unignoreNodes(view.items, authorId) } }
+            return {
+                ...state,
+                view: {
+                    ...view,
+                    chain: view.chain.map((c) => openComment(c, authorId)),
+                    root: unignoreNodes([view.root], authorId)[0],
+                },
+            }
+        }
     }
 }
