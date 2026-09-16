@@ -358,7 +358,21 @@ export default function CommentMenu({
                         )}
 
                         {panel.kind === 'reported' && (
-                            <p style={{ ...note, ...muted }}>{strings.reported}</p>
+                            <>
+                                <p style={{ ...note, ...muted }}>{strings.reported}</p>
+                                {/* not offered on a comment the reader already collapsed: he ignores
+                                    that author as it is */}
+                                {author && !ignoring && (
+                                    <button
+                                        type="button"
+                                        role="menuitem"
+                                        style={item}
+                                        onClick={openIgnore}
+                                    >
+                                        {strings.ignoreAuthor}
+                                    </button>
+                                )}
+                            </>
                         )}
 
                         {panel.kind === 'ignore' && author && (

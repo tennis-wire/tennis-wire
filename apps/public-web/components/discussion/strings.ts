@@ -75,6 +75,8 @@ export const strings = {
     tooManyReports: 'Слишком много жалоб, попробуйте позже',
     alreadyRemoved: 'Комментарий уже удалён модерацией',
     signInToReport: 'Войдите, чтобы пожаловаться',
+    // offered once the report is sent
+    ignoreAuthor: 'Игнорировать автора?',
     close: 'Закрыть',
 
     // ignoring
