@@ -13,7 +13,16 @@ const TABS = [
     { href: '/me/settings', label: 'Настройки', account: false },
 ]
 
-const since = new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' })
+// Month and year only, but in the genitive the phrase needs. Intl gives that form of the month
+// only next to a day, so the date is formatted with one and the day left out
+const dated = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+
+function since(iso: string): string {
+    const parts = dated.formatToParts(new Date(iso))
+    const part = (type: Intl.DateTimeFormatPartTypes) =>
+        parts.find((p) => p.type === type)?.value ?? ''
+    return `с ${part('month')} ${part('year')} г.`
+}
 
 const card: React.CSSProperties = {
     maxWidth: 960,
@@ -67,7 +76,7 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
                     <div style={{ fontSize: 13, color: 'var(--tw-text-muted)', marginTop: 3 }}>
                         {signedIn
                             ? createdAt
-                                ? `с ${since.format(new Date(createdAt))}`
+                                ? since(createdAt)
                                 : 'ваш аккаунт и настройки'
                             : 'настройки этого браузера'}
                     </div>

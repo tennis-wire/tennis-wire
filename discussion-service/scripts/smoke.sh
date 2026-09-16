@@ -56,7 +56,7 @@ json='Content-Type: application/json'
 # User ids are issued by user-service, so they are read off the comments each account creates.
 echo "# reader posts a top-level comment"
 CREATED=$(expect 201 -X POST "$API/comments" -H "Authorization: Bearer $READER" -H "$json" \
-  -d "{\"subjectType\":\"article\",\"subjectId\":\"$SUBJECT\",\"body\":\"first\"}")
+  -d "{\"subjectType\":\"publication\",\"subjectId\":\"$SUBJECT\",\"body\":\"first\"}")
 ROOT=$(jq -r .comment.id <<< "$CREATED"); READER_ID=$(jq -r .comment.author.id <<< "$CREATED")
 
 echo "# the author is the user-service id with a display name, not the Keycloak subject"
@@ -71,10 +71,10 @@ CREATED=$(expect 201 -X POST "$API/comments/$ROOT/replies" -H "Authorization: Be
 REPLY=$(jq -r .comment.id <<< "$CREATED"); DEV_ID=$(jq -r .comment.author.id <<< "$CREATED")
 
 echo "# anonymous read: 1 top-level with replyCount=1"
-expect 200 "$API/comments?subjectType=article&subjectId=$SUBJECT" | jq -e '.items | length == 1 and .[0].replyCount == 1' > /dev/null
+expect 200 "$API/comments?subjectType=publication&subjectId=$SUBJECT" | jq -e '.items | length == 1 and .[0].replyCount == 1' > /dev/null
 
 echo "# anonymous write: 401"
-expect 401 -X POST "$API/comments" -H "$json" -d '{"subjectType":"article","subjectId":"'"$SUBJECT"'","body":"x"}' > /dev/null
+expect 401 -X POST "$API/comments" -H "$json" -d '{"subjectType":"publication","subjectId":"'"$SUBJECT"'","body":"x"}' > /dev/null
 
 echo "# reader blocks dev (gravestone)"
 expect 200 -X PUT "$API/blocks/$DEV_ID" -H "Authorization: Bearer $READER" -H "$json" -d '{"mode":"gravestone"}' > /dev/null
@@ -97,7 +97,7 @@ UNTIL=$(in_one_hour)
 RESTRICTION=$(expect 201 -X POST "$API/moderation/restrictions" -H "Authorization: Bearer $DEV" -H "$json" \
   -d "{\"userId\":\"$READER_ID\",\"expiresAt\":\"$UNTIL\",\"reason\":\"smoke\"}" | jq -r .id)
 expect 403 -X POST "$API/comments" -H "Authorization: Bearer $READER" -H "$json" \
-  -d "{\"subjectType\":\"article\",\"subjectId\":\"$SUBJECT\",\"body\":\"nope\"}" | jq -e '.error == "COMMENTING_RESTRICTED" and .details.restrictedUntil != null' > /dev/null
+  -d "{\"subjectType\":\"publication\",\"subjectId\":\"$SUBJECT\",\"body\":\"nope\"}" | jq -e '.error == "COMMENTING_RESTRICTED" and .details.restrictedUntil != null' > /dev/null
 
 echo "# while restricted, reader's comments carry restricted: true and no name"
 expect 200 "$API/comments/$ROOT/branch" | jq -e '.root.author.restricted == true and .root.author.displayName == null' > /dev/null
@@ -106,7 +106,7 @@ echo "# lift it; reader can post again; reader may not lift (moderator only)"
 expect 403 -X DELETE "$API/moderation/restrictions/$RESTRICTION" -H "Authorization: Bearer $READER" > /dev/null
 expect 204 -X DELETE "$API/moderation/restrictions/$RESTRICTION" -H "Authorization: Bearer $DEV" > /dev/null
 expect 201 -X POST "$API/comments" -H "Authorization: Bearer $READER" -H "$json" \
-  -d "{\"subjectType\":\"article\",\"subjectId\":\"$SUBJECT\",\"body\":\"back\"}" > /dev/null
+  -d "{\"subjectType\":\"publication\",\"subjectId\":\"$SUBJECT\",\"body\":\"back\"}" > /dev/null
 expect 200 "$API/comments/$ROOT/branch" | jq -e '.root.author.displayName != null and .root.author.restricted == null' > /dev/null
 
 echo "# soft delete: dev cannot delete reader's root; reader can; node survives with visibility=deleted, no body, no author"
