@@ -18,6 +18,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse.of("NOT_FOUND", ex.getMessage()));
     }
 
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException ex) {
+        // Not NOT_FOUND: on the same path that means there is no block, here the person is missing
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse.of("USER_NOT_FOUND", ex.getMessage()));
+    }
+
     @ExceptionHandler(ForbiddenException.class)
     public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorResponse.of("FORBIDDEN", ex.getMessage()));
@@ -53,6 +59,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleResolution(ResolutionNotApplicableException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ErrorResponse.of("RESOLUTION_NOT_APPLICABLE", ex.getMessage()));
+    }
+
+    @ExceptionHandler(BlockListFullException.class)
+    public ResponseEntity<ErrorResponse> handleBlockListFull(BlockListFullException ex) {
+        // details.limit, so the client says how many without keeping a copy of the number
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(
+                        "BLOCK_LIST_FULL", ex.getMessage(), null, Map.of("limit", ex.limit()), Instant.now()));
     }
 
     @ExceptionHandler(UnknownSubjectTypeException.class)

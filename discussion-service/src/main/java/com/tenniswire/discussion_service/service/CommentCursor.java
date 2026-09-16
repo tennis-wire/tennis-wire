@@ -18,7 +18,12 @@ final class CommentCursor {
     record Position(Instant createdAt, UUID id) {}
 
     static String encode(Comment last) {
-        var raw = last.createdAt() + SEPARATOR + last.id();
+        return encode(last.createdAt(), last.id());
+    }
+
+    // The ignore list pages by the same pair, a time and an id, so it takes its cursor from here too
+    static String encode(Instant createdAt, UUID id) {
+        var raw = createdAt + SEPARATOR + id;
         return Base64.getUrlEncoder().withoutPadding().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
     }
 
