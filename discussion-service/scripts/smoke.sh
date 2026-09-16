@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # End-to-end smoke against the local stack: Keycloak (dev realm), user-service and discussion-service.
 # Needs: docker compose up -d postgres keycloak; the tennis_discussion and tennis_users databases
-# (docs/DEVELOPMENT.md); user-service running on 8092, since discussion-service resolves every reader
+# (see the local setup); user-service running on 8092, since discussion-service resolves every reader
 # token through it; discussion-service on 8093 (or via the gateway with BASE=http://localhost:8090);
 # jq, curl.
 #

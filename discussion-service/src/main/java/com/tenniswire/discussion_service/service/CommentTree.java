@@ -23,7 +23,7 @@ final class CommentTree {
         return comment.isDeleted() && comment.replyCount() == 0;
     }
 
-    /** Roots are the nodes whose parent is not in the list — top-level comments, or the branch head. */
+    /** Roots are the nodes whose parent is not in the list: top-level comments, or the branch head. */
     static List<CommentNode> forest(List<Comment> comments) {
         return forest(comments, Integer.MAX_VALUE);
     }
@@ -50,7 +50,7 @@ final class CommentTree {
         }
         // Pruned before anything is counted, and from the tree rather than from the input: a node
         // dropped out of the flat list would leave its children parentless, and they would surface
-        // as roots of their own. Taken off its parent, the whole subtree goes with it — which is
+        // as roots of their own. Taken off its parent, the whole subtree goes with it, which is
         // right, because a comment nobody is shown has nothing shown underneath it either.
         roots.removeIf(root -> hidden(root.comment()));
         for (var node : nodes.values()) {
@@ -65,7 +65,7 @@ final class CommentTree {
             // One rule for every caller: the node is marked when the service is handing over fewer
             // direct replies than the comment has. That covers the width cap here, the depth cap
             // that kept the deepest rows out of the result set, and the endpoints that return no
-            // replies at all. Blocks are deliberately out of view — they are applied after this,
+            // replies at all. Blocks are deliberately out of view: they are applied after this,
             // and what a viewer removed for himself is not something we withheld from him.
             node.repliesTruncated(node.children().size() < node.comment().replyCount());
         }

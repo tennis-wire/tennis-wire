@@ -1,11 +1,11 @@
 import { countLinks } from './text'
 
-// The rules of §4.3–4.6, applied before a comment leaves the device. The service checks the
+// The rules for comment text, applied before a comment leaves the device. The service checks the
 // length again (2000 as well) and not the links.
 export const MAX_LENGTH = 2000
 export const MAX_LINKS = 3
 
-// Edges trimmed, trailing spaces off each line, runs of blank lines cut to one (§4.5)
+// Edges trimmed, trailing spaces off each line, runs of blank lines cut to one
 export function normalize(text: string): string {
     return text
         .replace(/\r\n?/g, '\n')

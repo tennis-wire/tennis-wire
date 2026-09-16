@@ -3,7 +3,7 @@ package com.tenniswire.discussion_service.entity;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-/** How the blocker sees the blocked author's comments. Chosen at block time, see the spec §7. */
+/** How the blocker sees the blocked author's comments. Chosen at block time. */
 @Getter
 @RequiredArgsConstructor
 public enum BlockMode {

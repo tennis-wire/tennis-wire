@@ -113,7 +113,7 @@ export const TranslateDialog: React.FC<Props> = ({
             </DialogTitle>
 
             <DialogContent>
-                {/* Текст для перевода */}
+                {/* Text to translate */}
                 <Box sx={{ mb: 2 }}>
                     <Box
                         sx={{
@@ -165,7 +165,7 @@ export const TranslateDialog: React.FC<Props> = ({
                     </Typography>
                 </Box>
 
-                {/* Выбор языков */}
+                {/* Languages */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                     <FormControl size="small" sx={{ minWidth: 160 }}>
                         <InputLabel>Исходный</InputLabel>

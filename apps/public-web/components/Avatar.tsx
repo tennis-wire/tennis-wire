@@ -1,5 +1,5 @@
-// Stands in for a photo. Avatars are not in v1 — readers.md §1.4 keeps `avatarUrl` null and has
-// the clients draw an initial — so this is what an author looks like everywhere. Neutral on
+// Stands in for a photo. Avatars are not in v1: `avatarUrl` is always null and the clients draw an
+// initial, so this is what an author looks like everywhere. Neutral on
 // purpose: a colour hashed from the id would have to hold its contrast against nine looks.
 export default function Avatar({ name, size = 32 }: { name?: string | null; size?: number }) {
     const initial = name?.trim().charAt(0).toUpperCase()

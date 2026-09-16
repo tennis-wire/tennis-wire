@@ -67,7 +67,7 @@ public class Comment {
     // Both are empty on a comment whose author erased his account and that had to be kept because
     // something still stands on it. Nothing writes that through the entity: the columns stay
     // non-updatable and unwritable here, and the erase clears them in one statement of its own.
-    // A comment still standing always has both — the chk_comment_whole_while_standing constraint.
+    // A comment still standing always has both: the chk_comment_whole_while_standing constraint.
 
     @Column(name = "author_id", updatable = false)
     private UUID authorId;

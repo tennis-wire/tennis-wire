@@ -4,7 +4,7 @@ export function buildLoginHref(here: string | null): string {
 }
 
 // This page, comment and all. On the server there is no page to point at, and the endpoint falls
-// back to the Referer the browser sends — so the link works before hydration too.
+// back to the Referer the browser sends, so the link works before hydration too.
 export function loginHere(): string {
     const here =
         typeof window === 'undefined'

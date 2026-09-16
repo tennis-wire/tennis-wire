@@ -269,7 +269,7 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, readingTime
             />
 
             {/* Tags can only be picked, never typed in: the server takes ids.
-                Creating one is a separate screen — see issue #TODO. */}
+                Creating one is a separate screen; see issue #TODO. */}
             <Box sx={{ mb: 2 }}>
                 <Autocomplete
                     multiple

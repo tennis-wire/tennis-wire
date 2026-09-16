@@ -22,7 +22,7 @@ public class TranslationService {
     /**
      * Translates text using DeepL API with HTML tag handling enabled.
      *
-     * <p>HTML tags are preserved during translation — essential because the editor
+     * <p>HTML tags are preserved during translation, essential because the editor
      * works with rich text (Tiptap produces HTML).
      */
     public TranslateResponse translate(TranslateRequest request) throws DeepLException, InterruptedException {

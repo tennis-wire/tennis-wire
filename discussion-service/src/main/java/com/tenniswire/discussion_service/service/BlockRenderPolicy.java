@@ -8,7 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * The three render modes of the spec §7, applied in memory over a loaded tree.
+ * The three render modes, applied in memory over a loaded tree.
  *
  * <p>Precedence per node: subtree_removal drops the node and everything under it, a comment that
  * is down beats the two "keep the children" modes (there is no body to hide either way), then
@@ -56,7 +56,7 @@ public final class BlockRenderPolicy {
         }
         var visibility = Visibility.VISIBLE;
         // Moderation first: its removal sets deletedAt as well, and the placeholder must say
-        // which of the two it was. An erased account leaves that mark alone (§13.7).
+        // which of the two it was. An erased account leaves that mark alone.
         if (comment.isHiddenByModeration()) {
             visibility = Visibility.REMOVED;
         } else if (comment.isDeleted()) {

@@ -13,7 +13,7 @@ export function isFresh(session: Session, now: number = Date.now()): boolean {
     return session.accessExpiresAt - EARLY_SECONDS > Math.floor(now / 1000)
 }
 
-// Returns the session to use, or null when the refresh token is spent — the
+// Returns the session to use, or null when the refresh token is spent and the
 // reader has to sign in again.
 export async function freshSession(session: Session): Promise<Session | null> {
     if (isFresh(session)) return session

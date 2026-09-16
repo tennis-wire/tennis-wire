@@ -1,6 +1,6 @@
 /**
- * Tennis Wire Mobile — Шрифтовые пары
- * Синхронизировано с public-web/theme/fonts.ts
+ * Tennis Wire Mobile: font pairs
+ * Kept in sync with public-web/theme/fonts.ts
  *
  * Web uses CSS font-family strings + Google Fonts URLs.
  * Mobile uses expo-google-fonts package export names.

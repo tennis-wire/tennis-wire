@@ -56,19 +56,19 @@ export function useEditorWithPersist() {
         },
     })
 
-    // одноразовая уборка ключей, писавшихся до появления логина
+    // one-off removal of the keys written before sign-in existed
     useEffect(() => {
         for (const key of UNOWNED_KEYS) localStorage.removeItem(key)
     }, [])
 
-    // восстановление контента из localStorage
+    // restore the content from localStorage
     useEffect(() => {
         if (!editor || contentKey === null) return
         const savedContent = localStorage.getItem(contentKey)
         if (savedContent) editor.commands.setContent(savedContent)
     }, [editor, contentKey])
 
-    // дебаунс-сохранение метаданных
+    // debounced save of the metadata
     useEffect(() => {
         if (metadataKey === null) return
         const timer = setTimeout(() => {

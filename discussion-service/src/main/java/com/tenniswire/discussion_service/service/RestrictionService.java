@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Projection of moderation decisions (spec §8). Today the only capability is {@code comment}; the
+ * Projection of moderation decisions. Today the only capability is {@code comment}; the
  * column is scoped so that adding another is a value, not a migration.
  */
 @Service

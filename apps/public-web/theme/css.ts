@@ -3,7 +3,7 @@ import { PALETTES, type PaletteColors, type PaletteKey } from './palettes'
 import { DEFAULTS, STORAGE_KEY } from './state'
 
 // Every look as plain CSS, keyed by attributes on <html>. The provider only sets those three
-// attributes, so nothing writes sixteen custom properties one by one at runtime — and the boot
+// attributes, so nothing writes sixteen custom properties one by one at runtime, and the boot
 // script below can pick the stored look before the first paint, which is the whole point.
 const VARIABLES: Record<keyof PaletteColors, string> = {
     bg: '--tw-bg',
@@ -26,7 +26,7 @@ const VARIABLES: Record<keyof PaletteColors, string> = {
 
 const KEYS = Object.keys(VARIABLES) as (keyof PaletteColors)[]
 
-// html[…] outranks the :root fallback in globals.css whatever the source order
+// html[...] outranks the :root fallback in globals.css whatever the source order
 function rule(selector: string, colors: PaletteColors, scheme: 'light' | 'dark'): string {
     const body = KEYS.map((key) => `${VARIABLES[key]}:${colors[key]}`).join(';')
     return `${selector}{${body};color-scheme:${scheme}}`

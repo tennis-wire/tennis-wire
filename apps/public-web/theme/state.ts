@@ -19,7 +19,7 @@ export const DEFAULTS: ThemeState = {
 }
 
 // The look was stored as { isDark } before the third mode existed. The boot script in css.ts
-// repeats this line — both read the same key, one before the first paint and one after.
+// repeats this line: both read the same key, one before the first paint and one after.
 function modeOf(stored: { mode?: ThemeMode; isDark?: boolean }): ThemeMode {
     return stored.mode ?? (stored.isDark ? 'dark' : 'light')
 }
@@ -37,7 +37,7 @@ function read(): ThemeState {
 
 // The stored look as an external store: the same shape NicknamePrompt uses for sessionStorage.
 // A plain useState would have to be filled from an effect, and the effect would then be the
-// second thing to write the look onto <html> — after the boot script already wrote it.
+// second thing to write the look onto <html>, after the boot script already wrote it.
 let listeners: (() => void)[] = []
 let current: ThemeState | null = null
 
@@ -63,7 +63,7 @@ export function storeTheme(next: ThemeState) {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     } catch {
-        // localStorage недоступен — облик продержится до конца вкладки
+        // localStorage is unavailable: the look lasts until the tab closes
     }
     for (const listener of listeners) listener()
 }

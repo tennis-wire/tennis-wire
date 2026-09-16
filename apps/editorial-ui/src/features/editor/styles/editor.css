@@ -1,5 +1,5 @@
 /* ===========================
-   ProseMirror / Tiptap — base
+   ProseMirror / Tiptap: base
    Uses CSS custom properties from design system.
    =========================== */
 
@@ -22,7 +22,7 @@
 }
 
 /* ===========================
-   Headings — use display font
+   Headings: use display font
    =========================== */
 
 .ProseMirror h1 {
@@ -133,7 +133,7 @@
 }
 
 /* ===========================
-   Embeds — YouTube
+   Embeds: YouTube
    =========================== */
 
 .ProseMirror iframe {
@@ -169,7 +169,7 @@
 }
 
 /* ===========================
-   Embeds — Telegram
+   Embeds: Telegram
    =========================== */
 
 .ProseMirror .telegram-embed {
@@ -191,7 +191,7 @@
 }
 
 /* ===========================
-   Embeds — Video (.mp4 и т.д.)
+   Embeds: Video (.mp4 etc.)
    =========================== */
 
 .ProseMirror .video-embed {

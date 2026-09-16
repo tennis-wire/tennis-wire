@@ -49,7 +49,7 @@ public interface UserRestrictionRepository extends JpaRepository<UserRestriction
             @Param("now") Instant now);
 
     // Expired and lifted rows only. A ban still running outlives the account on purpose: it is the
-    // answer the erase gives user-service, and asking twice has to give it twice (§12.20). Once it
+    // answer the erase gives user-service, and asking twice has to give it twice. Once it
     // has run out, the next erase for the same reader sweeps it up.
     @Modifying
     @Query("""

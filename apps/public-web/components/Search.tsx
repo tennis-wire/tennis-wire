@@ -9,7 +9,7 @@ interface TagResult {
     type: 'player' | 'tournament' | 'organization' | 'topic' | 'section'
 }
 
-// Mock data based on DB seed — will be replaced with API call
+// Mock data based on DB seed, will be replaced with API call
 const MOCK_TAGS: TagResult[] = [
     { name: 'Новак Джокович', slug: 'novak-djokovic', type: 'player' },
     { name: 'Карлос Алькарас', slug: 'carlos-alcaraz', type: 'player' },

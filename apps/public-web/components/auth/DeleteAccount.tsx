@@ -60,7 +60,7 @@ export default function DeleteAccount({
     const signOut = useRef<HTMLFormElement>(null)
 
     // The server answers 202 and finishes out of band. Nothing is left to wait for here, so the
-    // reader is signed out at once (§13.4) — the account is already shut, and a session pointing
+    // reader is signed out at once: the account is already shut, and a session pointing
     // at it would only fail on the next request.
     async function remove() {
         setDeleting(true)
@@ -88,7 +88,7 @@ export default function DeleteAccount({
     return (
         <div style={box}>
             <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Удаление аккаунта</h2>
-            {/* §13.2, word for word. Other people's replies are not mentioned: they stay, and
+            {/* The rules' wording, word for word. Other people's replies are not mentioned: they stay, and
                 saying so here would read as a reason to think twice about them rather than
                 about this. */}
             <p style={{ ...hint, margin: '8px 0 0' }}>

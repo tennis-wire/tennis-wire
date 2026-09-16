@@ -26,7 +26,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          # Same issuer and audience as the gateway (auth.md §7): the service
+          # Same issuer and audience as the gateway: the service
           # validates the token itself rather than trusting whoever forwarded it.
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/tennis-wire}
           audiences:
@@ -51,7 +51,7 @@ server:
 
 discussion:
   # What a comment may hang off. One kind so far: anything content-service publishes, news and
-  # long-form alike — they are one entity there, told apart by a column, and a discussion belongs
+  # long-form alike. They are one entity there, told apart by a column, and a discussion belongs
   # to the entity rather than to the shape it was written in. Not called "article" for that reason:
   # content-service uses that word for the half of them that is not news.
   # The schema keeps the set open so that adding a kind is a config change; anything outside this
@@ -63,12 +63,12 @@ discussion:
     # Called directly, never through the gateway: /internal/** is not routed there.
     base-url: ${USER_SERVICE_URL:http://localhost:8092}
     connect-timeout: 1s
-    # No retry on this side. The client already retries once after 3 s (discussion-rules §3.19);
+    # No retry on this side. The client already retries once after 3 s;
     # a second layer here would only double the wait before the 503 and add nothing.
     read-timeout: 2s
 
   report:
-    # Open set on purpose (discussion-rules.md §10.5): anything outside it is a 400, and adding
+    # Open set on purpose: anything outside it is a 400, and adding
     # a code is a config change rather than a migration.
     reasons: [spam, insult, hate, illegal, personal_data, other]
     # The key the reporter hash is taken under. It must be set outside development: without a

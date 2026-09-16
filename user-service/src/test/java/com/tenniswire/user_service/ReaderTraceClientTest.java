@@ -20,7 +20,7 @@ import org.springframework.web.client.RestClient;
 
 /**
  * What is worth pinning down here is the answer, not the call: it decides whether the account may
- * be deleted now, held until a date, or never — and an answer misread is a ban shed.
+ * be deleted now, held until a date, or never, and an answer misread is a ban shed.
  */
 class ReaderTraceClientTest {
 

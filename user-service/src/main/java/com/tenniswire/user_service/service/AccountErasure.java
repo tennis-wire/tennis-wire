@@ -96,7 +96,7 @@ public class AccountErasure {
 
         if (record.identityClosedAt() == null) {
             // The request could not reach Keycloak. Nothing has been closed yet, so there is
-            // nothing to outwait either — the clock starts here and the rest waits for next pass.
+            // nothing to outwait either: the clock starts here and the rest waits for next pass.
             keycloak.stripAndDisable(record.subject());
             record.identityClosedAt(now).retryAfter(now.plus(grace)).attempts(0);
             return;
@@ -124,10 +124,9 @@ public class AccountErasure {
         profiles.deleteById(record.userId());
 
         if (erased.banned()) {
-            // The address stays taken until the ban runs out, or for good if it has no end
-            // (discussion-rules §12.20). Everything else about him is already gone. Asked about
-            // again on a cadence rather than at the date he gave: nothing here is told when a ban
-            // is lifted.
+            // The address stays taken until the ban runs out, or for good if it has no end.
+            // Everything else about him is already gone. Asked about again on a cadence rather
+            // than at the date he gave: nothing here is told when a ban is lifted.
             // Counted from zero again: what failed before is done, and the next failure should
             // start at the shortest wait rather than at whatever this account once climbed to.
             record.retryAfter(now.plus(properties.recheck())).attempts(0);

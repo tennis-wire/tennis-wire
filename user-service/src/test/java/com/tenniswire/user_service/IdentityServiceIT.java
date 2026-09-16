@@ -64,7 +64,7 @@ class IdentityServiceIT {
     /**
      * The whole reason the writer throws on zero rows. Eight threads race on one subject: they must
      * agree on a user, and exactly one profile may exist afterwards. A rollback that did not happen
-     * shows up here as a count of two or more — profiles nothing points at.
+     * shows up here as a count of two or more: profiles nothing points at.
      */
     @Test
     void concurrentFirstResolvesAgreeAndLeaveNoOrphans() throws Exception {

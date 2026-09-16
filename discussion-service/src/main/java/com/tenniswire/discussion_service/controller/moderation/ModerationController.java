@@ -112,7 +112,7 @@ public class ModerationController {
         return RestrictionResponse.from(restriction);
     }
 
-    // Active restrictions for a user — what the write gate currently sees
+    // Active restrictions for a user: what the write gate currently sees
     @GetMapping("/restrictions")
     public List<RestrictionResponse> active(@RequestParam UUID userId) {
         return RestrictionResponse.from(restrictionService.activeFor(userId));

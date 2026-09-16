@@ -14,7 +14,7 @@ export const linkButton: React.CSSProperties = {
 }
 
 // Under a comment: reply, show the thread, retry. Quiet, because the comment is the thing to
-// read — except for the one that opens a thread, which is the reader's way further in.
+// read. Except for the one that opens a thread, which is the reader's way further in.
 export const action: React.CSSProperties = {
     ...linkButton,
     color: 'var(--tw-text-secondary)',

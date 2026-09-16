@@ -9,7 +9,7 @@ import {
 } from 'react-native'
 import { useTheme } from '../theme'
 
-// ─── Typography ──────────────────────────────────────────────
+// --- Typography ---
 
 interface TTextProps extends TextProps {
     variant?: 'display' | 'h1' | 'h2' | 'h3' | 'body' | 'bodySmall' | 'caption' | 'label'
@@ -90,7 +90,7 @@ export function Text({ variant = 'body', color, style, ...props }: TTextProps) {
     return <RNText style={[variantStyle, color ? { color } : undefined, style]} {...props} />
 }
 
-// ─── Card ────────────────────────────────────────────────────
+// --- Card ---
 
 interface CardProps extends ViewProps {
     onPress?: () => void
@@ -126,7 +126,7 @@ export function Card({ onPress, style, children, ...props }: CardProps) {
     )
 }
 
-// ─── Tag ─────────────────────────────────────────────────────
+// --- Tag ---
 
 interface TagProps {
     label: string
@@ -156,7 +156,7 @@ export function Tag({ label, onPress }: TagProps) {
     return onPress ? <Pressable onPress={onPress}>{tagView}</Pressable> : tagView
 }
 
-// ─── LiveBadge ───────────────────────────────────────────────
+// --- LiveBadge ---
 
 export function LiveBadge() {
     const { colors, fonts } = useTheme()
@@ -184,7 +184,7 @@ export function LiveBadge() {
     )
 }
 
-// ─── Divider ─────────────────────────────────────────────────
+// --- Divider ---
 
 export function Divider({ style }: { style?: ViewProps['style'] }) {
     const { colors } = useTheme()
@@ -195,7 +195,7 @@ export function Divider({ style }: { style?: ViewProps['style'] }) {
     )
 }
 
-// ─── Screen ──────────────────────────────────────────────────
+// --- Screen ---
 
 export function Screen({ children, style, ...props }: ViewProps) {
     const { colors } = useTheme()

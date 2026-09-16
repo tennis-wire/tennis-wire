@@ -25,7 +25,7 @@ describe('UserManager storage', () => {
 
         expect(window.sessionStorage.length).toBe(0)
         expect(window.localStorage.length).toBe(0)
-        // Still a working store — it just lives in memory and dies with the tab.
+        // Still a working store: it just lives in memory and dies with the tab.
         await expect(userManager.settings.userStore.get('probe')).resolves.toBe('value')
     })
 })

@@ -1,4 +1,4 @@
-// What the reader typed and did not send, kept on the device (§4.15–17): one entry per article
+// What the reader typed and did not send, kept on the device: one entry per article
 // and per reply form, keyed by the reader too, so that the next person at the same computer does
 // not see it, and the same reader gets it back after signing in again.
 
@@ -36,7 +36,7 @@ export function readDraft(key: string, now = Date.now(), store = storage()): str
     }
 }
 
-// An emptied field is a cleared draft (§4.17)
+// An emptied field is a cleared draft
 export function saveDraft(key: string, text: string, now = Date.now(), store = storage()): void {
     try {
         if (text.trim() === '') store?.removeItem(key)

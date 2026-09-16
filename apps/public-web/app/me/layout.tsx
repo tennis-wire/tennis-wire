@@ -7,7 +7,7 @@ import Avatar from '@/components/Avatar'
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
 
 // Appearance is kept by the browser rather than the account, so the cabinet opens for a stranger
-// too — with one tab in it.
+// too, with one tab in it.
 const TABS = [
     { href: '/me', label: 'Профиль', account: true },
     { href: '/me/settings', label: 'Настройки', account: false },
@@ -105,7 +105,7 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
                     )
                 })}
                 {/* A tab with nothing behind it yet: discussion-service has no listing by author,
-                    and §15.13 has not settled what a profile shows. Not a link until it does. */}
+                    and the rules have not settled what a profile shows. Not a link until it does. */}
                 {signedIn && (
                     <span
                         aria-disabled

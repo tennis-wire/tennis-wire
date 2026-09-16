@@ -41,7 +41,7 @@ limit :limit
 
     // Both directions: whom he ignored is his, and who ignored him is a row about him. Neither
     // means anything once he is gone, and the second would go on hiding a comment with no author
-    // from whoever wrote it (discussion-rules §13.15).
+    // from whoever wrote it.
     @Modifying
     @Query("delete from Block b where b.id.blockerId = :readerId or b.id.blockedId = :readerId")
     int deleteInvolving(@Param("readerId") UUID readerId);

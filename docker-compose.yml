@@ -6,7 +6,7 @@
 # and are expected to run from the IDE against this stack.
 # Credentials below are local-only development defaults, not secrets. The one
 # real credential, the Google client secret, comes from .env and is not in the
-# repository — see .env.example.
+# repository; see .env.example.
 #
 # All ports are bound to 127.0.0.1: nothing here is meant to be reachable
 # from the network, and MinIO in particular must not be (see its comment).
@@ -96,7 +96,7 @@ services:
   # Hub. The MinIO CE repository was archived in April 2026: no new releases
   # and no official community images. Note that this image predates the final
   # CE security release (RELEASE.2025-10-15, privilege-escalation fix), which
-  # was never published as an image — this MinIO is permanently unpatched and
+  # was never published as an image: this MinIO is permanently unpatched and
   # must stay loopback-only. Local S3 emulator only; production object storage
   # is a separate decision.
   minio:
@@ -119,7 +119,7 @@ services:
 
   # ============== Bucket bootstrap ==============
   # The bucket stays private: results are served via presigned URLs, which
-  # need no anonymous policy — locally as in production.
+  # need no anonymous policy, locally as in production.
   minio-init:
     image: minio/mc:RELEASE.2025-08-13T08-35-41Z
     container_name: tw-minio-init

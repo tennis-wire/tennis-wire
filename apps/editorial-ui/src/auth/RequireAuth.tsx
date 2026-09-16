@@ -28,7 +28,7 @@ export default function RequireAuth({ children }: { children: ReactNode }) {
 
     // A dead session is not a failed sign-in. react-oidc-context reports a
     // failed silent renew through auth.error while leaving the user loaded, so
-    // checking error first would swap the editor for a full-page message —
+    // checking error first would swap the editor for a full-page message,
     // unmounting the tree the banner exists to keep alive.
     if (!auth.isAuthenticated) {
         return auth.error ? (

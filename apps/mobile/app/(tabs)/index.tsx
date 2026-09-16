@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router'
 import { useTheme } from '../../theme'
 import { Text, Card, Tag, LiveBadge, Divider, Screen } from '../../components/ui'
 
-// ─── Mock data (matches public-web/components/home/*) ────────
+// --- Mock data (matches public-web/components/home/*) ---
 
 const LIVE_MATCHES = [
     { id: '1', p1: 'Синнер', p2: 'Алькарас', score: '6-4 3-2', set: '2-й сет' },
@@ -60,7 +60,7 @@ const MATERIALS = [
     },
 ]
 
-// ─── Sections ────────────────────────────────────────────────
+// --- Sections ---
 
 function LiveTicker() {
     const { colors } = useTheme()
@@ -223,7 +223,7 @@ function MaterialsList() {
     )
 }
 
-// ─── Screen ──────────────────────────────────────────────────
+// --- Screen ---
 
 export default function HomeScreen() {
     return (

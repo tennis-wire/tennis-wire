@@ -136,7 +136,7 @@ export default function ComposeForm({
     }
 
     // The draft follows the typing at a short distance, and the last of it goes when the form
-    // does — the reply form closes on cancel, and the article page can be left mid-word.
+    // does: the reply form closes on cancel, and the article page can be left mid-word.
     useEffect(() => {
         latest.current = { draftKey, text }
     })

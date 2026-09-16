@@ -54,7 +54,7 @@ public class ModerationQueueService {
     }
 
     // Closes the whole card, not one report of it: the queue is per comment, and so is the
-    // decision. Which of them a moderator may write depends on how the comment stands — a comment
+    // decision. Which of them a moderator may write depends on how the comment stands: a comment
     // its author has already deleted is not moderation's to remove, only to count or to let go.
     public void resolve(UUID commentId, ReportResolution resolution, UUID moderatorId) {
         var comment =
