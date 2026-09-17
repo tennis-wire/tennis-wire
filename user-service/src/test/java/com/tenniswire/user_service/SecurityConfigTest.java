@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,6 +48,13 @@ class SecurityConfigTest {
 
     private static JwtRequestPostProcessor tokenWith(String role) {
         return jwt().jwt(builder -> builder.subject(UUID.randomUUID().toString()))
+                .authorities(new SimpleGrantedAuthority("ROLE_" + role));
+    }
+
+    // Deleting one's own account also asks how recent the login is; RecentLoginTest is about that
+    private static JwtRequestPostProcessor justSignedInWith(String role) {
+        return jwt().jwt(builder -> builder.subject(UUID.randomUUID().toString())
+                        .claim("auth_time", Instant.now().getEpochSecond()))
                 .authorities(new SimpleGrantedAuthority("ROLE_" + role));
     }
 
@@ -106,7 +114,7 @@ class SecurityConfigTest {
     void deletingOwnAccountIsAReadersAlone() throws Exception {
         mvc.perform(delete(ME)).andExpect(status().isUnauthorized());
         mvc.perform(delete(ME).with(tokenWith("service"))).andExpect(status().isForbidden());
-        mvc.perform(delete(ME).with(tokenWith("user"))).andExpect(status().isAccepted());
+        mvc.perform(delete(ME).with(justSignedInWith("user"))).andExpect(status().isAccepted());
     }
 
     @Test
