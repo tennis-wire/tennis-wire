@@ -13,7 +13,9 @@ public enum ReportResolution {
     // Its author had already deleted it; the violation is counted against him anyway
     COUNTED("counted"),
     // The author erased his account: there is no longer anything to judge
-    VOIDED("voided");
+    VOIDED("voided"),
+    // The text was kept its thirty days and went before anyone decided: nothing left to judge either
+    EXPIRED("expired");
 
     private final String value;
 

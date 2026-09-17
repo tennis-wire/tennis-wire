@@ -83,7 +83,7 @@ public class ModerationQueueService {
                 comments.markCounted(commentId);
                 reports.closeOpen(commentId, ReportResolution.COUNTED, moderatorId);
             }
-            case VOIDED -> throw new IllegalArgumentException("voided is not a decision a moderator takes");
+            case VOIDED, EXPIRED -> throw new IllegalArgumentException(resolution.value() + " is not for a moderator");
         }
     }
 

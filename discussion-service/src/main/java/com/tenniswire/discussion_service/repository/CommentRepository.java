@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -70,6 +71,13 @@ limit :limit
     @Transactional(propagation = Propagation.MANDATORY)
     @Query(value = "select 1 from pg_advisory_xact_lock(1, :key)", nativeQuery = true)
     int lockIdempotencyKey(@Param("key") int key);
+
+    // One text wipe at a time across instances, in the same two-argument key space; 2 is this lock's
+    // name. Tried rather than waited for: an instance that finds it taken leaves the work to the one
+    // holding it. Held until the transaction ends.
+    @Transactional(propagation = Propagation.MANDATORY)
+    @Query(value = "select pg_try_advisory_xact_lock(2, 0)", nativeQuery = true)
+    boolean tryLockTextExpiry();
 
     // Depth-capped and budgeted: an unbounded subtree makes the work of one request a property of
     // how far the thread grew, and a depth cap alone does not fix that - a comment with five
@@ -175,6 +183,25 @@ limit :limit
         where c.id in :ids
         """)
     int anonymize(@Param("ids") Collection<UUID> ids);
+
+    // Taken down before the cutoff and still carrying text, oldest first. Ids only: nothing may be in
+    // the persistence context before the tree lock.
+    @Query("""
+        select c.id from Comment c
+        where c.deletedAt < :cutoff and c.body is not null
+        order by c.deletedAt
+        """)
+    List<UUID> findTextKeptBefore(@Param("cutoff") Instant cutoff, Pageable page);
+
+    // The same condition once more: the ids were read before their trees were locked, and in between
+    // a comment can have lost its text to an erase, or gone.
+    @Modifying
+    @Query("""
+        update Comment c
+        set c.body = null
+        where c.id in :ids and c.body is not null and c.deletedAt < :cutoff
+        """)
+    int eraseTextOf(@Param("ids") Collection<UUID> ids, @Param("cutoff") Instant cutoff);
 
     // Removals and hand-counted violations land in one total. A counted one has no source of its
     // own - only a person counts one - hence the coalesce. The two columns exclude each other.
