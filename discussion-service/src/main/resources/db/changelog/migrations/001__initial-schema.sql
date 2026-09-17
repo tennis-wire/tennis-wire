@@ -113,8 +113,8 @@ CREATE TRIGGER trigger_comment_set_path
     EXECUTE FUNCTION comment_set_path();
 
 -- changeset andrei:7 splitStatements:false
--- comment: Trigger for auto-updating updated_at on comment — only when the body actually changes,
--- comment: so reply_count bumps and soft-deletes do not masquerade as edits
+-- comment: Trigger for auto-updating updated_at on comment, only when a body is written: reply_count
+-- comment: bumps, soft-deletes and a body taken away do not pass for edits
 -- rollback: DROP TRIGGER IF EXISTS trigger_comment_updated_at ON comment; DROP FUNCTION IF EXISTS update_updated_at_column();
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -127,7 +127,7 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trigger_comment_updated_at
     BEFORE UPDATE ON comment
     FOR EACH ROW
-    WHEN (OLD.body IS DISTINCT FROM NEW.body)
+    WHEN (NEW.body IS NOT NULL AND OLD.body IS DISTINCT FROM NEW.body)
     EXECUTE FUNCTION update_updated_at_column();
 
 -- changeset andrei:8

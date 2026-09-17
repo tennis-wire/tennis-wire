@@ -82,6 +82,17 @@ class ReaderErasureIT {
     }
 
     @Test
+    void emptyingHisCommentIsNotAnEdit() {
+        var his = commentService.create(alice, "publication", subjectId, "his").comment();
+        commentService.reply(bob, his.id(), "keeps the node");
+        var before = comments.findById(his.id()).orElseThrow().updatedAt();
+
+        erasure.erase(alice);
+
+        assertThat(comments.findById(his.id()).orElseThrow().updatedAt()).isEqualTo(before);
+    }
+
+    @Test
     void aGravestoneHisLastCommentWasHoldingUpGoesToo() {
         var top = commentService.create(bob, "publication", subjectId, "top").comment();
         var middle = commentService.reply(bob, top.id(), "middle").comment();
