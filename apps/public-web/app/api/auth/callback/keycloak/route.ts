@@ -8,6 +8,7 @@ import {
     SESSION_COOKIE,
     idTokenCookieOptions,
     readFlow,
+    readSession,
     sealSession,
     sessionCookieOptions,
     type Session,
@@ -21,9 +22,23 @@ function failed(reason: string, error?: unknown) {
     return response
 }
 
+// Every login with offline_access opens an offline session of its own, and the one it replaces
+// would otherwise keep its refresh token working for thirty idle days with nobody holding it.
+async function revoke(refreshToken: string) {
+    try {
+        await client.tokenRevocation(await oidcConfig(), refreshToken, {
+            token_type_hint: 'refresh_token',
+        })
+    } catch (error) {
+        console.error('revoking the replaced refresh token failed', error)
+    }
+}
+
 export async function GET(request: NextRequest) {
     const flow = await readFlow(request.cookies.get(FLOW_COOKIE)?.value)
     if (!flow) return failed('no flow cookie')
+
+    const previous = await readSession(request.cookies.get(SESSION_COOKIE)?.value)
 
     // Built from configuration rather than from request.url: the Host header
     // is the caller's to choose, and this URL is what the state, nonce and
@@ -54,6 +69,9 @@ export async function GET(request: NextRequest) {
     } catch (error) {
         return failed('code exchange rejected', error)
     }
+
+    // Only once the new session exists: a login that failed keeps the one the reader had
+    if (previous) await revoke(previous.refreshToken)
 
     const response = NextResponse.redirect(new URL(safeReturnTo(flow.returnTo), appOrigin()), {
         status: 303,
