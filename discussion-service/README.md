@@ -52,10 +52,15 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
 
 | Метод | Путь | Роль | Что |
 |---|---|---|---|
-| POST | `/comments` `{subjectType, subjectId, body}` | `user` | 201 `{comment, mutedByRecipient: false}`. `body` до 2000. Профиль автора запрашивается до записи, поэтому 503 не оставляет комментарий |
-| POST | `/comments/{id}/replies` `{body}` | `user` | 201 `{comment, mutedByRecipient}`: `true`, если автор родителя игнорирует пишущего. Subject наследуется от родителя; родитель удалён — 409 `PARENT_DELETED`, ушёл целиком — 404 `NOT_FOUND` |
+| POST | `/comments` `{subjectType, subjectId, body}` | `user` | 201 `{comment, mutedByRecipient: false}`. `body` до 2000. Профиль автора запрашивается до записи, поэтому 503 не оставляет комментарий. Необязательный `Idempotency-Key` (UUID) — ниже |
+| POST | `/comments/{id}/replies` `{body}` | `user` | 201 `{comment, mutedByRecipient}`: `true`, если автор родителя игнорирует пишущего. Subject наследуется от родителя; родитель удалён — 409 `PARENT_DELETED`, ушёл целиком — 404 `NOT_FOUND`. Необязательный `Idempotency-Key` — ниже |
 | DELETE | `/comments/{id}` | `user`, только автор | 204, идемпотентно |
 | POST | `/comments/{id}/reports` `{reason}` | `user` | 204 на любую принятую, в том числе повторную. `reason` из `discussion.reports.reasons`. Свой комментарий или автор в игноре не в режиме `soft` — 403, снят модерацией — 409 `COMMENT_ALREADY_REMOVED` |
+
+`Idempotency-Key` на обеих записях. Тот же ключ того же автора с тем же текстом в то же место — 201
+и комментарий, записанный первым запросом, `mutedByRecipient` пересчитан; второго комментария нет.
+Тот же ключ с другим текстом или местом — 422 `IDEMPOTENCY_KEY_REUSED`. Повтор, пришедший, пока
+первый запрос ещё пишется, ждёт его и получает тот же ответ. Без заголовка — как раньше.
 
 Отказ гейта на запись — 403 `COMMENTING_RESTRICTED` с `details.restrictedUntil` (`null` —
 бессрочно).
@@ -136,6 +141,11 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
   Держится на READ COMMITTED.
 - `comment.created` уходит в `ApplicationEventPublisher`; слушатель — `@TransactionalEventListener`
   (after-commit). Брокер не выбран; `DomainEventPublisher` — точка замены.
+- Ключ идемпотентности живёт в самом комментарии: `idempotency_key` и уникальный индекс по
+  `(author_id, idempotency_key)`. Таблицы и срока нет — ключ уходит вместе со строкой, а стирание
+  аккаунта обнуляет `author_id`, и пара больше ничего не находит. Повтор ищется под
+  `pg_advisory_xact_lock(1, …)` — пространство из двух int, с блокировкой дерева не пересекается;
+  берётся до неё. Гейт бана на повторе не проверяется: первый запрос его прошёл.
 - Ответ на удалённый комментарий не принимается: 409 `PARENT_DELETED`. Верхний уровень и ответы —
   от старых к новым.
 - Пути `/api/discussion/**`, а не `/api/comments/**`: `comments/{id}` и `comments/blocks` иначе
