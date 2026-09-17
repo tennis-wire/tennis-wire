@@ -7,7 +7,9 @@ import static org.mockito.Mockito.doAnswer;
 
 import com.tenniswire.discussion_service.TestcontainersConfiguration;
 import com.tenniswire.discussion_service.entity.Comment;
+import com.tenniswire.discussion_service.entity.ReportResolution;
 import com.tenniswire.discussion_service.exception.ParentDeletedException;
+import com.tenniswire.discussion_service.exception.ResolutionNotApplicableException;
 import com.tenniswire.discussion_service.exception.ResourceNotFoundException;
 import com.tenniswire.discussion_service.repository.CommentRepository;
 import java.time.Duration;
@@ -50,6 +52,12 @@ class TreeLockIT {
 
     @Autowired
     private ReaderErasure erasure;
+
+    @Autowired
+    private ReportService reportService;
+
+    @Autowired
+    private ModerationQueueService queue;
 
     @Autowired
     private CommentRepository rows;
@@ -149,6 +157,40 @@ class TreeLockIT {
                 .withThrowableOfType(ExecutionException.class)
                 .withCauseInstanceOf(ParentDeletedException.class);
         assertThat(replyCountOf(parent)).isOne();
+    }
+
+    @Test
+    void aReportOnACommentThatWentMeanwhileIsNotFound() throws Exception {
+        var root = comment(alice);
+        var leaf = reply(bob, root);
+
+        var late = race(
+                () -> commentService.deleteOwn(bob, leaf.id()), () -> reportService.report(carol, leaf.id(), "spam"));
+
+        assertThat(late)
+                .failsWithin(PATIENCE)
+                .withThrowableOfType(ExecutionException.class)
+                .withCauseInstanceOf(ResourceNotFoundException.class);
+    }
+
+    // resolve reads the comment before it hands over to hideByModerator. A lock taken only there
+    // would wait, then remove the comment as it was read before the wait: still standing.
+    @Test
+    void aCardDecidedWhileItsAuthorDeletesTheCommentIsNotRemoved() throws Exception {
+        var root = comment(alice);
+        var reported = reply(bob, root);
+        reportService.report(carol, reported.id(), "spam");
+
+        var late = race(
+                () -> commentService.deleteOwn(bob, reported.id()),
+                () -> queue.resolve(reported.id(), ReportResolution.HIDDEN, UUID.randomUUID()));
+
+        assertThat(late)
+                .failsWithin(PATIENCE)
+                .withThrowableOfType(ExecutionException.class)
+                .withCauseInstanceOf(ResolutionNotApplicableException.class);
+        assertThat(rows.findById(reported.id()).orElseThrow().isHiddenByModeration())
+                .isFalse();
     }
 
     // Both writers are done by the time the second one's future comes back

@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ReportService {
 
     private final CommentRepository comments;
+    private final TreeLock treeLock;
     private final BlockRepository blocks;
     private final ReportRepository reports;
     private final ReporterHash hash;
@@ -28,11 +29,13 @@ public class ReportService {
 
     public ReportService(
             CommentRepository comments,
+            TreeLock treeLock,
             BlockRepository blocks,
             ReportRepository reports,
             ReporterHash hash,
             ReportProperties properties) {
         this.comments = comments;
+        this.treeLock = treeLock;
         this.blocks = blocks;
         this.reports = reports;
         this.hash = hash;
@@ -67,6 +70,9 @@ public class ReportService {
         if (!reasons.contains(reason)) {
             throw new IllegalArgumentException("Unknown report reason; expected one of " + reasons);
         }
+        // Before the comment is read: a report keeps a row the collapse would otherwise take, and one
+        // filed while the comment is being taken would meet the foreign key rather than a 404.
+        treeLock.hold(commentId);
         var comment =
                 comments.findById(commentId).orElseThrow(() -> new ResourceNotFoundException("Comment", commentId));
         if (comment.isHiddenByModeration()) {
