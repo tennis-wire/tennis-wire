@@ -17,7 +17,7 @@ import {
 } from '@/lib/discussion/compose'
 import { clearDraft, readDraft, saveDraft } from '@/lib/discussion/drafts'
 
-import { formatUntil } from './format'
+import RestrictionPlate from './RestrictionPlate'
 import { strings } from './strings'
 import { action, linkButton, muted } from './styles'
 
@@ -94,14 +94,6 @@ const button: React.CSSProperties = {
     background: 'var(--tw-primary)',
     color: '#fff',
     cursor: 'pointer',
-}
-
-const plate: React.CSSProperties = {
-    margin: '0 0 8px',
-    padding: '8px 12px',
-    borderRadius: 6,
-    background: 'color-mix(in srgb, var(--tw-accent-soft) 45%, transparent)',
-    fontSize: 14,
 }
 
 export default function ComposeForm({
@@ -189,26 +181,13 @@ export default function ComposeForm({
 
     if (restrictedUntil !== undefined) {
         return (
-            <div style={row}>
-                <Avatar name={mine} size={36} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={plate}>
-                        {restrictedUntil
-                            ? strings.restrictedUntil(formatUntil(restrictedUntil))
-                            : strings.restrictedIndefinitely}
-                    </p>
-                    {text !== '' && (
-                        <div style={box}>
-                            <textarea
-                                readOnly
-                                value={text}
-                                style={field}
-                                aria-label={placeholder}
-                            />
-                        </div>
-                    )}
-                </div>
-            </div>
+            <RestrictionPlate until={restrictedUntil}>
+                {text !== '' && (
+                    <div style={box}>
+                        <textarea readOnly value={text} style={field} aria-label={placeholder} />
+                    </div>
+                )}
+            </RestrictionPlate>
         )
     }
 

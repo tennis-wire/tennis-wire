@@ -28,6 +28,11 @@ function listed(items: Comment[], nextCursor: string | null = null): State {
     return reduce(initial, { type: 'list', page: { items, nextCursor } })
 }
 
+function restrictionOf(state: State) {
+    if (state.phase !== 'ready') throw new Error('not ready')
+    return state.restriction
+}
+
 function items(state: State) {
     if (state.phase !== 'ready' || state.view.kind !== 'list') throw new Error('not a list')
     return state.view.items
@@ -197,6 +202,25 @@ describe('reduce', () => {
         expect(items(state)[0].comment.replyCount).toBe(1)
         expect(items(state)[0].replies?.map((reply) => reply.comment.id)).toEqual([mine.id])
         if (state.phase === 'ready') expect(state.highlight).toBe(top.id)
+    })
+
+    it("keeps the reader's restriction from the load that drew the view, not from a later page", () => {
+        const banned = { restriction: { until: null } }
+        let state = reduce(initial, {
+            type: 'list',
+            page: { items: [comment()], nextCursor: 'next', viewer: banned },
+        })
+        state = reduce(state, {
+            type: 'more-loaded',
+            page: { items: [comment()], nextCursor: null, viewer: { restriction: null } },
+        })
+        expect(restrictionOf(state)).toEqual({ until: null })
+
+        const top = comment()
+        const rooted = reduce(state, { type: 'rooted', chain: [top], root: top, restriction: null })
+        expect(restrictionOf(rooted)).toBeNull()
+        // someone not signed in gets no viewer at all
+        expect(restrictionOf(listed([comment()]))).toBeNull()
     })
 
     it('lights up the root of a re-rooted view, or the comment it was asked to', () => {

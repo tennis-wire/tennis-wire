@@ -131,7 +131,13 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
             const [chain, root] = await Promise.all([ancestry(id), branch(id)])
             if (mine === generation.current) {
                 setMutedUnder(muted)
-                dispatch({ type: 'rooted', chain: chain.chain, root: root.root, highlight })
+                dispatch({
+                    type: 'rooted',
+                    chain: chain.chain,
+                    root: root.root,
+                    highlight,
+                    restriction: chain.viewer?.restriction ?? null,
+                })
             }
         } catch (error) {
             if (mine !== generation.current) return

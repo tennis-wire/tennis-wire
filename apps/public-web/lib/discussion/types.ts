@@ -32,9 +32,16 @@ export type Comment = {
     replies: Comment[]
 }
 
-export type CommentPage = { items: Comment[]; nextCursor: string | null }
+// until: null for a restriction with no end
+export type Restriction = { until: string | null }
+
+// The reader's own standing, sent with the reads that open a thread: the listing and the chain a link
+// leads to. Missing for someone not signed in; restriction is null when nothing stops him writing.
+export type Viewer = { restriction: Restriction | null }
+
+export type CommentPage = { items: Comment[]; nextCursor: string | null; viewer?: Viewer }
 export type Branch = { root: Comment }
-export type Ancestry = { chain: Comment[] }
+export type Ancestry = { chain: Comment[]; viewer?: Viewer }
 
 // What a POST answers: the comment as its author sees it, and whether the author of the comment
 // replied to ignores him

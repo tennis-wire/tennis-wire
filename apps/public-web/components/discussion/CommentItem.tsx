@@ -5,11 +5,12 @@ import { loginHere } from '@/lib/auth/loginHref'
 import type { BlockMode } from '@/lib/discussion/modes'
 import type { ReportReason } from '@/lib/discussion/reasons'
 import type { Node } from '@/lib/discussion/tree'
-import type { Author, Comment } from '@/lib/discussion/types'
+import type { Author, Comment, Restriction } from '@/lib/discussion/types'
 
 import CommentBody, { Placeholder, placeholderFor } from './CommentBody'
 import CommentMenu from './CommentMenu'
 import ComposeForm from './ComposeForm'
+import RestrictionPlate from './RestrictionPlate'
 import { formatWhen } from './format'
 import { strings } from './strings'
 import { action, linkButton, muted } from './styles'
@@ -22,6 +23,8 @@ export type Ctx = {
     // the reader's draft key for a form under this comment, or null when none can be kept
     draftKeyFor: (parentId: string) => string | null
     signedIn: boolean
+    // what stops the reader writing, known with the page: "Reply" opens the plate instead of a form
+    restriction: Restriction | null
     // the reader's own id, to tell his comments from the rest; null while unknown
     userId: string | null
     onShowReplies: (id: string) => void
@@ -215,7 +218,9 @@ export default function CommentItem({ node, inline, ctx }: Props) {
                     )}
                     {replying && readable && (
                         <div style={{ marginTop: 8 }}>
-                            {ctx.signedIn ? (
+                            {ctx.signedIn && ctx.restriction ? (
+                                <RestrictionPlate until={ctx.restriction.until} />
+                            ) : ctx.signedIn ? (
                                 <ComposeForm
                                     draftKey={ctx.draftKeyFor(comment.id)}
                                     placeholder={strings.yourReply}
