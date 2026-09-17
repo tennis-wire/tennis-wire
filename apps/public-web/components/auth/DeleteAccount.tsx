@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 
+import { carriesDeletionMark, confirmDeletionHref, deletionOutcome } from '@/lib/auth/deletion'
 import { clearDraftsOf } from '@/lib/discussion/drafts'
 
 const box: React.CSSProperties = {
@@ -34,30 +35,50 @@ const quiet: React.CSSProperties = {
     color: 'var(--tw-live)',
 }
 
-const field: React.CSSProperties = {
-    width: '100%',
-    maxWidth: 300,
-    padding: '9px 12px',
-    font: 'inherit',
-    fontSize: 15,
-    color: 'var(--tw-text)',
-    background: 'var(--tw-surface)',
-    border: '1px solid var(--tw-border)',
-    borderRadius: 7,
+const quietLink: React.CSSProperties = {
+    ...quiet,
+    display: 'inline-block',
+    textDecoration: 'none',
 }
 
-export default function DeleteAccount({
-    displayName,
-    userId,
-}: {
-    displayName: string
-    userId: string | null
-}) {
-    const [asked, setAsked] = useState(false)
-    const [typed, setTyped] = useState('')
+const cancel: React.CSSProperties = {
+    background: 'none',
+    border: 'none',
+    font: 'inherit',
+    fontSize: 14,
+    color: 'var(--tw-text-secondary)',
+    cursor: 'pointer',
+}
+
+const row: React.CSSProperties = {
+    display: 'flex',
+    gap: 10,
+    flexWrap: 'wrap',
+    alignItems: 'center',
+}
+
+// idle: nothing asked yet; login: the reader is to confirm his login; last: back from it, one button
+type Step = 'idle' | 'login' | 'last'
+
+export default function DeleteAccount({ userId }: { userId: string | null }) {
+    // Back from the login with the mark, the last step is open at once
+    const [step, setStep] = useState<Step>(() =>
+        typeof window !== 'undefined' && carriesDeletionMark(window.location.search)
+            ? 'last'
+            : 'idle'
+    )
     const [error, setError] = useState<string | null>(null)
     const [deleting, setDeleting] = useState(false)
     const signOut = useRef<HTMLFormElement>(null)
+
+    // The mark leaves with the step it opened, or a reload would offer the last button again
+    function goTo(next: Step, message: string | null = null) {
+        if (carriesDeletionMark(window.location.search)) {
+            window.history.replaceState(null, '', window.location.pathname)
+        }
+        setStep(next)
+        setError(message)
+    }
 
     // The server answers 202 and finishes out of band. Nothing is left to wait for here, so the
     // reader is signed out at once: the account is already shut, and a session pointing
@@ -75,9 +96,11 @@ export default function DeleteAccount({
             return
         }
 
-        if (!response.ok) {
+        const outcome = deletionOutcome(response)
+        if (outcome !== 'deleted') {
             setDeleting(false)
-            setError('Не удалось удалить аккаунт, попробуйте позже')
+            if (outcome === 'confirm-again') goTo('login', 'Нужно подтвердить вход ещё раз')
+            else setError('Не удалось удалить аккаунт, попробуйте позже')
             return
         }
 
@@ -95,62 +118,43 @@ export default function DeleteAccount({
                 Все ваши комментарии будут удалены. Восстановить аккаунт нельзя.
             </p>
 
-            {!asked ? (
+            {step === 'idle' && (
                 <p style={{ margin: '16px 0 0' }}>
-                    <button type="button" onClick={() => setAsked(true)} style={quiet}>
+                    <button type="button" onClick={() => goTo('login')} style={quiet}>
                         Удалить аккаунт
                     </button>
                 </p>
-            ) : (
+            )}
+
+            {step === 'login' && (
                 <div style={{ marginTop: 16 }}>
-                    <label
-                        htmlFor="confirm-delete"
-                        style={{ display: 'block', fontSize: 14, marginBottom: 8 }}
-                    >
-                        Чтобы подтвердить, введите <b>{displayName}</b>
-                    </label>
-                    <div
-                        style={{
-                            display: 'flex',
-                            gap: 10,
-                            flexWrap: 'wrap',
-                            alignItems: 'center',
-                        }}
-                    >
-                        <input
-                            id="confirm-delete"
-                            value={typed}
-                            onChange={(event) => setTyped(event.target.value)}
-                            autoComplete="off"
-                            style={field}
-                        />
-                        <button
-                            type="button"
-                            onClick={remove}
-                            disabled={deleting || typed !== displayName}
-                            style={danger}
-                        >
-                            {deleting ? 'Удаляем…' : 'Удалить навсегда'}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setAsked(false)
-                                setTyped('')
-                                setError(null)
-                            }}
-                            style={{
-                                background: 'none',
-                                border: 'none',
-                                font: 'inherit',
-                                fontSize: 14,
-                                color: 'var(--tw-text-secondary)',
-                                cursor: 'pointer',
-                            }}
-                        >
+                    <p style={{ fontSize: 14, margin: '0 0 12px' }}>
+                        Чтобы удалить аккаунт, подтвердите вход тем же способом, которым входили.
+                    </p>
+                    <div style={row}>
+                        <a href={confirmDeletionHref()} style={quietLink}>
+                            Подтвердить вход
+                        </a>
+                        <button type="button" onClick={() => goTo('idle')} style={cancel}>
                             Отмена
                         </button>
                     </div>
+                </div>
+            )}
+
+            {step === 'last' && (
+                <div style={{ ...row, marginTop: 16 }}>
+                    <button type="button" onClick={remove} disabled={deleting} style={danger}>
+                        {deleting ? 'Удаляем…' : 'Удалить навсегда'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => goTo('idle')}
+                        disabled={deleting}
+                        style={cancel}
+                    >
+                        Отмена
+                    </button>
                 </div>
             )}
 

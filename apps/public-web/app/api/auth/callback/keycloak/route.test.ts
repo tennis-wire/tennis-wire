@@ -63,6 +63,7 @@ function callback(session?: string) {
 }
 
 beforeEach(() => {
+    flow.returnTo = '/news/one'
     authorizationCodeGrant.mockReset()
     tokenRevocation.mockReset()
     vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -107,5 +108,40 @@ describe('GET /api/auth/callback/keycloak', () => {
 
         expect(response.headers.get('location')).toBe('http://localhost:3000/news/one')
         expect(response.cookies.get('tw_session')?.value).toBe('sealed')
+    })
+
+    describe('the mark that opens the last step of deleting an account', () => {
+        const marked = '/me/settings/actions?delete=confirmed'
+
+        it('comes back with the account that left for the login', async () => {
+            flow.returnTo = marked
+            authorizationCodeGrant.mockResolvedValue(tokensFor('reader-1'))
+
+            const response = await GET(callback('signed-in'))
+
+            expect(response.headers.get('location')).toBe(`http://localhost:3000${marked}`)
+        })
+
+        it('is dropped when another account comes back', async () => {
+            flow.returnTo = marked
+            authorizationCodeGrant.mockResolvedValue(tokensFor('reader-2'))
+
+            const response = await GET(callback('signed-in'))
+
+            expect(response.headers.get('location')).toBe(
+                'http://localhost:3000/me/settings/actions'
+            )
+        })
+
+        it('is dropped when nobody was signed in before', async () => {
+            flow.returnTo = marked
+            authorizationCodeGrant.mockResolvedValue(tokensFor('reader-1'))
+
+            const response = await GET(callback())
+
+            expect(response.headers.get('location')).toBe(
+                'http://localhost:3000/me/settings/actions'
+            )
+        })
     })
 })

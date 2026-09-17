@@ -13,6 +13,7 @@ import {
     sessionCookieOptions,
     type Session,
 } from '@/lib/auth/session'
+import { withoutDeletionMark } from '@/lib/auth/deletion'
 import { safeReturnTo } from '@/lib/auth/returnTo'
 
 function failed(reason: string, error?: unknown) {
@@ -73,9 +74,12 @@ export async function GET(request: NextRequest) {
     // Only once the new session exists: a login that failed keeps the one the reader had
     if (previous) await revoke(previous.refreshToken)
 
-    const response = NextResponse.redirect(new URL(safeReturnTo(flow.returnTo), appOrigin()), {
-        status: 303,
-    })
+    const returnTo = safeReturnTo(flow.returnTo)
+    const sameAccount = previous?.sub === session.sub
+    const response = NextResponse.redirect(
+        new URL(sameAccount ? returnTo : withoutDeletionMark(returnTo), appOrigin()),
+        { status: 303 }
+    )
     response.cookies.set(SESSION_COOKIE, await sealSession(session), sessionCookieOptions())
     if (idToken) response.cookies.set(ID_TOKEN_COOKIE, idToken, idTokenCookieOptions())
     response.cookies.delete(FLOW_COOKIE)
