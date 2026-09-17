@@ -25,6 +25,7 @@ import {
 
 import { ThemeProvider, useTheme } from '../theme'
 import ReaderSessionProvider from '../components/auth/ReaderSessionProvider'
+import { strings } from '../components/discussion/strings'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -53,6 +54,10 @@ function RootStack() {
                     options={{ headerShown: true, title: 'Игрок' }}
                 />
                 <Stack.Screen name="me" options={{ headerShown: true, title: 'Профиль' }} />
+                <Stack.Screen
+                    name="me/ignore"
+                    options={{ headerShown: true, title: strings.ignoreList }}
+                />
             </Stack>
         </>
     )
