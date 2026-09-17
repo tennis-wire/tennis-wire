@@ -446,6 +446,11 @@ uv run arq transcription.worker.tasks.WorkerSettings      # worker
 
 Set `WHISPER_DEVICE=cpu` in `.env` on machines without an NVIDIA GPU.
 
+Like the Java services, it validates the token itself against Keycloak
+(`KEYCLOAK_ISSUER_URI`), so start Keycloak first; `/api/health` is the only
+path that works without it. A job is visible only to the author who started
+it, and `GET /api/transcribe/jobs` lists the caller's own.
+
 ### Frontends
 
 Each app under `apps/` has its own `package-lock.json` and is installed

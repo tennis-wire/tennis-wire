@@ -143,8 +143,11 @@ CORS терминируется в gateway (сделано).
 ## 7. Валидация в сервисах
 
 - **Java (`api-gateway`, `content-service`, `editorial-bff`, `discussion-service`):** `spring-boot-starter-oauth2-resource-server`. `issuer-uri` и `audiences` — свойства `spring.security.oauth2.resourceserver.jwt.*`, кода для проверки `aud` писать не нужно: Boot сам добавляет валидатор (свойство есть с 2.7, работает одинаково для servlet и reactive). Собственного кода остаётся только конвертер ролей `realm_access.roles` → `ROLE_*`. Gateway дополнительно пробрасывает `Authorization` downstream (token relay).
-- **Python (`transcription-service`):** PyJWT + `PyJWKClient` (кэш JWKS из коробки), проверка `iss`, `aud`, `exp`, роли `author`. Зависимость FastAPI в `api/deps.py`. Не считается долгом — делается в том же шаге, что и Java-сервисы.
-- **`transcription-service` — owner у задачи:** при создании job сохраняется `sub` (и `preferred_username` для логов); появляется список «мои задачи»; вопрос «кто занял GPU-воркера» получает ответ.
+- **Python (`transcription-service`):** PyJWT + `PyJWKClient`. Проверяются подпись (только RS256), `iss`, `aud`, `exp` и наличие `sub`; расхождение часов — 60 с, как по умолчанию в Spring. Роль `author` требует зависимость FastAPI из `api/deps.py`, и стоит она на роутере `/api/transcribe`, а не на каждом обработчике: новый маршрут закрыт сам. `/api/health` анонимный. Нет токена или он негоден — 401 с `WWW-Authenticate: Bearer`, нет роли — 403, ключи не получить — 503.
+    - Адрес JWKS выводится из `KEYCLOAK_ISSUER_URI` по раскладке Keycloak (`/protocol/openid-connect/certs`), без discovery.
+    - Набор ключей кэшируется на 5 минут и перезапрашивается на неизвестный `kid`, так что ротация подхватывается. Кэш отдельных ключей (`cache_keys`) выключен: он не истекает, и ключ, убранный из realm, продолжал бы проверять токены.
+    - Перезапрос на неизвестный `kid` не ограничен по частоте, в отличие от Nimbus в Java. Токен с выдуманным `kid` gateway отклоняет сам, до сервиса он доходит только в обход gateway.
+- **`transcription-service` — owner у задачи:** при создании job сохраняются `sub` и `preferred_username`. Статус, результат и отмена — только владельцу, на чужую задачу 404, как на несуществующую. `GET /api/transcribe/jobs` — свои задачи, новые сверху, по индексу в Redis рядом с задачами. Кто занял GPU-воркера, видно в логе воркера: имя владельца пишется при старте задачи.
 
 ## 8. Realm как код
 
@@ -162,7 +165,7 @@ CORS терминируется в gateway (сделано).
 
 Схема подтверждена на gateway (шаг 2); для остальных сервисов остаётся образцом.
 
-- **Основной объём — без Keycloak.** В Spring — `mockJwt()` из `SecurityMockServerConfigurers`: он подменяет `SecurityContext` целиком, декодер не вызывается, тестовая RSA-пара не нужна. В Python — PyJWT с тестовым ключом и подмена `issuer`/`jwks` через `dependency_overrides`. Такие тесты проверяют **правила**, но не конвертер ролей: authorities задаются напрямую.
+- **Основной объём — без Keycloak.** В Spring — `mockJwt()` из `SecurityMockServerConfigurers`: он подменяет `SecurityContext` целиком, декодер не вызывается, тестовая RSA-пара не нужна. Такие тесты проверяют **правила**, но не конвертер ролей: authorities задаются напрямую. В Python подмена глубже: тестовая RSA-пара и `TokenVerifier` с подставленным набором ключей через `dependency_overrides[get_token_verifier]`, так что вместе с правилами проверяется и сама верификация — подпись, `kid`, claims, разбор ролей.
 - **Один интеграционный тест на реальный flow.** Testcontainers поднимает Keycloak с тем же `tennis-wire-realm.json`, что монтируется в compose (файл добавлен в тестовые ресурсы, копии нет). Downstream заменён на HTTP-заглушку, поэтому проверяется и то, что gateway пробрасывает `Authorization` дальше. Медленный, поэтому один.
 - **Что он покрывает:** валидность realm-файла, разбор настоящего токена, маппинг `realm_access.roles` → `ROLE_*`, разграничение ролей (`author` проходит, `user` и `moderator-bot` — нет), token relay.
 - **Проверка `aud`.** В dev-realm есть клиент `no-audience` без маппера; токен от него корректно подписан и выдан настоящему пользователю с ролью `author`, но адресован не нам. Тест ждёт 401 — отказ происходит при валидации токена, до разбора ролей.
