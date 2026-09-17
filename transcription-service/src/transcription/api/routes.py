@@ -8,7 +8,7 @@ from typing import IO, Annotated
 
 import structlog
 from arq.connections import ArqRedis
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, UploadFile, status
 
 from transcription.api.deps import (
     get_arq_redis,
@@ -157,8 +157,9 @@ async def transcribe_file(
     s3: Annotated[S3Storage, Depends(get_s3_storage)],
     arq: Annotated[ArqRedis, Depends(get_arq_redis)],
     settings: Annotated[Settings, Depends(get_settings)],
-    language: str | None = None,
-    enable_diarization: bool = False,
+    # Form fields: they come in the multipart body beside the file, not in the URL.
+    language: Annotated[str | None, Form()] = None,
+    enable_diarization: Annotated[bool, Form()] = False,
 ) -> JobCreatedResponse:
     """Start transcription from uploaded file."""
     size = _measure(file.file)
