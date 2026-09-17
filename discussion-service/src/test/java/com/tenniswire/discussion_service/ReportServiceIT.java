@@ -101,6 +101,20 @@ class ReportServiceIT {
     }
 
     @Test
+    void aCommentWhoseTextIsGoneIsNoLongerReportable() {
+        var comment = commentOf(alice);
+        commentService.reply(bob, comment, "keeps the node");
+        commentService.deleteOwn(alice, comment);
+        // what the wipe leaves once the thirty days are up: the author stays, the text does not
+        comments.saveAndFlush(comments.findById(comment).orElseThrow().body(null));
+
+        assertThatThrownBy(() -> reportService.report(bob, comment, "spam"))
+                .isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> reportService.reportAsBot(comment, "spam"))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
     void aCommentModerationRemovedIsNot() {
         var comment = commentOf(alice);
         removeByModeration(comment);

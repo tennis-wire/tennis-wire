@@ -1,0 +1,11 @@
+# Test profile, activated for the whole module in build.gradle.kts rather than per class, so a new
+# test cannot quietly come up without it.
+#
+# A plain application.yaml here would not do: it resolves to the same classpath location as the real
+# one and would hide it outright rather than adding to it.
+
+discussion:
+  text-expiry:
+    # TextExpiryIT drives the pass itself. A scheduled one starts with the context and could be holding
+    # the wipe lock at the moment a test runs its own.
+    enabled: false

@@ -36,3 +36,9 @@ dependencies {
     testImplementation(libs.wiremock.standalone)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
+
+// The test profile applies to every test in this module, so application-test.yaml is the one place
+// test-only settings live and no test class has to remember to ask for it.
+tasks.test {
+    systemProperty("spring.profiles.active", "test")
+}

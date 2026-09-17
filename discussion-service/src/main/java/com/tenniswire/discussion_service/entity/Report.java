@@ -51,7 +51,7 @@ public class Report {
     @Column(name = "resolved_at")
     private Instant resolvedAt;
 
-    // null for VOIDED, which the erase job writes with no moderator behind it
+    // null for VOIDED and EXPIRED: the service writes those, with no moderator behind them
     @Column(name = "resolved_by")
     private UUID resolvedBy;
 

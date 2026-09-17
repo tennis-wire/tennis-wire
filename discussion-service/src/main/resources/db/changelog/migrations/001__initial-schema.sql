@@ -113,8 +113,8 @@ CREATE TRIGGER trigger_comment_set_path
     EXECUTE FUNCTION comment_set_path();
 
 -- changeset andrei:7 splitStatements:false
--- comment: Trigger for auto-updating updated_at on comment — only when the body actually changes,
--- comment: so reply_count bumps and soft-deletes do not masquerade as edits
+-- comment: Trigger for auto-updating updated_at on comment, only when a body is written: reply_count
+-- comment: bumps, soft-deletes and a body taken away do not pass for edits
 -- rollback: DROP TRIGGER IF EXISTS trigger_comment_updated_at ON comment; DROP FUNCTION IF EXISTS update_updated_at_column();
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -127,7 +127,7 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trigger_comment_updated_at
     BEFORE UPDATE ON comment
     FOR EACH ROW
-    WHEN (OLD.body IS DISTINCT FROM NEW.body)
+    WHEN (NEW.body IS NOT NULL AND OLD.body IS DISTINCT FROM NEW.body)
     EXECUTE FUNCTION update_updated_at_column();
 
 -- changeset andrei:8
@@ -165,12 +165,12 @@ CREATE TABLE report (
                         created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
                         resolved_at    TIMESTAMPTZ,
-                        resolved_by    UUID,                             -- NULL for 'voided': no moderator decides it
-                        resolution     TEXT,                             -- 'hidden' | 'dismissed' | 'counted' | 'voided'
+                        resolved_by    UUID,                             -- NULL for 'voided' and 'expired': no moderator decides them
+                        resolution     TEXT,                             -- 'hidden' | 'dismissed' | 'counted' | 'voided' | 'expired'
 
                         CONSTRAINT chk_report_source CHECK (source IN ('user', 'bot')),
                         CONSTRAINT chk_report_resolution CHECK (
-                            resolution IS NULL OR resolution IN ('hidden', 'dismissed', 'counted', 'voided')),
+                            resolution IS NULL OR resolution IN ('hidden', 'dismissed', 'counted', 'voided', 'expired')),
                         CONSTRAINT chk_report_resolved CHECK ((resolved_at IS NULL) = (resolution IS NULL)),
                         CONSTRAINT chk_report_reporter CHECK (
                             resolved_at IS NOT NULL OR (source = 'bot') = (reporter_hash IS NULL))
@@ -235,8 +235,8 @@ CREATE INDEX idx_comment_counted_author ON comment (author_id, counted_at)
 -- comment: stands on and leaves the rest as anonymous nodes, so the replies underneath survive:
 -- comment: author_id goes, and the body goes with it — what the rules promise a departing reader is
 -- comment: erasure, not concealment (discussion-rules §13.14, §11.23). Emptiness is confined to
--- comment: comments already taken down: one still standing has both. The same two columns are what
--- comment: the thirty-day wipe of removed text will need (§8.20, §11.22).
+-- comment: comments already taken down: one still standing has both. A body also goes on its own,
+-- comment: thirty days after its comment was taken down (changeset 16).
 ALTER TABLE comment
     ALTER COLUMN author_id DROP NOT NULL,
     ALTER COLUMN body DROP NOT NULL,
@@ -258,3 +258,9 @@ ALTER TABLE comment ADD COLUMN idempotency_key UUID;
 
 CREATE UNIQUE INDEX uq_comment_idempotency ON comment (author_id, idempotency_key)
     WHERE idempotency_key IS NOT NULL;
+
+-- changeset andrei:16
+-- comment: What the thirty-day wipe looks for: comments taken down that still carry text, oldest first.
+-- comment: Partial, so it holds about a month's worth of taken-down comments rather than the whole table.
+CREATE INDEX idx_comment_text_kept ON comment (deleted_at)
+    WHERE deleted_at IS NOT NULL AND body IS NOT NULL;

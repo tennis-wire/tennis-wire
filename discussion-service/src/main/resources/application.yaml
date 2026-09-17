@@ -76,6 +76,16 @@ discussion:
     # ids are public. Rotating it only lets everyone report once more.
     hash-key: ${REPORT_HASH_KEY:dev-report-hash-key}
 
+  text-expiry:
+    # How long the text of a comment taken down is kept, whether its author deleted it or moderation
+    # removed it. The privacy policy names this term.
+    after: 30d
+    # ISO-8601: @Scheduled reads this as a plain string and parses it itself, without Boot's relaxed
+    # binding. The rest of this block goes through @ConfigurationProperties and does not.
+    interval: PT1H
+    # Comments per transaction. Every tree a batch reaches is locked until it commits.
+    batch-size: 250
+
 logging:
   level:
     com.tenniswire.discussion_service: DEBUG

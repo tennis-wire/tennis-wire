@@ -59,7 +59,7 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
 | POST | `/comments` `{subjectType, subjectId, body}` | `user` | 201 `{comment, mutedByRecipient: false}`. `body` до 2000. Профиль автора запрашивается до записи, поэтому 503 не оставляет комментарий. Необязательный `Idempotency-Key` (UUID) — ниже |
 | POST | `/comments/{id}/replies` `{body}` | `user` | 201 `{comment, mutedByRecipient}`: `true`, если автор родителя игнорирует пишущего. Subject наследуется от родителя; родитель удалён — 409 `PARENT_DELETED`, ушёл целиком — 404 `NOT_FOUND`. Необязательный `Idempotency-Key` — ниже |
 | DELETE | `/comments/{id}` | `user`, только автор | 204, идемпотентно |
-| POST | `/comments/{id}/reports` `{reason}` | `user` | 204 на любую принятую, в том числе повторную. `reason` из `discussion.reports.reasons`. Свой комментарий или автор в игноре не в режиме `soft` — 403, снят модерацией — 409 `COMMENT_ALREADY_REMOVED` |
+| POST | `/comments/{id}/reports` `{reason}` | `user` | 204 на любую принятую, в том числе повторную. `reason` из `discussion.reports.reasons`. Свой комментарий или автор в игноре не в режиме `soft` — 403, снят модерацией — 409 `COMMENT_ALREADY_REMOVED`, текста уже нет (стёрт аккаунт или вышел срок) — 404 `NOT_FOUND` |
 
 `Idempotency-Key` на обеих записях. Тот же ключ того же автора с тем же текстом в то же место — 201
 и комментарий, записанный первым запросом, `mutedByRecipient` пересчитан; второго комментария нет.
@@ -86,9 +86,9 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
 | Метод | Путь | Роль | Что |
 |---|---|---|---|
 | DELETE | `/moderation/comments/{id}` | `moderator`, `moderator-bot` | снять комментарий; снятое ботом не подписано |
-| POST | `/moderation/reports` `{commentId, reason}` | `moderator-bot` | 204, жалоба классификатора |
-| GET | `/moderation/reports?status=open&page=&size=` | `moderator` | очередь, карточка на комментарий, `{items, page, size}`; `size` до 200 |
-| PATCH | `/moderation/reports/{commentId}` `{resolution}` | `moderator` | 204, закрывает карточку целиком: `hidden` \| `dismissed` \| `counted`. `counted` — только у удалённого автором, иначе 409 `RESOLUTION_NOT_APPLICABLE` |
+| POST | `/moderation/reports` `{commentId, reason}` | `moderator-bot` | 204, жалоба классификатора; снят модерацией — 409, текста нет — 404, как у читательской |
+| GET | `/moderation/reports?status=open&page=&size=` | `moderator` | очередь, карточка на комментарий, `{items, page, size}`; `size` до 200. Карточку удалённого автором комментария сервис закрывает сам через 30 дней после удаления, вместе с текстом (`expired`) |
+| PATCH | `/moderation/reports/{commentId}` `{resolution}` | `moderator` | 204, закрывает карточку целиком: `hidden` \| `dismissed` \| `counted`. `counted` — только у удалённого автором и пока его текст хранится, иначе 409 `RESOLUTION_NOT_APPLICABLE`. `voided` и `expired` пишет только сам сервис — 400 |
 | POST | `/moderation/restrictions` `{userId, expiresAt?, reason?}` | `moderator` | 201, ограничение на комментирование; без `expiresAt` — бессрочное |
 | GET | `/moderation/restrictions?userId=` | `moderator` | действующие ограничения |
 | DELETE | `/moderation/restrictions/{id}` | `moderator` | 204 |
@@ -131,18 +131,27 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
   в лог, чтобы одна такая строка не роняла всю ветку.
 - Копии ника в `comment` нет: переименованный модератором ник иначе остался бы в старых
   комментариях до бэкфилла. Падение user-service закрывает кэш, а не копия.
-- Триггер `updated_at` срабатывает только на смену `body`: инкремент `reply_count` и
-  soft-delete правкой не считаются.
+- Триггер `updated_at` срабатывает, только когда пишется новый `body`: инкремент `reply_count`,
+  soft-delete и зануление текста (стирание аккаунта, срок) правкой не считаются.
 - `id` генерится Hibernate (`@UuidGenerator VERSION_7`), а не DB-default: известен до flush.
   `path`, `root_id`, `path_key`, таймстемпы — `@Generated`, приходят из `INSERT … RETURNING`.
 - `reply_count` пишется только атомарным `UPDATE … +1`, сущность его никогда не записывает.
 - Одно дерево — один пишущий. Ответ, удаление автором, снятие модерацией, решение по жалобе,
-  жалоба и стирание сначала берут `pg_advisory_xact_lock` по `root_id` (`TreeLock`), стирание —
-  по всем деревьям батча в порядке ключей. Иначе двое действуют по одним и тем же счётчикам:
-  заглушка остаётся без ответов, родитель считает невидимый ответ, ответ ложится под удалённый
-  комментарий или падает на FK. Блокировка берётся до первого чтения комментария в транзакции:
-  сущность, прочитанная раньше, после ожидания вернулась бы из persistence context прежней.
-  Держится на READ COMMITTED.
+  жалоба, стирание аккаунта и стирание текста по сроку сначала берут `pg_advisory_xact_lock` по
+  `root_id` (`TreeLock`), оба стирания — по всем деревьям батча в порядке ключей. Иначе двое
+  действуют по одним и тем же счётчикам: заглушка остаётся без ответов, родитель считает невидимый
+  ответ, ответ ложится под удалённый комментарий или падает на FK. Блокировка берётся до первого
+  чтения комментария в транзакции: сущность, прочитанная раньше, после ожидания вернулась бы из
+  persistence context прежней. Держится на READ COMMITTED.
+- Текст удалённого автором и снятого модерацией комментария стирается через 30 дней после
+  `deleted_at`, строка остаётся (`TextExpiryJob`, `discussion.text-expiry`: `after`, `interval`,
+  `batch-size`). Проход идёт на каждом инстансе; батч — транзакция, которая начинается с
+  `pg_try_advisory_xact_lock(2, 0)`: не взята — инстанс пропускает тик, и батчи всех инстансов идут
+  по одному. Id батча читаются без блокировки строк, потом `TreeLock`, условие повторяется в
+  `UPDATE`. Не `SKIP LOCKED`: строку старой заглушки пишет и схлопывание, уже держа дерево, и
+  строка, взятая до дерева, дала бы дедлок. Открытые жалобы на эти комментарии закрываются как
+  `expired` той же транзакцией: засчитывать без текста нечего. Под профилем `test` проход
+  выключен, `TextExpiryIT` вызывает его сам.
 - `comment.created` уходит в `ApplicationEventPublisher`; слушатель — `@TransactionalEventListener`
   (after-commit). Брокер не выбран; `DomainEventPublisher` — точка замены.
 - Ограничение читателя приходит в листинге и `ancestry`, а не отдельным `GET /me`: по §3.7 бан
