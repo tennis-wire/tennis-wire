@@ -19,6 +19,8 @@ dependencies = [
     "boto3>=1.35",               # S3-compatible
     # HTTP client
     "httpx>=0.28",
+    # Token validation: RS256 needs the crypto extra
+    "pyjwt[crypto]>=2.10",
     # Configuration
     "pydantic-settings>=2.6",
     # Logging

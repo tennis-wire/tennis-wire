@@ -9,7 +9,7 @@ from typing import IO, Annotated
 from arq.connections import ArqRedis
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 
-from transcription.api.deps import get_arq_redis, get_job_storage, get_s3_storage
+from transcription.api.deps import get_arq_redis, get_job_storage, get_s3_storage, require_author
 from transcription.api.schemas import (
     HealthResponse,
     JobCreatedResponse,
@@ -24,7 +24,12 @@ from transcription.security import check_media_url_allowed
 from transcription.storage.jobs import JobStorage
 from transcription.storage.s3 import S3Storage
 
-router = APIRouter()
+# Anonymous: probes call it without a token. The gateway does not route it.
+health_router = APIRouter()
+
+# Every route here needs an author, including the ones added later: the check sits on the
+# router, not on each handler.
+transcribe_router = APIRouter(prefix="/transcribe", dependencies=[Depends(require_author)])
 
 
 def _gpu_available() -> bool:
@@ -39,7 +44,7 @@ def _gpu_available() -> bool:
 # ============== Routes ==============
 
 
-@router.get("/health", response_model=HealthResponse)
+@health_router.get("/health", response_model=HealthResponse)
 async def health_check(
     arq: Annotated[ArqRedis, Depends(get_arq_redis)],
 ) -> HealthResponse:
@@ -61,8 +66,8 @@ async def health_check(
     )
 
 
-@router.post(
-    "/transcribe/url",
+@transcribe_router.post(
+    "/url",
     response_model=JobCreatedResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
@@ -125,8 +130,8 @@ def _safe_suffix(filename: str | None) -> str:
     return suffix if re.fullmatch(r"\.[a-z0-9]{1,8}", suffix) else ""
 
 
-@router.post(
-    "/transcribe/file",
+@transcribe_router.post(
+    "/file",
     response_model=JobCreatedResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
@@ -179,7 +184,7 @@ async def transcribe_file(
     )
 
 
-@router.get("/transcribe/{job_id}", response_model=JobStatusResponse)
+@transcribe_router.get("/{job_id}", response_model=JobStatusResponse)
 async def get_job_status(
     job_id: str,
     job_storage: Annotated[JobStorage, Depends(get_job_storage)],
@@ -204,7 +209,7 @@ async def get_job_status(
     )
 
 
-@router.get("/transcribe/{job_id}/result", response_model=JobResultResponse)
+@transcribe_router.get("/{job_id}/result", response_model=JobResultResponse)
 async def get_job_result(
     job_id: str,
     job_storage: Annotated[JobStorage, Depends(get_job_storage)],
@@ -244,7 +249,7 @@ async def get_job_result(
     )
 
 
-@router.delete("/transcribe/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
+@transcribe_router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def cancel_job(
     job_id: str,
     job_storage: Annotated[JobStorage, Depends(get_job_storage)],

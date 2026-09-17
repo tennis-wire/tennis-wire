@@ -41,6 +41,15 @@ class Settings(BaseSettings):
     whisper_compute_type: Literal["float16", "float32", "int8"] = "float16"
     hf_token: str | None = None  # For speaker diarization
 
+    # Auth: same issuer and audience as the gateway and the Java services
+    keycloak_issuer_uri: str = "http://localhost:8180/realms/tennis-wire"
+    jwt_audience: str = "tennis-wire-api"
+
+    @property
+    def jwks_uri(self) -> str:
+        # Keycloak's layout. The Java services find it through discovery; here it saves a request.
+        return f"{self.keycloak_issuer_uri.rstrip('/')}/protocol/openid-connect/certs"
+
     # Limits
     max_file_size_mb: int = 500
     max_duration_minutes: int = 180

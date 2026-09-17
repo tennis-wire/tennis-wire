@@ -2,9 +2,14 @@
 
 from unittest.mock import AsyncMock
 
+import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from jwt import PyJWK, PyJWKClientConnectionError
 
-from tests.conftest import FakeJobStorage
+from tests.conftest import FakeJobStorage, TokenFactory
+from transcription.api.deps import get_token_verifier
+from transcription.auth import TokenVerifier
 from transcription.config import Settings
 from transcription.constants import TRANSCRIBE_TASK_NAME
 from transcription.models import JobStatus, TranscriptionJob
@@ -13,9 +18,9 @@ from transcription.models import JobStatus, TranscriptionJob
 class TestHealthEndpoint:
     """Tests for health check endpoint."""
 
-    def test_health_check(self, client: TestClient) -> None:
+    def test_health_check(self, anonymous_client: TestClient) -> None:
         """Test health check returns ok."""
-        response = client.get("/api/health")
+        response = anonymous_client.get("/api/health")
 
         assert response.status_code == 200
         data = response.json()
@@ -233,3 +238,85 @@ class TestTranscribeFileEndpoint:
 
         assert response.status_code == 400
         mock_arq.enqueue_job.assert_not_called()
+
+
+AUTHOR_ROUTES = (
+    ("post", "/api/transcribe/url"),
+    ("post", "/api/transcribe/file"),
+    ("get", "/api/transcribe/test-job-123"),
+    ("get", "/api/transcribe/test-job-123/result"),
+    ("delete", "/api/transcribe/test-job-123"),
+)
+
+
+class TestAuthentication:
+    """The author gate on every transcription route."""
+
+    @pytest.mark.parametrize(("method", "path"), AUTHOR_ROUTES)
+    def test_no_token_is_401(
+        self, anonymous_client: TestClient, mock_arq: AsyncMock, method: str, path: str
+    ) -> None:
+        response = anonymous_client.request(method, path)
+
+        assert response.status_code == 401
+        assert response.headers["WWW-Authenticate"] == "Bearer"
+        mock_arq.enqueue_job.assert_not_called()
+
+    def test_invalid_token_is_401(self, anonymous_client: TestClient) -> None:
+        response = anonymous_client.get(
+            "/api/transcribe/test-job-123", headers={"Authorization": "Bearer not.a.jwt"}
+        )
+
+        assert response.status_code == 401
+        assert 'error="invalid_token"' in response.headers["WWW-Authenticate"]
+
+    def test_reader_is_403(
+        self, anonymous_client: TestClient, make_token: TokenFactory, mock_arq: AsyncMock
+    ) -> None:
+        token = make_token(realm_access={"roles": ["user"]})
+
+        response = anonymous_client.post(
+            "/api/transcribe/url",
+            json={"url": "https://youtube.com/watch?v=test123"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 403
+        mock_arq.enqueue_job.assert_not_called()
+
+    def test_admin_passes_through_the_composite(
+        self, anonymous_client: TestClient, make_token: TokenFactory
+    ) -> None:
+        # Keycloak expands composites into the token, so admin arrives carrying author.
+        token = make_token(realm_access={"roles": ["admin", "user", "author", "moderator"]})
+
+        response = anonymous_client.post(
+            "/api/transcribe/url",
+            json={"url": "https://youtube.com/watch?v=test123"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 202
+
+    def test_unreachable_keys_are_503(
+        self,
+        app: FastAPI,
+        anonymous_client: TestClient,
+        settings: Settings,
+        make_token: TokenFactory,
+    ) -> None:
+        class Unreachable:
+            def get_signing_key_from_jwt(self, token: str) -> PyJWK:
+                raise PyJWKClientConnectionError("connection refused")
+
+        verifier = TokenVerifier(Unreachable(), settings.keycloak_issuer_uri, settings.jwt_audience)
+        app.dependency_overrides[get_token_verifier] = lambda: verifier
+
+        response = anonymous_client.get(
+            "/api/transcribe/test-job-123", headers={"Authorization": f"Bearer {make_token()}"}
+        )
+
+        assert response.status_code == 503
+
+    def test_health_stays_anonymous(self, anonymous_client: TestClient) -> None:
+        assert anonymous_client.get("/api/health").status_code == 200
