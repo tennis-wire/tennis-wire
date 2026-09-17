@@ -7,19 +7,20 @@
 1. **Keycloak — только identity.** Кто это, какие роли, какие токены. Профили, настройки, фэнтези, аватары — в `user-service` и профильных сервисах.
 2. **Сервисы — OIDC resource servers.** Каждый сервис валидирует JWT сам по JWKS: gateway не единственная линия обороны.
 3. **Проверяем роли, а не факт логина.** С первого дня gateway и сервисы авторизуют по ролям, даже пока в системе один человек со всеми ролями. Появление сотрудника — создание учётки и выдача роли, без изменений в коде.
-4. **Realm как код.** Конфигурация realm лежит в репозитории; ручные правки через UI экспортируются и коммитятся.
+4. **Realm как код.** Конфигурация realm лежит в репозитории. Найденное в консоли переносится в JSON руками, экспорт не используется (§8).
 5. **Внутренний `user_id`.** `sub` из Keycloak — не первичный ключ пользователя в наших сервисах (см. §5).
 
 ## 2. Роли
 
-Realm-роли (client-роли не используем — проще маппинг и одна точка правды):
+Realm-роли (client-роли не используем — проще маппинг и одна точка правды; исключение — встроенные роли `realm-management` у `user-service`, §3):
 
 | Роль | Кому | Как выдаётся | Что даёт |
 |---|---|---|---|
-| `user` | Зарегистрированный читатель | Автоматически при саморегистрации (default role) | Комментарии, фэнтези, личный кабинет |
+| `user` | Зарегистрированный читатель | Автоматически: default-группа `readers` (регистрация, вход через Google, учётка из консоли) | Комментарии, жалобы, игнор-лист, личный кабинет; позже фэнтези |
 | `author` | Сотрудник-автор | Вручную администратором | Редакторский контур: черновики, AI-чат, перевод, транскрипция |
 | `moderator` | Сотрудник-модератор | Вручную администратором | Модерация комментариев: скрытие, бан, разбор жалоб и сигналов бота |
-| `moderator-bot` | Service account бота | Назначается клиенту `moderation-bot` | Узкий поднабор модерации (пометка / скрытие), без бана |
+| `moderator-bot` | Service account бота | Назначается клиенту `moderation-bot` | Жалоба от классификатора (`POST /moderation/reports`) и снятие комментария; без ограничений и без чтения очереди |
+| `service` | Service account'ы `user-service` и `discussion-service` | Назначается сервисному аккаунту клиента | Вызовы `/internal/**` между сервисами (§6) |
 | `admin` | Администратор | Вручную; composite из `user`, `author`, `moderator` | Управление пользователями и системой |
 
 `author` и `moderator` независимы: у одного человека могут быть обе.
@@ -36,22 +37,24 @@ Realm-роли (client-роли не используем — проще мап�
 | `public-web` | `apps/public-web` (Next.js, SSR) | confidential | Authorization Code + PKCE, секрет на сервере | `openid-client` + `iron-session`; токены в зашифрованной cookie, в браузер не попадают |
 | `mobile` | `apps/mobile` (Expo) | public | Authorization Code + PKCE | `expo-auth-session` |
 | `moderation-bot` | бот-модератор | confidential, service account | `client_credentials` | — |
+| `user-service` | `user-service` | confidential, service account | `client_credentials` | Spring Security OAuth2 Client; роль `service` и client-роли `realm-management` `manage-users`, `view-realm` — гашение и удаление учёток, чтение `accessTokenLifespan` |
+| `discussion-service` | `discussion-service` | confidential, service account | `client_credentials` | Spring Security OAuth2 Client; роль `service` |
 
 Путь к `author` / `moderator` — только через администратора.
 
 Саморегистрация в realm **включена** (B1): форма на странице логина, email как username, подтверждение адреса обязательно. До читателей она была выключена — роль `user` было некому потреблять.
 
-Локально в realm есть ещё клиент `dev-cli` (public, password grant) и пользователи `dev` / `reader` — артефакты разработки для `curl` и тестов. В целевом realm их нет.
+Локально в realm есть ещё клиенты `dev-cli` (public, password grant) и `no-audience` (без audience mapper, для теста §9), пользователи `dev`, `reader` и `moderator` — артефакты разработки для `curl` и тестов. В целевом realm их нет.
 
 ## 4. Токены
 
 - **Access token:** 5 минут. Определяет верхнюю границу задержки отзыва доступа.
 - **SSO session (realm-уровень, staff-ориентировано):** idle 30 минут, max 8 часов.
-- **Читательские клиенты (`public-web`, `mobile`):** запрашивают `offline_access`; refresh-токен отвязан от SSO-сессии и живёт 30 дней простоя (`offlineSessionIdleTimeout`). С Keycloak 26.1 такой вход своей SSO-сессии не оставляет вовсе, только offline-сессию: молча перелогинить читателя нечем. Остальным клиентам этот scope из optional убран.
+- **Читательские клиенты (`public-web`, `mobile`):** запрашивают `offline_access`; refresh-токен отвязан от SSO-сессии и живёт 30 дней простоя (`offlineSessionIdleTimeout`), но не дольше 180 дней от входа (`offlineSessionMaxLifespan`). С Keycloak 26.1 такой вход своей SSO-сессии не оставляет вовсе, только offline-сессию: молча перелогинить читателя нечем. Остальным клиентам этот scope из optional убран.
 - **Формат:** JWT, подпись RS256, ключи ротируются в Keycloak; сервисы берут их по JWKS.
 - **Роли в токене:** `realm_access.roles`. В Spring нужен `JwtAuthenticationConverter` с маппингом в `ROLE_*`.
 - **Audience:** Keycloak по умолчанию не ставит `aud` для API. В каждом клиенте заводится audience mapper (`oidc-audience-mapper`, `included.custom.audience: tennis-wire-api`); gateway и сервисы проверяют `aud`, а не только `iss`.
-  Маппер намеренно продублирован по клиентам, а не вынесен в общий client scope: realm-уровневый массив `clientScopes` в файле импорта **заменяет** встроенные scope'ы вместо того, чтобы дополнять их, и вместе с ними пропадает `roles` — токены приходят без `realm_access.roles`. Четыре копии маппера дешевле, чем ручное описание всех встроенных scope'ов.
+  Маппер намеренно продублирован по клиентам, а не вынесен в общий client scope: realm-уровневый массив `clientScopes` в файле импорта **заменяет** встроенные scope'ы вместо того, чтобы дополнять их, и вместе с ними пропадает `roles` — токены приходят без `realm_access.roles`. Копия маппера в каждом клиенте (сейчас их семь) дешевле, чем ручное описание всех встроенных scope'ов.
 - **Обязательные claims для сервисов:** `iss`, `aud`, `sub`, `exp`, `realm_access.roles`, `azp` (какой клиент выпустил). Для staff дополнительно `email`, `preferred_username` — для логов и owner у задач.
 
 ### Сессия в `editorial-ui`
@@ -99,9 +102,9 @@ Realm-роли (client-роли не используем — проще мап�
 
 Обновление access-токена — на сервере, single-flight по `sub`: страница шлёт несколько запросов сразу, и без этого каждый пошёл бы за своим токеном. Выход дополнительно отзывает refresh-токен: offline-токен переживает завершение SSO-сессии по определению, и выброшенной куки мало. Новый вход поверх живой сессии отзывает refresh-токен заменённой: каждый вход с `offline_access` открывает свою offline-сессию, и прежняя жила бы 30 дней. Отзыв снимает только сессию этого токена, другие устройства читателя не трогает.
 
-Браузер ходит в gateway не напрямую, а через same-origin маршруты `/api/discussion/**` и `/api/users/**`. Запрос там собирается заново: наружу уходят метод, путь, query, тело, `Content-Type`, `Accept` и `Authorization` из куки — `Cookie`, `Host` и `X-Forwarded-*` остаются на этой стороне. Обратно — статус, тело и `Content-Type`. На не-GET проверяется `Origin`.
+Браузер ходит в gateway не напрямую, а через same-origin маршруты `/api/discussion/**` и `/api/users/**`. Запрос там собирается заново: наружу уходят метод, путь, query, тело, `Content-Type`, `Accept`, `Idempotency-Key` и `Authorization` из куки — `Cookie`, `Host` и `X-Forwarded-*` остаются на этой стороне. Обратно — статус, тело и `Content-Type`. На не-GET проверяется `Origin`.
 
-Анонимные чтения через прокси ограничиваются по адресу из `X-Forwarded-For` (5/с, ёмкость 20): в gateway они все приходят с адреса Next-инстанса, и там их различить уже нечем.
+Запросы без сессии через прокси ограничиваются по адресу из `X-Forwarded-For` (крайний правый элемент, 5/с, ёмкость 20): в gateway они все приходят с адреса Next-инстанса, и там их различить уже нечем.
 
 Страницы сессию при рендере не читают: `cookies()` сделал бы динамической каждую из них и снял бы кэш HTML. Кто вошёл, выясняет клиентский островок запросом к `/api/auth/session` после монтирования; в ответе имя, `userId` и дата создания профиля из `user-service`, но не токен. Свой `userId` читателю нужен, чтобы отличать свои комментарии от чужих, и секретом он не является: `author.id` есть в каждом комментарии.
 
@@ -119,7 +122,7 @@ Realm-роли (client-роли не используем — проще мап�
     - Кэш `sub → user_id` живёт у потребителя без TTL: строка `identity_link` создаётся один раз и не меняется, устаревшего значения не бывает. Ограничение только по размеру.
     - `user-service` недоступен и промах кэша — 503 на этот запрос. Попадания работают, анонимные чтения резолв не вызывают.
     - Реализация в самом потребителе (`discussion-service/security/RemoteUserIdResolver`), а не в `auth-support`: иначе HTTP-клиент, oauth2-client и Caffeine оказались бы в classpath всех пяти модулей.
-- **Staff-контур** (`content-service`, `transcription-service`) использует `sub` напрямую — для owner у задач и аудита. Смена провайдера в staff-контуре обрабатывается вручную, объём данных мал.
+- **Staff-контур** хранит `sub` напрямую, без `user_id`: `transcription-service` — владелец задачи (§7). В `content-service` колонка `articles.author_id` есть, но из токена не заполняется. Смена провайдера в staff-контуре обрабатывается вручную, объём данных мал.
 - **Профиль автора в ответе.** `discussion-service` сам собирает `author` в каждый комментарий: один batch-вызов `GET /internal/users?ids=` на ответ, под своим токеном client_credentials, кэш с TTL 2 минуты. Клиент получает готовый комментарий одним запросом, без второго round-trip'а. Цена: отказ `user-service` — 503 на весь листинг, а не лента без подписей.
 
 ## 6. Маршруты gateway → роль
@@ -130,15 +133,17 @@ Realm-роли (client-роли не используем — проще мап�
 | `/actuator/gateway` | `admin` | Экспонируется только профилем `local`; роль требуется и там. Профиль управляет экспозицией, security — доступом |
 | `/api/public/**` | анонимно | |
 | `/api/editorial/**`, `/api/ai/**`, `/api/translate/**`, `/api/transcribe/**` | `author` | |
-| `/api/aggregator/**` | `author` | planned |
+| `/api/aggregator/**` | `author` | planned; правила в gateway пока нет, путь закрыт |
 | `/api/discussion/comments/**` GET | анонимно | токен, если есть, всё равно валидируется — по нему применяются блокировки зрителя |
-| `/api/discussion/comments/**` POST/DELETE, `/api/discussion/blocks/**` | `user` | |
+| `/api/discussion/**` (прочее) | `user` | запись комментариев и жалоб, игнор-лист; сервис пускает только `comments/**` и `blocks/**` |
 | `/api/discussion/moderation/**` | `moderator` или `moderator-bot` | сервис сужает: `/moderation/restrictions/**` и `GET`/`PATCH /moderation/reports/**` — только `moderator`; `POST /moderation/reports` — только `moderator-bot` |
 | `/api/users/me/**` | `user` | сюда же `DELETE /api/users/me` — читатель удаляет свой аккаунт; сервис дополнительно требует вход не старше 5 минут (`auth_time`) |
 | `DELETE /api/users/{id}` | `admin` | удаление аккаунта через поддержку: единственный выход для забаненного навсегда (`discussion-rules.md` §12.16) |
-| `/api/users/**` (прочее) | — | правила нет, значит `denyAll`. Новый путь объявляет себя сам |
+| всё прочее | — | правила нет, значит `denyAll` — в gateway и в каждом сервисе. Новый путь объявляет себя сам |
 
 CORS терминируется в gateway (сделано).
+
+**`/internal/**` через gateway не ходит.** Маршрута на него нет, а без правила запрос упал бы в `denyAll`. Сервисы вызывают друг друга напрямую по кластерному DNS: `discussion-service` → `user-service` (`POST /internal/identities/resolve`, `GET /internal/users?ids=`) и `user-service` → `discussion-service` (`DELETE /internal/users/{id}`). В самих сервисах `/internal/**` требует роль `service`: её несут только сервисные аккаунты `user-service` и `discussion-service`, токен они получают по `client_credentials`, и проверяется он как любой другой, вместе с `aud`. Исключение — resolve: он требует `user`, потому что потребитель пересылает токен самого читателя (§5), и в `user-service` это правило объявлено раньше общего. Сетевой изоляции пока нет: до NetworkPolicy в Kubernetes `/internal/**` держится на ролях и на отсутствии маршрута.
 
 ## 7. Валидация в сервисах
 
@@ -178,24 +183,23 @@ CORS терминируется в gateway (сделано).
 | 1 ✅ | `chore/keycloak-local` | Keycloak в compose, `tennis-wire-realm.json` (§2–§4, §8), dev-клиент и dev-пользователи; проверка руками: логин в консоль, получение токена `curl`, разбор claims |
 | 2 ✅ | `security/gateway-auth` | Gateway → resource server: §6, конвертер ролей, `aud`, закрытие actuator; тестовая RSA-пара + один Testcontainers-тест |
 | 3 ✅ | `refactor/editorial-ui/api-client`, `security/editorial-ui/login` | Общая обёртка над `fetch`; сужение redirect URI до конкретных путей; PKCE-логин, гвард маршрутов, выход; Bearer и политика 401/403 с single-flight обновлением; баннер истёкшей сессии с входом через попап; черновик по пользователю. Решения — §4 |
-| 4 | `security/services-jwt` | `content-service` и `transcription-service` валидируют JWT сами; owner у job и список «мои» |
-| 5 | позже | `public-web` (Auth.js), `mobile` (`expo-auth-session`), `user-service` с `user_id` и `identity_link`, per-client сессии для читателей; здесь же — замена резолвера в `discussion-service` и перелив `author_id` с `sub` на `user_id` (§5) |
+| 4 ✅ | `security/java-services/jwt`, `security/transcription-service/jwt` | `content-service` и `editorial-bff` валидируют JWT сами, конвертер ролей вынесен в `auth-support`; `transcription-service` — PyJWT, роль `author` на роутере, owner у job и список «мои» (§7). `discussion-service` и `user-service` resource server'ами появились |
+| 5 — частично | план читательского контура (`readers.md` §5) | Сделано: `user-service` с `user_id` и `identity_link` (A1); замена резолвера в `discussion-service` и перелив `author_id` с `sub` на `user_id` (A2, §5); `public-web` на `openid-client` + `iron-session` вместо Auth.js (B2, §4); per-client сессии для читателей (§4). Осталось: `mobile` на `expo-auth-session` (C2) |
 
-Модель `model_v2.c4` обновляется отдельной веткой после шага 2, когда топология реально изменится.
+Модель `model_v2.c4` приведена к коду веткой `docs/architecture/readers-sync`; дальше её правит та ветка, которая меняет топологию.
 
 ## 11. Отложено / открытые вопросы
 
-- **Социальный вход — остался Apple.** Google включён (`readers.md`, шаг B1.5): встроенный провайдер, `trustEmail`, конфигурация в realm-json. Apple — не «без кода», как было записано здесь раньше: встроенного провайдера в Keycloak нет, generic OIDC не подходит, нужен JAR расширения в образе — первый custom SPI, разбор в `readers.md` §1.1. Срок — запуск `mobile`: кнопка Google в iOS-приложении обязывает добавить Sign in with Apple по правилу App Store 4.8.
+- **Социальный вход — остался Apple.** Google включён (`readers.md`, шаг B1.5): встроенный провайдер, `trustEmail`, конфигурация в realm-json. Apple — не «без кода», как было записано здесь раньше: встроенного провайдера в Keycloak нет, generic OIDC не подходит, нужен JAR расширения в образе — первый custom SPI, разбор в `readers.md` §1.1. Срок — запуск `mobile`: кнопка Google в iOS-приложении обязывает добавить Sign in with Apple по правилу App Store 4.8. Отступление от условия пересмотра записано в `ADR-0001`.
 - **MFA для сотрудников:** conditional OTP по роли `author` / `moderator` / `admin` — конфигурация flow, включается при росте команды.
-- **Доставка `user_id` в сервисы** — §5.
-- **Бот-модератор:** способ реализации (регулярки + LLM) и место в топологии не определены; изучить существующие подходы ближе к делу. В identity-модели у него уже есть место: клиент `moderation-bot` и роль `moderator-bot`.
-- **Интерфейс модератора:** где живёт — в `editorial-ui` или в отдельном разделе `public-web`. Не спроектирован.
+- **Бот-модератор:** способ реализации (регулярки + LLM) и место в топологии не определены; изучить существующие подходы ближе к делу. В identity-модели у него уже есть место: клиент `moderation-bot` и роль `moderator-bot`; API тоже — `POST /moderation/reports` и снятие комментария.
+- **Интерфейс модератора:** временно — очередь жалоб в `editorial-ui` (`/moderation`, за ролью `moderator`). Постоянное место — `editorial-ui` или раздел `public-web` — не выбрано; экранов для ограничений и снятия комментария нет.
 - **Кастомизация страниц логина** Keycloak под бренд — отдельная задача, не блокирует.
 - **Сквозной тест логина.** Потоки `editorial-ui` и `public-web` проверяются
   руками по сценариям, которые живут в истории веток, а не в репозитории.
   Playwright с поднятым Keycloak закрыл бы это, но заводить браузерную
   автоматизацию с самого сложного флоу — неудачный первый шаг.
-- **Ведро анонимных чтений в `public-web` — в памяти инстанса.** При двух
+- **Ведро запросов без сессии в `public-web` — в памяти инстанса.** При двух
   инстансах лимит удваивается. Общее состояние (Redis, как в gateway) понадобится
   вместе со вторым инстансом, не раньше.
 - **Повтор запроса, упавшего в момент истечения.** Сейчас после входа через
@@ -212,5 +216,5 @@ CORS терминируется в gateway (сделано).
   независимых вызова `signinSilent()` с одним refresh-токеном, и `signinSilent`
   собственной блокировки не имеет, так что single-flight в обёртке от этой пары
   не защищает.
-- **Размер бандла `editorial-ui`** — 1.2 МБ, сборка предупреждает. MUI, TipTap и
+- **Размер бандла `editorial-ui`** — около 1.4 МБ (`vite build`, 2026-09-17), сборка предупреждает. MUI, TipTap и
   prismjs; лечится ленивой загрузкой страниц. К авторизации отношения не имеет.
