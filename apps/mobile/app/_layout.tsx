@@ -24,6 +24,7 @@ import {
 } from '@expo-google-fonts/nunito-sans'
 
 import { ThemeProvider, useTheme } from '../theme'
+import ReaderSessionProvider from '../components/auth/ReaderSessionProvider'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -51,6 +52,7 @@ function RootStack() {
                     name="players/[slug]"
                     options={{ headerShown: true, title: 'Игрок' }}
                 />
+                <Stack.Screen name="me" options={{ headerShown: true, title: 'Профиль' }} />
             </Stack>
         </>
     )
@@ -85,7 +87,9 @@ export default function RootLayout() {
 
     return (
         <ThemeProvider>
-            <RootStack />
+            <ReaderSessionProvider>
+                <RootStack />
+            </ReaderSessionProvider>
         </ThemeProvider>
     )
 }
