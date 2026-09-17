@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { MAX_LENGTH, normalize, problem } from './compose'
+import { DiscussionError } from './api'
+import { MAX_LENGTH, classify, normalize, problem } from './compose'
 
 describe('normalize', () => {
     it('trims the edges and squeezes blank lines, keeping single line breaks', () => {
@@ -28,5 +29,21 @@ describe('problem', () => {
         const three = 'https://a.b https://a.b/c https://a.b/d'
         expect(problem(three)).toBeNull()
         expect(problem(`${three} https://a.b/e`)).toBe('links')
+    })
+})
+
+describe('classify', () => {
+    it('tells a reader replying to a comment that went altogether that it is gone', () => {
+        const gone = new DiscussionError(404, 'NOT_FOUND', 'Comment not found: 1')
+        const down = new DiscussionError(409, 'PARENT_DELETED', 'Comment is no longer standing: 1')
+
+        expect(classify(gone, true)).toEqual({ kind: 'parent' })
+        expect(classify(down, true)).toEqual({ kind: 'parent' })
+    })
+
+    it('does not read a 404 on a top-level comment as a parent gone', () => {
+        const gone = new DiscussionError(404, 'NOT_FOUND', 'no route')
+
+        expect(classify(gone, false)).toEqual({ kind: 'other', message: 'no route' })
     })
 })
