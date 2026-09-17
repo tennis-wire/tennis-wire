@@ -43,6 +43,7 @@ dev = [
     "pytest-cov>=6.0",
     "pytest-xdist>=3.5",
     "respx>=0.22",               # HTTP mocking
+    "fakeredis>=2.26",           # Redis for storage tests
     # Linting & formatting
     "ruff>=0.8",
     "mypy>=1.13",

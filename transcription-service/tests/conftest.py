@@ -88,8 +88,15 @@ class FakeJobStorage:
     def __init__(self) -> None:
         self.jobs: dict[str, TranscriptionJob] = {}
 
+    async def create(self, job: TranscriptionJob) -> None:
+        self.jobs[job.id] = job
+
     async def save(self, job: TranscriptionJob) -> None:
         self.jobs[job.id] = job
+
+    async def list_for_owner(self, owner_sub: str, limit: int) -> list[TranscriptionJob]:
+        owned = [job for job in self.jobs.values() if job.owner_sub == owner_sub]
+        return sorted(owned, key=lambda job: job.created_at, reverse=True)[:limit]
 
     async def get(self, job_id: str) -> TranscriptionJob | None:
         return self.jobs.get(job_id)
@@ -159,6 +166,7 @@ def mock_job() -> TranscriptionJob:
     """A sample transcription job."""
     return TranscriptionJob(
         id="test-job-123",
+        owner_sub=AUTHOR_SUB,
         source_url="https://youtube.com/watch?v=test",
         language="en",
     )

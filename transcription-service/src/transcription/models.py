@@ -64,6 +64,9 @@ class TranscriptionJob(BaseModel):
     """A transcription job."""
 
     id: str = Field(..., description="Unique job ID")
+    # sub of the author who started the job; the username is for logs only
+    owner_sub: str
+    owner_username: str | None = None
     status: JobStatus = JobStatus.PENDING
     source_url: str | None = None  # YouTube URL or other
     source_file: str | None = None  # S3 key of uploaded file

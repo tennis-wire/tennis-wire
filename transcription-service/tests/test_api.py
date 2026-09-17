@@ -1,5 +1,6 @@
 """Tests for API endpoints."""
 
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
@@ -7,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from jwt import PyJWK, PyJWKClientConnectionError
 
-from tests.conftest import FakeJobStorage, TokenFactory
+from tests.conftest import AUTHOR_SUB, FakeJobStorage, TokenFactory
 from transcription.api.deps import get_token_verifier
 from transcription.auth import TokenVerifier
 from transcription.config import Settings
@@ -241,6 +242,7 @@ class TestTranscribeFileEndpoint:
 
 
 AUTHOR_ROUTES = (
+    ("get", "/api/transcribe/jobs"),
     ("post", "/api/transcribe/url"),
     ("post", "/api/transcribe/file"),
     ("get", "/api/transcribe/test-job-123"),
@@ -320,3 +322,67 @@ class TestAuthentication:
 
     def test_health_stays_anonymous(self, anonymous_client: TestClient) -> None:
         assert anonymous_client.get("/api/health").status_code == 200
+
+
+class TestOwnership:
+    """A job belongs to the author who started it."""
+
+    def test_new_job_records_its_owner(
+        self, client: TestClient, job_storage: FakeJobStorage
+    ) -> None:
+        response = client.post(
+            "/api/transcribe/url", json={"url": "https://youtube.com/watch?v=test123"}
+        )
+
+        saved = job_storage.jobs[response.json()["job_id"]]
+        assert saved.owner_sub == AUTHOR_SUB
+        assert saved.owner_username == "dev"
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            ("get", "/api/transcribe/test-job-123"),
+            ("get", "/api/transcribe/test-job-123/result"),
+            ("delete", "/api/transcribe/test-job-123"),
+        ],
+    )
+    async def test_another_authors_job_is_not_found(
+        self,
+        anonymous_client: TestClient,
+        make_token: TokenFactory,
+        job_storage: FakeJobStorage,
+        mock_job: TranscriptionJob,
+        method: str,
+        path: str,
+    ) -> None:
+        await job_storage.save(mock_job)
+        token = make_token(sub="someone-else", preferred_username="colleague")
+
+        response = anonymous_client.request(
+            method, path, headers={"Authorization": f"Bearer {token}"}
+        )
+
+        assert response.status_code == 404
+        assert job_storage.jobs[mock_job.id].status == JobStatus.PENDING
+
+    async def test_my_jobs_lists_only_mine_newest_first(
+        self, client: TestClient, job_storage: FakeJobStorage
+    ) -> None:
+        older = TranscriptionJob(
+            id="older", owner_sub=AUTHOR_SUB, created_at=datetime(2026, 9, 1, tzinfo=UTC)
+        )
+        newer = TranscriptionJob(
+            id="newer", owner_sub=AUTHOR_SUB, created_at=datetime(2026, 9, 2, tzinfo=UTC)
+        )
+        theirs = TranscriptionJob(id="theirs", owner_sub="someone-else")
+        for job in (older, newer, theirs):
+            await job_storage.save(job)
+
+        response = client.get("/api/transcribe/jobs")
+
+        assert response.status_code == 200
+        assert [job["job_id"] for job in response.json()["jobs"]] == ["newer", "older"]
+
+    def test_my_jobs_limit_is_bounded(self, client: TestClient) -> None:
+        assert client.get("/api/transcribe/jobs?limit=0").status_code == 422
+        assert client.get("/api/transcribe/jobs?limit=101").status_code == 422

@@ -21,6 +21,7 @@ from transcription.auth import (
     TokenVerifier,
 )
 from transcription.config import Settings, get_settings
+from transcription.models import TranscriptionJob
 from transcription.storage.jobs import JobStorage
 from transcription.storage.s3 import S3Storage
 
@@ -91,3 +92,18 @@ def require_author(principal: Annotated[Principal, Depends(get_principal)]) -> P
             detail="The author role is required",
         )
     return principal
+
+
+async def get_owned_job(
+    job_id: str,
+    author: Annotated[Principal, Depends(require_author)],
+    job_storage: Annotated[JobStorage, Depends(get_job_storage)],
+) -> TranscriptionJob:
+    # Someone else's job answers exactly like a missing one: its id says nothing about it.
+    job = await job_storage.get(job_id)
+    if job is None or job.owner_sub != author.sub:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found",
+        )
+    return job

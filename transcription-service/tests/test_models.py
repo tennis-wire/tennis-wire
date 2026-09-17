@@ -15,6 +15,7 @@ class TestTranscriptionJob:
         """Test creating a job."""
         job = TranscriptionJob(
             id="test-123",
+            owner_sub="author-sub",
             source_url="https://youtube.com/watch?v=test",
         )
 
@@ -25,7 +26,7 @@ class TestTranscriptionJob:
 
     def test_job_is_terminal(self) -> None:
         """Test is_terminal property."""
-        job = TranscriptionJob(id="test-123")
+        job = TranscriptionJob(id="test-123", owner_sub="author-sub")
 
         job.status = JobStatus.PENDING
         assert not job.is_terminal
