@@ -1,5 +1,5 @@
 import type { BlockMode } from './modes'
-import type { Comment, CommentPage } from './types'
+import type { Comment, CommentPage, Restriction } from './types'
 
 // What the island holds and how it changes. Pure: the loaders in useDiscussion feed it, the
 // components draw it. Two views share one tree shape: the page's top-level list, and one
@@ -39,7 +39,9 @@ export type State =
     // the comment the view was rooted on is gone, and the reader saw it go
     | { phase: 'gone' }
     // highlight: the comment the reader was brought to, by a link or by posting it
-    | { phase: 'ready'; view: View; highlight: string | null }
+    // restriction: what stops the reader writing, as the load that drew the view found it. A later
+    // page leaves it be: a ban given meanwhile is met on sending, with the text still in the field.
+    | { phase: 'ready'; view: View; highlight: string | null; restriction: Restriction | null }
 
 export type Action =
     | { type: 'loading' }
@@ -49,7 +51,13 @@ export type Action =
     | { type: 'list'; page: CommentPage }
     | { type: 'more'; status: Status }
     | { type: 'more-loaded'; page: CommentPage }
-    | { type: 'rooted'; chain: Comment[]; root: Comment; highlight?: string }
+    | {
+          type: 'rooted'
+          chain: Comment[]
+          root: Comment
+          highlight?: string
+          restriction?: Restriction | null
+      }
     | { type: 'replies-loading'; id: string }
     | { type: 'replies-failed'; id: string }
     | { type: 'branch-loaded'; id: string; root: Comment }
@@ -252,6 +260,7 @@ export function reduce(state: State, action: Action): State {
             return {
                 phase: 'ready',
                 highlight: null,
+                restriction: action.page.viewer?.restriction ?? null,
                 view: {
                     kind: 'list',
                     items: action.page.items.map(leaf),
@@ -277,6 +286,7 @@ export function reduce(state: State, action: Action): State {
             return {
                 phase: 'ready',
                 highlight: action.highlight ?? action.root.id,
+                restriction: action.restriction ?? null,
                 view: {
                     kind: 'rooted',
                     chain: action.chain,

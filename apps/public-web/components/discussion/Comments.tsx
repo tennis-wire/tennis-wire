@@ -10,6 +10,7 @@ import CommentBody, { Placeholder, placeholderFor } from './CommentBody'
 import CommentItem, { AuthorName, type Ctx } from './CommentItem'
 import ComposeForm from './ComposeForm'
 import HiddenBranch from './HiddenBranch'
+import RestrictionPlate from './RestrictionPlate'
 import { formatWhen } from './format'
 import { strings } from './strings'
 import { action, linkButton, muted } from './styles'
@@ -85,6 +86,7 @@ export default function Comments({ subjectType, subjectId }: Props) {
 
     // The comment the reader was brought to goes into view once it is drawn
     const highlight = state.phase === 'ready' ? state.highlight : null
+    const restriction = state.phase === 'ready' ? state.restriction : null
     useEffect(() => {
         if (highlight)
             document.getElementById(`comment-${highlight}`)?.scrollIntoView({ block: 'center' })
@@ -104,6 +106,7 @@ export default function Comments({ subjectType, subjectId }: Props) {
         mutedUnder: discussion.mutedUnder,
         draftKeyFor,
         signedIn,
+        restriction,
         userId,
         onShowReplies: discussion.showReplies,
         onMoreReplies: discussion.moreReplies,
@@ -250,7 +253,9 @@ function Body({ discussion, ctx, sessionKnown, sessionExpired, draftKey }: BodyP
                 the invitation to sign in flash first */}
             {sessionKnown && (
                 <div style={{ marginBottom: 24 }}>
-                    {ctx.signedIn ? (
+                    {ctx.signedIn && ctx.restriction ? (
+                        <RestrictionPlate until={ctx.restriction.until} />
+                    ) : ctx.signedIn ? (
                         <ComposeForm
                             draftKey={draftKey}
                             seed={seed}
