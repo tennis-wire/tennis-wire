@@ -2,7 +2,8 @@ import { View, Pressable } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../../../theme'
-import { Text, Divider, Screen } from '../../../components/ui'
+import { Text, Card, Divider, Screen } from '../../../components/ui'
+import { useReaderSession } from '../../../components/auth/ReaderSessionProvider'
 
 interface MenuItem {
     label: string
@@ -32,6 +33,46 @@ const MENU: MenuItem[] = [
     },
 ]
 
+function ReaderRow() {
+    const { colors } = useTheme()
+    const router = useRouter()
+    const { session } = useReaderSession()
+
+    const label = !session ? '…' : session.authenticated ? (session.displayName ?? '…') : 'Войти'
+    const initial = session?.authenticated
+        ? (session.displayName ?? '?').charAt(0).toUpperCase()
+        : '?'
+
+    return (
+        <Card onPress={() => router.push('/me')} style={{ marginBottom: 20 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }}>
+                <View
+                    style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 20,
+                        backgroundColor: colors.primary,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        marginRight: 14,
+                    }}
+                >
+                    <Text variant="h3" color="#fff">
+                        {initial}
+                    </Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                    <Text variant="h3">{label}</Text>
+                    <Text variant="caption" style={{ marginTop: 2 }}>
+                        {session?.authenticated ? 'Личный кабинет' : 'Комментарии и профиль'}
+                    </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </View>
+        </Card>
+    )
+}
+
 export default function MoreScreen() {
     const { colors } = useTheme()
     const router = useRouter()
@@ -39,6 +80,7 @@ export default function MoreScreen() {
     return (
         <Screen>
             <View style={{ padding: 16 }}>
+                <ReaderRow />
                 {MENU.map((item, i) => (
                     <View key={item.route}>
                         <Pressable
