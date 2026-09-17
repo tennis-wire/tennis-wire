@@ -68,6 +68,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of("PARENT_DELETED", ex.getMessage()));
     }
 
+    @ExceptionHandler(IdempotencyKeyReusedException.class)
+    public ResponseEntity<ErrorResponse> handleIdempotencyKeyReused(IdempotencyKeyReusedException ex) {
+        // 422 rather than 409: nothing about the comment stands in the way. The request itself is not
+        // the one the key was first sent with, and the comment written then is not this one.
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
+                .body(ErrorResponse.of("IDEMPOTENCY_KEY_REUSED", ex.getMessage()));
+    }
+
     @ExceptionHandler(ResolutionNotApplicableException.class)
     public ResponseEntity<ErrorResponse> handleResolution(ResolutionNotApplicableException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)

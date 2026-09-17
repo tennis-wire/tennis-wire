@@ -306,6 +306,9 @@ export function reduce(state: State, action: Action): State {
             return inView(state, action.id, (node) => ({ ...node, revealed: true }))
         case 'posted':
             if (state.phase !== 'ready' || state.view.kind !== 'list') return state
+            // Sent again under its key, a comment can come back that the page has read meanwhile
+            if (findNode(state.view, action.comment.id))
+                return { ...state, highlight: action.comment.id }
             return {
                 ...state,
                 highlight: action.comment.id,
@@ -313,6 +316,8 @@ export function reduce(state: State, action: Action): State {
             }
         case 'replied': {
             if (state.phase !== 'ready') return state
+            if (findNode(state.view, action.comment.id))
+                return { ...state, highlight: action.comment.id }
             const next = inView(state, action.parentId, (node) => ({
                 ...node,
                 comment: { ...node.comment, replyCount: node.comment.replyCount + 1 },

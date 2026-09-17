@@ -34,12 +34,24 @@ export function ancestry(id: string) {
     return readQueue(() => read<Ancestry>(`${COMMENTS}/${id}/ancestry`))
 }
 
-export function createComment(subjectType: string, subjectId: string, body: string) {
-    return write<CommentCreated>('POST', COMMENTS, { subjectType, subjectId, body })
+// Sent again under the same key, both hand back the comment the first send wrote: 201 as before.
+// The same key with another text is 422 IDEMPOTENCY_KEY_REUSED.
+export function createComment(
+    subjectType: string,
+    subjectId: string,
+    body: string,
+    idempotencyKey: string
+) {
+    return write<CommentCreated>('POST', COMMENTS, { subjectType, subjectId, body }, idempotencyKey)
 }
 
-export function createReply(parentId: string, body: string) {
-    return write<CommentCreated>('POST', `${COMMENTS}/${parentId}/replies`, { body })
+export function createReply(parentId: string, body: string, idempotencyKey: string) {
+    return write<CommentCreated>(
+        'POST',
+        `${COMMENTS}/${parentId}/replies`,
+        { body },
+        idempotencyKey
+    )
 }
 
 export function deleteComment(id: string) {

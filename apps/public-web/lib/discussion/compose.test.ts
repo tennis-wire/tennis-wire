@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { DiscussionError } from './api'
-import { MAX_LENGTH, classify, normalize, problem } from './compose'
+import { MAX_LENGTH, classify, keyFor, normalize, problem } from './compose'
 
 describe('normalize', () => {
     it('trims the edges and squeezes blank lines, keeping single line breaks', () => {
@@ -45,5 +45,20 @@ describe('classify', () => {
         const gone = new DiscussionError(404, 'NOT_FOUND', 'no route')
 
         expect(classify(gone, false)).toEqual({ kind: 'other', message: 'no route' })
+    })
+})
+
+describe('keyFor', () => {
+    it('keeps the key while the text stays and makes a new one once it changes', () => {
+        let made = 0
+        const newKey = () => `key-${(made += 1)}`
+
+        const first = keyFor(null, 'text', newKey)
+        expect(first).toEqual({ body: 'text', key: 'key-1' })
+        expect(keyFor(first, 'text', newKey)).toBe(first)
+        expect(keyFor(first, 'text, edited', newKey)).toEqual({
+            body: 'text, edited',
+            key: 'key-2',
+        })
     })
 })

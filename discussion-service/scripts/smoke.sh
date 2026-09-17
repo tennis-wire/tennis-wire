@@ -118,4 +118,17 @@ echo "# unblock is idempotent"
 expect 204 -X DELETE "$API/blocks/$DEV_ID" -H "Authorization: Bearer $READER" > /dev/null
 expect 204 -X DELETE "$API/blocks/$DEV_ID" -H "Authorization: Bearer $READER" > /dev/null
 
+echo "# dev posts the same text twice under one key: one comment; the key with another text: 422"
+KEY=$(new_uuid)
+keyed_post() {
+  expect "$1" -X POST "$API/comments" -H "Authorization: Bearer $DEV" -H "$json" -H "Idempotency-Key: $KEY" \
+    -d "{\"subjectType\":\"publication\",\"subjectId\":\"$SUBJECT\",\"body\":\"$2\"}"
+}
+FIRST=$(keyed_post 201 once | jq -r .comment.id)
+AGAIN=$(keyed_post 201 once | jq -r .comment.id)
+if [ "$FIRST" != "$AGAIN" ]; then
+  echo "FAIL: the same key wrote a second comment ($FIRST, $AGAIN)" >&2; exit 1
+fi
+keyed_post 422 twice | jq -e '.error == "IDEMPOTENCY_KEY_REUSED"' > /dev/null
+
 echo "OK (subject $SUBJECT)"

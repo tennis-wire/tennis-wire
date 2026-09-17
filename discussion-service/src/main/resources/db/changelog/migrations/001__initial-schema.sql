@@ -247,3 +247,14 @@ ALTER TABLE comment
         body IS NULL OR char_length(body) BETWEEN 1 AND 10000),
     ADD CONSTRAINT chk_comment_whole_while_standing CHECK (
         deleted_at IS NOT NULL OR (author_id IS NOT NULL AND body IS NOT NULL));
+
+-- changeset andrei:15
+-- comment: The key a client sends with a new comment, so that the same send repeated after an answer
+-- comment: that never arrived finds the comment instead of writing a second one. Unique per author,
+-- comment: not overall: the key is the client's and proves nothing about anyone else. Partial, since
+-- comment: a comment sent without a key has no part in it. Nothing expires the key: it goes with the
+-- comment: row, and an erase takes author_id away, after which the pair matches nothing.
+ALTER TABLE comment ADD COLUMN idempotency_key UUID;
+
+CREATE UNIQUE INDEX uq_comment_idempotency ON comment (author_id, idempotency_key)
+    WHERE idempotency_key IS NOT NULL;

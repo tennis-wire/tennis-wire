@@ -182,6 +182,23 @@ describe('reduce', () => {
         expect(items(state)[0].hasMore).toBe(false)
     })
 
+    it('does not draw twice a comment handed back that the page already has', () => {
+        const top = comment({ replyCount: 1 })
+        const mine = comment({ inReplyToId: top.id, rootId: top.id })
+        let state = reduce(listed([top]), {
+            type: 'branch-loaded',
+            id: top.id,
+            root: { ...top, replies: [mine] },
+        })
+        state = reduce(state, { type: 'replied', parentId: top.id, comment: mine })
+        state = reduce(state, { type: 'posted', comment: top })
+
+        expect(items(state)).toHaveLength(1)
+        expect(items(state)[0].comment.replyCount).toBe(1)
+        expect(items(state)[0].replies?.map((reply) => reply.comment.id)).toEqual([mine.id])
+        if (state.phase === 'ready') expect(state.highlight).toBe(top.id)
+    })
+
     it('lights up the root of a re-rooted view, or the comment it was asked to', () => {
         const top = comment()
         const target = comment({ inReplyToId: top.id, rootId: top.id })

@@ -108,6 +108,10 @@ public class Comment {
     @Column(name = "counted_at")
     private Instant countedAt;
 
+    // What the client sent the comment under, if anything: the same send repeated finds this row
+    @Column(name = "idempotency_key", updatable = false)
+    private UUID idempotencyKey;
+
     // -- Timestamps: DB-owned (defaults + trigger) --
 
     @Generated(event = EventType.INSERT)
