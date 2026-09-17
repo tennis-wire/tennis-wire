@@ -37,16 +37,20 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
 
 | Метод | Путь | Роль | Что |
 |---|---|---|---|
-| GET | `/comments?subjectType=&subjectId=&limit=&cursor=` | аноним | верхний уровень от старых к новым, `{items, nextCursor}`. `limit` по умолчанию 50, вне 1–200 приводится к границе. `subjectType` не из allowlist — 400 `UNKNOWN_SUBJECT_TYPE`, битый курсор — 400 `INVALID_CURSOR` |
+| GET | `/comments?subjectType=&subjectId=&limit=&cursor=` | аноним | верхний уровень от старых к новым, `{items, nextCursor, viewer?}`. `limit` по умолчанию 50, вне 1–200 приводится к границе. `subjectType` не из allowlist — 400 `UNKNOWN_SUBJECT_TYPE`, битый курсор — 400 `INVALID_CURSOR` |
 | GET | `/comments/{id}/branch` | аноним | `{root}`: комментарий и ответы под ним на 5 уровней, до 20 прямых ответов у узла и до 500 строк на ответ |
 | GET | `/comments/{id}/replies?limit=&cursor=` | аноним | прямые ответы страницами, `{items, nextCursor}`, лимиты как у верхнего уровня |
-| GET | `/comments/{id}/ancestry` | аноним | `{chain: [корень … id]}` без вложенных ответов |
+| GET | `/comments/{id}/ancestry` | аноним | `{chain: [корень … id], viewer?}` без вложенных ответов |
 
 `branch`, `replies` и `ancestry` отвечают 404 `NOT_FOUND`, если комментария нет или это заглушка,
 которую не видит никто. 404 `HIDDEN_BY_BLOCK` — если сам комментарий или комментарий выше по цепочке
 написан тем, кого зритель убрал игнором «с ветками»; в `details.blockedIds` эти авторы, от корня
 вниз. Автор заглушки туда не попадает: заглушка не подписана, в том числе для игнорирующего, и
 список бывает пустым.
+
+`viewer` — положение вошедшего читателя в ответах, с которых открывается ветка: в листинге (на каждой
+странице) и в `ancestry`. `{restriction: {until}}` — действующий бан на комментирование, `until: null` —
+бессрочный; `{restriction: null}` — ничего не мешает. У анонима и в `/replies` поля нет.
 
 **Запись**
 
@@ -141,6 +145,9 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
   Держится на READ COMMITTED.
 - `comment.created` уходит в `ApplicationEventPublisher`; слушатель — `@TransactionalEventListener`
   (after-commit). Брокер не выбран; `DomainEventPublisher` — точка замены.
+- Ограничение читателя приходит в листинге и `ancestry`, а не отдельным `GET /me`: по §3.7 бан
+  известен вместе со списком, а не вторым запросом со своим отказом, и туда же ляжет состояние
+  обсуждения (§14): что стоит вместо формы, решают оба, закрытое обсуждение — прежде бана (§14.6).
 - Ключ идемпотентности живёт в самом комментарии: `idempotency_key` и уникальный индекс по
   `(author_id, idempotency_key)`. Таблицы и срока нет — ключ уходит вместе со строкой, а стирание
   аккаунта обнуляет `author_id`, и пара больше ничего не находит. Повтор ищется под
