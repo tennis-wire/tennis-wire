@@ -4,8 +4,15 @@ import { useEffect, useRef, useState } from 'react'
 
 import Avatar from '@/components/Avatar'
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
-import { DiscussionError, NetworkError } from '@/lib/discussion/api'
-import { MAX_LENGTH, MAX_LINKS, normalize, problem } from '@/lib/discussion/compose'
+import { DiscussionError } from '@/lib/discussion/api'
+import {
+    type Failure,
+    MAX_LENGTH,
+    MAX_LINKS,
+    classify,
+    normalize,
+    problem,
+} from '@/lib/discussion/compose'
 import { clearDraft, readDraft, saveDraft } from '@/lib/discussion/drafts'
 
 import { formatUntil } from './format'
@@ -29,9 +36,6 @@ type Props = {
 }
 
 export type Seed = { text: string; at: number }
-
-type Failure =
-    { kind: 'network' } | { kind: 'rate' } | { kind: 'parent' } | { kind: 'other'; message: string }
 
 const DRAFT_DELAY_MS = 300
 
@@ -96,17 +100,6 @@ const plate: React.CSSProperties = {
     borderRadius: 6,
     background: 'color-mix(in srgb, var(--tw-accent-soft) 45%, transparent)',
     fontSize: 14,
-}
-
-function classify(error: unknown): Failure {
-    if (error instanceof NetworkError) return { kind: 'network' }
-    if (error instanceof DiscussionError) {
-        if (error.status === 429) return { kind: 'rate' }
-        if (error.code === 'PARENT_DELETED') return { kind: 'parent' }
-        if (error.status >= 500 || error.code === 'GATEWAY_UNAVAILABLE') return { kind: 'network' }
-        return { kind: 'other', message: error.message }
-    }
-    return { kind: 'network' }
 }
 
 export default function ComposeForm({
@@ -179,7 +172,7 @@ export default function ComposeForm({
                 )
                 return
             }
-            setFailure(classify(error))
+            setFailure(classify(error, onParentDeleted !== undefined))
         } finally {
             setSending(false)
         }

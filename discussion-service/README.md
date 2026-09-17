@@ -53,7 +53,7 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
 | Метод | Путь | Роль | Что |
 |---|---|---|---|
 | POST | `/comments` `{subjectType, subjectId, body}` | `user` | 201 `{comment, mutedByRecipient: false}`. `body` до 2000. Профиль автора запрашивается до записи, поэтому 503 не оставляет комментарий |
-| POST | `/comments/{id}/replies` `{body}` | `user` | 201 `{comment, mutedByRecipient}`: `true`, если автор родителя игнорирует пишущего. Subject наследуется от родителя; родитель удалён — 409 `PARENT_DELETED` |
+| POST | `/comments/{id}/replies` `{body}` | `user` | 201 `{comment, mutedByRecipient}`: `true`, если автор родителя игнорирует пишущего. Subject наследуется от родителя; родитель удалён — 409 `PARENT_DELETED`, ушёл целиком — 404 `NOT_FOUND` |
 | DELETE | `/comments/{id}` | `user`, только автор | 204, идемпотентно |
 | POST | `/comments/{id}/reports` `{reason}` | `user` | 204 на любую принятую, в том числе повторную. `reason` из `discussion.reports.reasons`. Свой комментарий или автор в игноре не в режиме `soft` — 403, снят модерацией — 409 `COMMENT_ALREADY_REMOVED` |
 
@@ -127,6 +127,13 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
 - `id` генерится Hibernate (`@UuidGenerator VERSION_7`), а не DB-default: известен до flush.
   `path`, `root_id`, `path_key`, таймстемпы — `@Generated`, приходят из `INSERT … RETURNING`.
 - `reply_count` пишется только атомарным `UPDATE … +1`, сущность его никогда не записывает.
+- Одно дерево — один пишущий. Ответ, удаление автором, снятие модерацией, решение по жалобе,
+  жалоба и стирание сначала берут `pg_advisory_xact_lock` по `root_id` (`TreeLock`), стирание —
+  по всем деревьям батча в порядке ключей. Иначе двое действуют по одним и тем же счётчикам:
+  заглушка остаётся без ответов, родитель считает невидимый ответ, ответ ложится под удалённый
+  комментарий или падает на FK. Блокировка берётся до первого чтения комментария в транзакции:
+  сущность, прочитанная раньше, после ожидания вернулась бы из persistence context прежней.
+  Держится на READ COMMITTED.
 - `comment.created` уходит в `ApplicationEventPublisher`; слушатель — `@TransactionalEventListener`
   (after-commit). Брокер не выбран; `DomainEventPublisher` — точка замены.
 - Ответ на удалённый комментарий не принимается: 409 `PARENT_DELETED`. Верхний уровень и ответы —

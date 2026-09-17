@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 public interface CommentRepository extends JpaRepository<Comment, UUID> {
@@ -49,6 +50,17 @@ limit :limit
     // until the collapse reads them back.
     @Query("select c.id from Comment c where c.authorId = :authorId")
     List<UUID> findIdsByAuthor(@Param("authorId") UUID authorId);
+
+    // Bare ids rather than entities: nothing lands in the persistence context before the tree lock,
+    // so the comments read once it is held come from the database.
+    @Query("select distinct c.rootId from Comment c where c.id in :ids")
+    List<UUID> findRootIdsOf(@Param("ids") Collection<UUID> ids);
+
+    // Held until the transaction ends, and free to take again inside it. Mandatory: outside a
+    // transaction the lock would be let go the moment it was taken.
+    @Transactional(propagation = Propagation.MANDATORY)
+    @Query(value = "select 1 from pg_advisory_xact_lock(:key)", nativeQuery = true)
+    int lockTree(@Param("key") long key);
 
     // Depth-capped and budgeted: an unbounded subtree makes the work of one request a property of
     // how far the thread grew, and a depth cap alone does not fix that - a comment with five

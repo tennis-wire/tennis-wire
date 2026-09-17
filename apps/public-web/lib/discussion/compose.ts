@@ -1,3 +1,4 @@
+import { DiscussionError, NetworkError } from './api'
 import { countLinks } from './text'
 
 // The rules for comment text, applied before a comment leaves the device. The service checks the
@@ -24,4 +25,23 @@ export function problem(text: string): Problem | null {
     if (body.length > MAX_LENGTH) return 'long'
     if (countLinks(body) > MAX_LINKS) return 'links'
     return null
+}
+
+export type Failure =
+    { kind: 'network' } | { kind: 'rate' } | { kind: 'parent' } | { kind: 'other'; message: string }
+
+// What the form says when sending failed. A reply finds its parent gone in two ways: 409
+// PARENT_DELETED while replies still hold the parent up, 404 once it had none and went
+// altogether. The reader is told the same either way.
+export function classify(error: unknown, replying: boolean): Failure {
+    if (error instanceof NetworkError) return { kind: 'network' }
+    if (error instanceof DiscussionError) {
+        if (error.status === 429) return { kind: 'rate' }
+        if (error.code === 'PARENT_DELETED' || (replying && error.status === 404)) {
+            return { kind: 'parent' }
+        }
+        if (error.status >= 500 || error.code === 'GATEWAY_UNAVAILABLE') return { kind: 'network' }
+        return { kind: 'other', message: error.message }
+    }
+    return { kind: 'network' }
 }

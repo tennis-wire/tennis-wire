@@ -28,11 +28,14 @@ public class ModerationQueueService {
 
     private final ReportRepository reports;
     private final CommentRepository comments;
+    private final TreeLock treeLock;
     private final CommentService commentService;
 
-    public ModerationQueueService(ReportRepository reports, CommentRepository comments, CommentService commentService) {
+    public ModerationQueueService(
+            ReportRepository reports, CommentRepository comments, TreeLock treeLock, CommentService commentService) {
         this.reports = reports;
         this.comments = comments;
+        this.treeLock = treeLock;
         this.commentService = commentService;
     }
 
@@ -57,6 +60,9 @@ public class ModerationQueueService {
     // decision. Which of them a moderator may write depends on how the comment stands: a comment
     // its author has already deleted is not moderation's to remove, only to count or to let go.
     public void resolve(UUID commentId, ReportResolution resolution, UUID moderatorId) {
+        // Here and not only in hideByModerator: the comment read below stays in the persistence
+        // context, and hideByModerator would get it back as it stood before the wait.
+        treeLock.hold(commentId);
         var comment =
                 comments.findById(commentId).orElseThrow(() -> new ResourceNotFoundException("Comment", commentId));
         if (reports.countByCommentIdAndResolvedAtIsNull(commentId) == 0) {
