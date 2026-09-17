@@ -80,6 +80,11 @@ public class ModerationQueueService {
                     throw new ResolutionNotApplicableException(
                             "A violation is counted by hand only on a comment its author deleted: " + commentId);
                 }
+                // The wipe closes the card as it takes the text, so the queue does not lead here
+                if (comment.hasNoText()) {
+                    throw new ResolutionNotApplicableException(
+                            "A violation is counted only while the text is kept: " + commentId);
+                }
                 comments.markCounted(commentId);
                 reports.closeOpen(commentId, ReportResolution.COUNTED, moderatorId);
             }
@@ -88,9 +93,9 @@ public class ModerationQueueService {
     }
 
     private static QueuedComment card(OpenReportGroup group, Comment comment, List<ReasonTally> tallies) {
-        if (comment == null || tallies == null) {
-            // Only reachable if the comment went away between the two queries, which the erase
-            // flow can do. One missing card beats a failed page.
+        if (comment == null || comment.hasNoText() || tallies == null) {
+            // Only reachable if the comment went away or lost its text between the two queries, which
+            // the erase and the wipe can both do. One missing card beats a failed page or a blank one.
             return null;
         }
         var reasons = new HashMap<String, Long>();

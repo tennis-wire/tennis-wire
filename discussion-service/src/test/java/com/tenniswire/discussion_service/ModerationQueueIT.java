@@ -177,6 +177,20 @@ class ModerationQueueIT {
         assertThat(counts.removedByBot().total()).isZero();
     }
 
+    @Test
+    void aViolationIsNotCountedOnceTheTextIsGone() {
+        var comment = comment();
+        reportService.report(UUID.randomUUID(), comment, "spam");
+        commentService.deleteOwn(author, comment);
+        // The wipe closes the card as it takes the text. Left open here, as a card can stand for the
+        // moment between the two reads of the queue.
+        comments.saveAndFlush(comments.findById(comment).orElseThrow().body(null));
+
+        assertThat(mine(queue.open(0, 200), comment)).isEmpty();
+        assertThatThrownBy(() -> queue.resolve(comment, ReportResolution.COUNTED, moderator))
+                .isInstanceOf(ResolutionNotApplicableException.class);
+    }
+
     private QueueEntryResponse.QueueAuthor countsFor(UUID authorId) {
         var carrier = comment();
         reportService.report(UUID.randomUUID(), carrier, "spam");

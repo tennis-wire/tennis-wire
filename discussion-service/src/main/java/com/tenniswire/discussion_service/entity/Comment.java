@@ -139,4 +139,9 @@ public class Comment {
     public boolean hasNoAuthor() {
         return authorId == null;
     }
+
+    // True once the text is gone, with an erased account or after its thirty days down
+    public boolean hasNoText() {
+        return body == null;
+    }
 }
