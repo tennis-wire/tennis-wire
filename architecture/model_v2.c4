@@ -8,7 +8,7 @@
 //
 // Auth: топология identity-провайдера, клиентов и валидации токенов — здесь;
 // роли, клиенты, TTL и политика — в architecture/auth.md (источник правды),
-// решение — в architecture/0001-identity-provider.md.
+// решение — в docs/adr/0001-identity-provider.md.
 
 specification {
   element actor {
@@ -76,8 +76,7 @@ model {
   }
 
   actor registeredUser 'Пользователь' {
-    #planned
-    description 'Зарегистрированный пользователь: комментарии, фэнтези, личный кабинет'
+    description 'Зарегистрированный читатель: комментарии, жалобы, игнор-лист, личный кабинет. Фэнтези — позже'
   }
 
   actor author 'Автор' {
@@ -85,13 +84,11 @@ model {
   }
 
   actor moderator 'Модератор' {
-    #planned
-    description 'Следит за комментариями: скрывает, банит, разбирает жалобы и сигналы бота'
+    description 'Разбирает очередь жалоб и сигналов бота. Ограничения и снятие комментариев есть в API, экрана для них нет'
   }
 
   actor admin 'Админ' {
-    #planned
-    description 'Управление системой, пользователями, контентом'
+    description 'Сотрудники, роли и отзыв доступа — в консоли Keycloak; удаление аккаунта через поддержку. Своего интерфейса нет'
   }
 
   // ===== EXTERNAL SYSTEMS =====
@@ -198,7 +195,7 @@ model {
 
     // ----- EDITORIAL -----
     container editorial 'Editorial UI' {
-      description 'Редакторский SPA: курирование и создание контента. Все обращения к бэкенду идут через API Gateway'
+      description 'Редакторский SPA: курирование и создание контента, временно — очередь модерации. Все обращения к бэкенду идут через API Gateway'
       technology 'React, TypeScript, Vite, Tiptap, MUI'
 
       webapp curatorApp 'Curator UI' {
@@ -207,6 +204,10 @@ model {
 
       webapp editorApp 'Editor UI' {
         description 'Редактор контента: черновики, AI-чат, перевод, транскрипция'
+      }
+
+      webapp moderationApp 'Moderation Queue' {
+        description 'Очередь жалоб, /moderation за ролью moderator. Место временное, постоянное не выбрано — auth.md §11'
       }
     }
 
@@ -270,35 +271,29 @@ model {
 
     // ----- USER SERVICE -----
     container userService 'User Service' {
-      #planned
-      description 'Профили и настройки. Владеет внутренним user_id и связью с Identity Provider. Аутентификации здесь нет'
+      description 'Профили читателей. Владеет внутренним user_id и связью с Identity Provider. Аутентификации здесь нет'
       technology 'Java, Spring Boot'
 
       service userApi 'User API' {
-        #planned
-        description 'Профили, настройки, /api/users/me. Удаление аккаунта: запрос гасит учётку, остальное доделывает фоновая джоба'
+        description '/api/users/me: профиль и ник, удаление своего аккаунта (вход не старше 5 минут); DELETE /api/users/{id} для admin; /internal/**: resolve и имена пачкой. Удаление: запрос гасит учётку, остальное доделывает фоновая джоба'
       }
 
       database userDb 'User DB' {
-        #planned
-        description 'Профили; identity_link (provider, sub) → user_id'
-        technology 'PostgreSQL'
+        description 'Профили; identity_link (provider, sub) → user_id; аккаунты на удалении; резервации имён'
+        technology 'PostgreSQL, Liquibase'
       }
     }
 
     // ----- IDENTITY PROVIDER -----
     container identity 'Identity Provider' {
-      #planned
       description 'Аутентификация, роли, токены для всех клиентов. Только identity: прикладные данные пользователя — в User Service'
       technology 'Keycloak'
 
       service identityOidc 'OIDC' {
-        #planned
-        description 'Authorization Code + PKCE, client_credentials для бота, JWKS для сервисов'
+        description 'Authorization Code + PKCE, offline-токены читателей, client_credentials для сервисов и бота, JWKS, Admin API. Регистрация по email и вход через Google'
       }
 
       database identityDb 'Identity DB' {
-        #planned
         description 'Realm: пользователи, роли, клиенты, сессии'
         technology 'PostgreSQL (локально — H2, без volume)'
       }
@@ -307,43 +302,47 @@ model {
     // ----- MODERATION BOT -----
     container moderationBot 'Moderation Bot' {
       #planned
-      description 'Автомодерация комментариев: регулярки + LLM. Способ реализации и место в топологии не определены — см. auth.md §11'
+      description 'Автомодерация комментариев: регулярки + LLM. Самого бота нет; клиент moderation-bot, роль и API под него есть. Способ реализации и место в топологии не определены — см. auth.md §11'
       technology 'TBD'
     }
 
     // ----- DISCUSSION SERVICE -----
     container discussionService 'Discussion Service' {
-      description 'Обсуждения: древовидные комментарии к любой сущности платформы, peer-блокировки, временные ограничения на комменты'
+      description 'Обсуждения: древовидные комментарии к публикациям, игнор-лист, жалобы и очередь модерации, ограничения на комментирование (срочные и бессрочные)'
       technology 'Java, Spring Boot'
 
       service discussionApi 'Discussion API' {
-        description 'Комментарии и ветки (/api/discussion/comments/**), блокировки (/api/discussion/blocks/**), модерация (/api/discussion/moderation/**). Чтение анонимно, но токен, если есть, применяется: по нему считаются блокировки зрителя'
+        description 'Комментарии, ветки и жалобы читателей (/api/discussion/comments/**), игнор-лист (/api/discussion/blocks/**), модерация (/api/discussion/moderation/**), стирание следа ушедшего читателя (DELETE /internal/users/{id}). Чтение анонимно, но токен, если есть, применяется: по нему считаются игнор и ограничение зрителя'
       }
 
       database discussionDb 'Discussion DB' {
-        description 'Комментарии (дерево на ltree), блокировки, ограничения на комменты'
+        description 'Комментарии (дерево на ltree), игнор-лист, ограничения, жалобы'
         technology 'PostgreSQL, Liquibase'
       }
     }
 
     // ----- API GATEWAY -----
     container apiGateway 'API Gateway' {
-      description 'Единая точка входа для всех клиентов, включая редакторский UI. Здесь же терминируется CORS'
+      description 'Единая точка входа для всех клиентов, включая редакторский UI. Здесь же терминируется CORS и считается rate limit (Redis; ключ — читатель, иначе адрес)'
       technology 'Spring Cloud Gateway'
     }
 
     // ----- CLIENT APPS -----
     container webApp 'Public Web' {
-      description 'Основной сайт для читателей'
+      description 'Основной сайт для читателей. Next.js работает как BFF: токены у сервера, браузер ходит только в свой origin'
       technology 'Next.js, TypeScript'
 
       webapp publicSite 'Public Site' {
-        description 'Новости, результаты, статьи'
+        description 'Новости, результаты, статьи. Настоящие — страница статьи и островок комментариев, остальное на моках'
       }
 
       webapp userCabinet 'User Cabinet' {
-        #planned
-        description 'Личный кабинет, настройки'
+        description '/me: профиль, облик, игнор-лист, смена ника, удаление аккаунта'
+      }
+
+      service webServer 'Next.js Server' {
+        description 'Серверный рендер и route handlers: вход и выход (/api/auth/**), BFF-прокси /api/discussion/** и /api/users/** с allowlist заголовков, проверкой Origin и лимитом запросов без сессии. Сессия — зашифрованная httpOnly-кука, токены в браузер не уходят'
+        technology 'Next.js, openid-client, iron-session'
       }
     }
 
@@ -361,12 +360,12 @@ model {
 
   // --- Actors ---
   reader -> tennisService.webApp.publicSite 'Читает контент'
-  registeredUser -> tennisService.webApp 'Использует сервис'
-  registeredUser -> tennisService.mobileApp 'Использует сервис'
+  registeredUser -> tennisService.webApp 'Комментирует, ведёт кабинет'
+  registeredUser -> tennisService.mobileApp 'Использует сервис (входа в приложении пока нет)'
   author -> tennisService.editorial 'Создаёт контент'
-  moderator -> tennisService.editorial 'Модерирует комментарии (интерфейс не спроектирован)'
-  admin -> tennisService.webApp 'Управляет системой'
+  moderator -> tennisService.editorial.moderationApp 'Разбирает жалобы'
   admin -> tennisService.identity 'Заводит сотрудников, роли, отзыв доступа (admin-консоль)'
+  admin -> tennisService.apiGateway 'DELETE /api/users/{id}: удаление аккаунта через поддержку, без интерфейса'
 
   // --- External sources -> Parsers ---
   tennisDataSources.atpWta -> tennisService.parsingSubsystem.atpParser 'Данные'
@@ -393,6 +392,7 @@ model {
   tennisService.editorial.editorApp -> tennisService.apiGateway 'Черновики, AI-чат, перевод, транскрипция'
   tennisService.editorial.curatorApp -> tennisService.editorial.editorApp 'В работу'
   tennisService.editorial.curatorApp -> tennisService.apiGateway 'Список спарсенных материалов'
+  tennisService.editorial.moderationApp -> tennisService.apiGateway 'Очередь жалоб и решения (/api/discussion/moderation/reports/**)'
 
   // --- API Gateway -> Services ---
   tennisService.apiGateway -> tennisService.editorialBff.editorialBffApi '/api/ai/**, /api/translate/**'
@@ -424,23 +424,25 @@ model {
 
   // Оба направления между сервисами идут напрямую по кластерному DNS, /internal/** через gateway
   // не маршрутизируется. Цикл здесь намеренный: каждая сторона владеет тем, чего у другой нет —
-  // discussion спрашивает имена авторов, user удаляет след ушедшего читателя (readers.md §1.6).
+  // discussion спрашивает user_id читателя и имена авторов, user удаляет след ушедшего читателя (readers.md §1.6).
+  tennisService.discussionService.discussionApi -> tennisService.userService.userApi 'POST /internal/identities/resolve: user_id читателя по его же токену'
   tennisService.discussionService.discussionApi -> tennisService.userService.userApi 'GET /internal/users?ids=: имена авторов пачкой'
   tennisService.userService.userApi -> tennisService.discussionService.discussionApi 'DELETE /internal/users/{id}: стирание следа, ответ несёт срок действующего бана'
 
   // --- Auth: клиенты -> Identity Provider ---
   // Идентификаторы клиентов и роли — auth.md §2–§3
   tennisService.editorial -> tennisService.identity.identityOidc 'OIDC Authorization Code + PKCE (client editorial-ui)'
-  tennisService.webApp -> tennisService.identity.identityOidc 'OIDC, confidential client (public-web)'
-  tennisService.mobileApp -> tennisService.identity.identityOidc 'OIDC Authorization Code + PKCE (client mobile)'
+  tennisService.webApp.webServer -> tennisService.identity.identityOidc 'OIDC Authorization Code + PKCE, confidential client public-web; обновление и отзыв offline-токена'
+  tennisService.mobileApp -> tennisService.identity.identityOidc 'OIDC Authorization Code + PKCE (client mobile; клиент в realm есть, в приложении не подключено)'
   tennisService.moderationBot -> tennisService.identity.identityOidc 'client_credentials (client moderation-bot, роль moderator-bot)'
 
   // --- Auth: валидация токенов по JWKS ---
   tennisService.apiGateway -> tennisService.identity.identityOidc 'JWKS: валидация JWT, роль -> маршрут'
   tennisService.contentService.contentApi -> tennisService.identity.identityOidc 'JWKS: валидация JWT'
+  tennisService.editorialBff.editorialBffApi -> tennisService.identity.identityOidc 'JWKS: валидация JWT'
   tennisService.transcriptionService.transcriptionApi -> tennisService.identity.identityOidc 'JWKS: валидация JWT, owner у задач'
-  tennisService.discussionService.discussionApi -> tennisService.identity.identityOidc 'JWKS: валидация JWT; на анонимных чтениях токен необязателен, но валидируется'
-  tennisService.userService.userApi -> tennisService.identity.identityOidc 'JWKS: валидация JWT'
+  tennisService.discussionService.discussionApi -> tennisService.identity.identityOidc 'JWKS: валидация JWT, на анонимных чтениях токен необязателен, но валидируется; client_credentials для /internal/** user-service'
+  tennisService.userService.userApi -> tennisService.identity.identityOidc 'JWKS: валидация JWT; client_credentials для /internal/** discussion-service'
   // Роли manage-users и view-realm выданы сервисному аккаунту клиента user-service (auth.md §3)
   tennisService.userService.userApi -> tennisService.identity.identityOidc 'Admin API: гашение и удаление учётки, чтение accessTokenLifespan'
 
@@ -448,11 +450,13 @@ model {
   tennisService.identity.identityOidc -> tennisService.identity.identityDb 'Realm data'
 
   // --- Moderation bot -> API Gateway ---
-  tennisService.moderationBot -> tennisService.apiGateway 'Скрытие комментариев (/api/discussion/moderation/**)'
+  tennisService.moderationBot -> tennisService.apiGateway 'Жалобы и снятие комментариев (/api/discussion/moderation/**)'
 
   // --- Client Apps -> API Gateway ---
-  tennisService.webApp.publicSite -> tennisService.apiGateway 'Контент (пока не подключено: работает на моках)'
-  tennisService.webApp.userCabinet -> tennisService.apiGateway 'Профиль, настройки'
+  // Браузер в gateway не ходит: только в свой origin, дальше запрос собирает сервер Next.js.
+  tennisService.webApp.publicSite -> tennisService.webApp.webServer 'Страницы; вход, сессия, комментарии и игнор через /api/**'
+  tennisService.webApp.userCabinet -> tennisService.webApp.webServer 'Профиль, ник, игнор-лист, удаление аккаунта'
+  tennisService.webApp.webServer -> tennisService.apiGateway 'Прокси /api/discussion/**, /api/users/** с токеном из куки; статья — /api/public/articles/{slug} при рендере. Остальной контент — моки'
   tennisService.mobileApp.iosApp -> tennisService.apiGateway 'Контент (пока не подключено: работает на моках)'
   tennisService.mobileApp.androidApp -> tennisService.apiGateway 'Контент (пока не подключено: работает на моках)'
 }
@@ -467,7 +471,10 @@ views {
 
     include *
     include reader
+    include registeredUser
     include author
+    include moderator
+    include admin
     include externalApis
 
     exclude element.tag = #planned
@@ -483,9 +490,10 @@ views {
 
   view editorialFlow {
     title 'Editorial Flow — как есть'
-    description 'Автор → редакторский UI → gateway → BFF / Content / Transcription'
+    description 'Автор → редакторский UI → gateway → BFF / Content / Transcription; там же временно очередь модерации'
 
     include author
+    include moderator
     include tennisService.editorial
     include tennisService.editorial.*
     include tennisService.apiGateway
@@ -512,9 +520,10 @@ views {
 
   view readerFlow {
     title 'Reader Flow — как есть'
-    description 'Публичные клиенты. Сетевые вызовы пока не подключены'
+    description 'Читатель → сайт (BFF) → gateway → content / discussion / user. mobile пока на моках'
 
     include reader
+    include registeredUser
     include tennisService.webApp
     include tennisService.webApp.*
     include tennisService.mobileApp
@@ -524,6 +533,8 @@ views {
     include tennisService.contentService.*
     include tennisService.discussionService
     include tennisService.discussionService.*
+    include tennisService.userService
+    include tennisService.userService.*
 
     exclude element.tag = #planned
   }
@@ -573,7 +584,7 @@ views {
 
   view authFlowTarget {
     title 'Auth Flow — целевая'
-    description 'Клиенты получают токены у Identity Provider; gateway и сервисы валидируют их по JWKS. Роли и политика — auth.md. Не реализовано'
+    description 'Клиенты получают токены у Identity Provider; gateway и сервисы валидируют их по JWKS. Роли и политика — auth.md. Не реализованы бот-модератор и вход в mobile'
 
     include registeredUser
     include author
@@ -587,6 +598,7 @@ views {
     include tennisService.moderationBot
     include tennisService.apiGateway
     include tennisService.contentService.contentApi
+    include tennisService.editorialBff.editorialBffApi
     include tennisService.transcriptionService.transcriptionApi
     include tennisService.discussionService.discussionApi
     include tennisService.userService
