@@ -12,5 +12,10 @@ export default defineConfig({
     test: {
         environment: 'node',
         include: ['lib/**/*.test.ts'],
+        env: {
+            // api.ts calls gatewayOrigin() eagerly; tests never assert the exact URL, only
+            // method/headers/retry behavior, so any well-formed value is fine here.
+            EXPO_PUBLIC_GATEWAY_ORIGIN: 'http://gateway.test',
+        },
     },
 })
