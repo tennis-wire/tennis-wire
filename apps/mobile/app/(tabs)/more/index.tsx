@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../../../theme'
 import { Text, Card, Divider, Screen } from '../../../components/ui'
 import { useReaderSession } from '../../../components/auth/ReaderSessionProvider'
+import Avatar from '../../../components/Avatar'
 
 interface MenuItem {
     label: string
@@ -39,27 +40,13 @@ function ReaderRow() {
     const { session } = useReaderSession()
 
     const label = !session ? '…' : session.authenticated ? (session.displayName ?? '…') : 'Войти'
-    const initial = session?.authenticated
-        ? (session.displayName ?? '?').charAt(0).toUpperCase()
-        : '?'
+    const name = session?.authenticated ? session.displayName : undefined
 
     return (
         <Card onPress={() => router.push('/me')} style={{ marginBottom: 20 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }}>
-                <View
-                    style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 20,
-                        backgroundColor: colors.primary,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        marginRight: 14,
-                    }}
-                >
-                    <Text variant="h3" color="#fff">
-                        {initial}
-                    </Text>
+                <View style={{ marginRight: 14 }}>
+                    <Avatar name={name} size={40} />
                 </View>
                 <View style={{ flex: 1 }}>
                     <Text variant="h3">{label}</Text>
