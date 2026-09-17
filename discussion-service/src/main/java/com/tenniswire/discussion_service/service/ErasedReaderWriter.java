@@ -18,6 +18,7 @@ class ErasedReaderWriter {
 
     private final CommentRepository comments;
     private final CommentCollapse collapse;
+    private final TreeLock treeLock;
     private final ReportRepository reports;
     private final BlockRepository blocks;
     private final UserRestrictionRepository restrictions;
@@ -25,11 +26,13 @@ class ErasedReaderWriter {
     ErasedReaderWriter(
             CommentRepository comments,
             CommentCollapse collapse,
+            TreeLock treeLock,
             ReportRepository reports,
             BlockRepository blocks,
             UserRestrictionRepository restrictions) {
         this.comments = comments;
         this.collapse = collapse;
+        this.treeLock = treeLock;
         this.reports = reports;
         this.blocks = blocks;
         this.restrictions = restrictions;
@@ -41,6 +44,8 @@ class ErasedReaderWriter {
     // walk goes up through those ancestors and finds them ready to go
     @Transactional
     void erase(List<UUID> batch) {
+        // Every tree the batch reaches, before any of it is read
+        treeLock.hold(batch);
         // Asked before anonymize touches anything: one of his comments may have gone out of view
         // long ago, held in the table by a report, and its parent's count parted with it back then.
         var wereShown = comments.findAllById(batch).stream()

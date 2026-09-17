@@ -58,6 +58,7 @@ public class CommentService {
 
     private final CommentRepository comments;
     private final CommentCollapse collapse;
+    private final TreeLock treeLock;
     private final BlockRepository blocks;
     private final UserRestrictionRepository restrictions;
     private final ReportRepository reports;
@@ -67,6 +68,7 @@ public class CommentService {
     public CommentService(
             CommentRepository comments,
             CommentCollapse collapse,
+            TreeLock treeLock,
             BlockRepository blocks,
             UserRestrictionRepository restrictions,
             ReportRepository reports,
@@ -74,6 +76,7 @@ public class CommentService {
             SubjectTypes subjects) {
         this.comments = comments;
         this.collapse = collapse;
+        this.treeLock = treeLock;
         this.blocks = blocks;
         this.restrictions = restrictions;
         this.reports = reports;
@@ -101,6 +104,9 @@ public class CommentService {
 
     public CreatedComment reply(UUID authorId, UUID parentId, String body) {
         assertMayComment(authorId);
+        // Before the parent is read: a delete that got to the tree first has committed by the time
+        // this goes on, and the check below finds the parent down or gone.
+        treeLock.hold(parentId);
         var parent = findOrThrow(parentId);
         // A gravestone is kept to hold up what is already under it, not to gather more. It has no
         // reply button, so this is someone whose form was open while the comment came down - and
@@ -126,6 +132,7 @@ public class CommentService {
     }
 
     public void deleteOwn(UUID actorId, UUID commentId) {
+        treeLock.hold(commentId);
         var comment = findOrThrow(commentId);
         // actorId first: a comment left behind by an erased account answers to nobody.
         if (!actorId.equals(comment.authorId())) {
@@ -145,11 +152,13 @@ public class CommentService {
      * moderation has nothing left to remove there, only a violation it may still count.
      */
     public void hideByModerator(UUID commentId, UUID moderatorId) {
+        treeLock.hold(commentId);
         hide(findOrThrow(commentId), Comment.HIDDEN_BY_MODERATOR, moderatorId);
     }
 
     /** Removal by the classifier. It has no reader profile, so the row records only that it acted. */
     public void hideByBot(UUID commentId) {
+        treeLock.hold(commentId);
         hide(findOrThrow(commentId), Comment.HIDDEN_BY_BOT, null);
     }
 

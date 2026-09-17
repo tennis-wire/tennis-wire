@@ -27,6 +27,9 @@ import org.springframework.stereotype.Component;
  * <p>Reads are batched over the entire set rather than repeated per node: one query per level of
  * depth to gather the ancestors, then one each for children and reports. The order is deepest
  * first, so a comment is only judged once every child that could go already has.
+ *
+ * <p>The counts are read here and acted on here, so callers hold the {@link TreeLock} of every tree
+ * they hand in, taken before they read anything of it.
  */
 @Component
 class CommentCollapse {
