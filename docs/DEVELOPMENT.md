@@ -289,8 +289,11 @@ deployed realm needs its own Google project, its own client and an https URI.
 
 Staff and readers get different session lengths out of the same realm. The SSO
 session is short for everyone: 30 minutes idle, 8 hours absolute. `public-web`
-and `mobile` additionally request the `offline_access` scope, which yields a
-refresh token detached from the SSO session and good for 30 days of inactivity.
+and `mobile` request the `offline_access` scope, which yields a refresh token
+detached from the SSO session and good for 30 days of inactivity. Since Keycloak
+26.1 such a login leaves no SSO session of its own, only the offline one: nothing
+signs a reader of the site in silently, and `/api/auth/login` shows the login
+page again unless another client's SSO session is alive in the same browser.
 Every other client, `editorial-ui` included, has `offline_access` removed from
 its optional scopes and cannot ask for one:
 
@@ -423,6 +426,13 @@ and skips the pass rather than guess; without discussion-service the trace stays
 and the account is not deleted. It comes back to both next minute, and the
 request itself answers 202 either way — the deletion is written down and will
 happen. `user.erasure.*` in `application.yaml` holds the intervals.
+
+The request itself wants a recent login: `auth_time` in the token no older than
+`user.deletion.login-max-age` (5 minutes), otherwise 401
+`REAUTHENTICATION_REQUIRED` with an RFC 9470 `WWW-Authenticate` challenge. A token
+without `auth_time` counts as an old login. The site sends the reader through
+`/api/auth/login?prompt=login` right before the last button, so a `curl` against
+this endpoint needs a token from a login that recent too.
 
 ### Transcription service
 
