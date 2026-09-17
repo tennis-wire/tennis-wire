@@ -2,6 +2,7 @@ import { ScrollView, View } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 import { useTheme } from '../../../theme'
 import { Text, Tag, Screen } from '../../../components/ui'
+import Comments from '../../../components/discussion/Comments'
 
 export default function MaterialDetailScreen() {
     const { slug } = useLocalSearchParams<{ slug: string }>()
@@ -68,6 +69,21 @@ export default function MaterialDetailScreen() {
                     <Text variant="caption" style={{ marginTop: 20 }}>
                         slug: {slug}
                     </Text>
+
+                    <View
+                        style={{
+                            height: 1,
+                            backgroundColor: colors.border,
+                            marginTop: 28,
+                            marginBottom: 28,
+                        }}
+                    />
+
+                    {/* The article above is still mock content (see materials.tsx), but comments
+                        are real: subjectId is the slug for now, the closest stand-in for an
+                        article id until content itself comes off the backend. Comments posted
+                        against it will need a migration once that switch happens. */}
+                    <Comments subjectType="publication" subjectId={slug} />
                 </View>
             </ScrollView>
         </Screen>
