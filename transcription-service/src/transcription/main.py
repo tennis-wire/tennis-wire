@@ -67,6 +67,9 @@ def create_app() -> FastAPI:
         title="Transcription Service",
         description="Video/audio transcription service using WhisperX",
         version=__version__,
+        # The schema too, not only the pages over it: it maps the whole API for anyone who
+        # reaches the service port. The gateway does not route any of the three.
+        openapi_url="/openapi.json" if settings.is_development else None,
         docs_url="/docs" if settings.is_development else None,
         redoc_url="/redoc" if settings.is_development else None,
         lifespan=lifespan,

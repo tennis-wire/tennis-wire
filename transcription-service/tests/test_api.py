@@ -207,6 +207,33 @@ class TestTranscribeFileEndpoint:
         job_id = response.json()["job_id"]
         assert job_storage.jobs[job_id].source_file == f"uploads/{job_id}/source.mp3"
 
+    def test_upload_passes_language_and_diarization_from_the_form(
+        self, client: TestClient, job_storage: FakeJobStorage
+    ) -> None:
+        # The shape editorial-ui sends: both fields in the multipart body beside the file.
+        response = client.post(
+            "/api/transcribe/file",
+            files={"file": ("interview.mp3", b"data", "audio/mpeg")},
+            data={"language": "ru", "enable_diarization": "true"},
+        )
+
+        assert response.status_code == 202
+        job = job_storage.jobs[response.json()["job_id"]]
+        assert job.language == "ru"
+        assert job.enable_diarization is True
+
+    def test_upload_without_fields_detects_language(
+        self, client: TestClient, job_storage: FakeJobStorage
+    ) -> None:
+        response = client.post(
+            "/api/transcribe/file",
+            files={"file": ("interview.mp3", b"data", "audio/mpeg")},
+        )
+
+        job = job_storage.jobs[response.json()["job_id"]]
+        assert job.language is None
+        assert job.enable_diarization is False
+
     def test_upload_rejects_oversized_file(
         self,
         client: TestClient,
