@@ -96,6 +96,22 @@ describe('proxy', () => {
         expect(response.headers.get('x-internal')).toBeNull()
     })
 
+    it("passes a write's idempotency key on", async () => {
+        const fetchMock = upstreamReturns()
+
+        await proxy(
+            request('http://localhost:3000/api/discussion/comments', {
+                method: 'POST',
+                cookie: 'signed-in',
+                headers: { origin: 'http://localhost:3000', 'idempotency-key': 'key-1' },
+            }),
+            '/api/discussion/'
+        )
+
+        const sent = new Headers(fetchMock.mock.calls[0]![1]!.headers)
+        expect(sent.get('idempotency-key')).toBe('key-1')
+    })
+
     it('refuses a write from another origin', async () => {
         const fetchMock = upstreamReturns()
 

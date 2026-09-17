@@ -50,7 +50,8 @@ async function toError(response: Response): Promise<DiscussionError> {
 export async function once<T>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     path: string,
-    body?: unknown
+    body?: unknown,
+    idempotencyKey?: string
 ): Promise<T> {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
@@ -61,6 +62,7 @@ export async function once<T>(
             headers: {
                 accept: 'application/json',
                 ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+                ...(idempotencyKey === undefined ? {} : { 'idempotency-key': idempotencyKey }),
             },
             body: body === undefined ? undefined : JSON.stringify(body),
             signal: controller.signal,
@@ -89,12 +91,13 @@ export async function read<T>(path: string): Promise<T> {
     }
 }
 
-// A write: one request and no retry. The service has no idempotency key, so a second try after a
-// timeout can land the same comment twice; a retry is the reader's decision, by hand.
+// A write: one request and no retry of its own; a retry is the reader's, by hand. A comment goes
+// with an idempotency key, and a retry under the same key cannot land it twice.
 export function write<T>(
     method: 'POST' | 'PUT' | 'DELETE',
     path: string,
-    body?: unknown
+    body?: unknown,
+    idempotencyKey?: string
 ): Promise<T> {
-    return once<T>(method, path, body)
+    return once<T>(method, path, body, idempotencyKey)
 }

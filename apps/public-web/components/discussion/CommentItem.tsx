@@ -30,7 +30,12 @@ export type Ctx = {
     onReroot: (id: string) => void
     onOpenReply: (id: string) => void
     onCloseReply: () => void
-    onReply: (parentId: string, body: string, inline: boolean) => Promise<void>
+    onReply: (
+        parentId: string,
+        body: string,
+        inline: boolean,
+        idempotencyKey: string
+    ) => Promise<void>
     onPromote: (text: string) => void
     onSessionExpired: () => void
     onRemove: (id: string) => Promise<void>
@@ -215,7 +220,9 @@ export default function CommentItem({ node, inline, ctx }: Props) {
                                     draftKey={ctx.draftKeyFor(comment.id)}
                                     placeholder={strings.yourReply}
                                     autoFocus
-                                    onSubmit={(body) => ctx.onReply(comment.id, body, inline)}
+                                    onSubmit={(body, idempotencyKey) =>
+                                        ctx.onReply(comment.id, body, inline, idempotencyKey)
+                                    }
                                     onCancel={ctx.onCloseReply}
                                     onParentDeleted={ctx.onPromote}
                                     onSessionExpired={ctx.onSessionExpired}

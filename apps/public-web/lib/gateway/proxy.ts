@@ -15,8 +15,9 @@ import { clientAddress, takeToken } from './rateLimit'
 // The request is rebuilt, never forwarded. Anything not listed here stays on
 // this side: Cookie, Host and X-Forwarded-* in particular. The sealed session
 // has no business in the logs of hops that cannot read it, and a forwarded XFF
-// would break the gateway's key resolver.
-const REQUEST_HEADERS = ['content-type', 'accept']
+// would break the gateway's key resolver. Idempotency-Key goes through: without
+// it a comment sent again after a lost answer is written twice.
+const REQUEST_HEADERS = ['content-type', 'accept', 'idempotency-key']
 const RESPONSE_HEADERS = ['content-type']
 
 function json(status: number, code: string) {

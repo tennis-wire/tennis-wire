@@ -7,9 +7,11 @@ import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
 import { DiscussionError } from '@/lib/discussion/api'
 import {
     type Failure,
+    type Keyed,
     MAX_LENGTH,
     MAX_LINKS,
     classify,
+    keyFor,
     normalize,
     problem,
 } from '@/lib/discussion/compose'
@@ -27,8 +29,8 @@ type Props = {
     seed?: Seed | null
     placeholder: string
     autoFocus?: boolean
-    // sends the normalized text; throws DiscussionError or NetworkError
-    onSubmit: (body: string) => Promise<void>
+    // sends the normalized text under its idempotency key; throws DiscussionError or NetworkError
+    onSubmit: (body: string, idempotencyKey: string) => Promise<void>
     onCancel?: () => void
     // a reply form only: the parent is gone, the text can go up as a comment of its own
     onParentDeleted?: (text: string) => void
@@ -119,6 +121,8 @@ export default function ComposeForm({
     // undefined: no restriction met; null: one with no end
     const [restrictedUntil, setRestrictedUntil] = useState<string | null | undefined>(undefined)
     const sent = useRef(false)
+    // the text last sent and the key it went under, until an answer says the comment is written
+    const pending = useRef<Keyed | null>(null)
     const latest = useRef({ draftKey, text })
     // A hand-over replaces the text once; state adjusted during render, the way React wants
     // a prop change answered
@@ -154,7 +158,10 @@ export default function ComposeForm({
         setSending(true)
         setFailure(null)
         try {
-            await onSubmit(normalize(text))
+            const send = keyFor(pending.current, normalize(text))
+            pending.current = send
+            await onSubmit(send.body, send.key)
+            pending.current = null
             sent.current = true
             if (draftKey) clearDraft(draftKey)
             setText('')

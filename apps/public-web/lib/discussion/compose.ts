@@ -27,6 +27,19 @@ export function problem(text: string): Problem | null {
     return null
 }
 
+export type Keyed = { body: string; key: string }
+
+// The key a text goes under. The same text sent again keeps its key, "Retry" included, so an answer
+// that never arrived costs no second comment. A changed text is another comment and gets a key of its
+// own: under the old one the service would refuse it.
+export function keyFor(
+    previous: Keyed | null,
+    body: string,
+    newKey: () => string = () => crypto.randomUUID()
+): Keyed {
+    return previous?.body === body ? previous : { body, key: newKey() }
+}
+
 export type Failure =
     { kind: 'network' } | { kind: 'rate' } | { kind: 'parent' } | { kind: 'other'; message: string }
 

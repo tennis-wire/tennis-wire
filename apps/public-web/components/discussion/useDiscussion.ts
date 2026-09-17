@@ -66,10 +66,15 @@ export type Discussion = {
     openReply: (id: string) => void
     closeReply: () => void
     // the reader's own writing; both throw for the form to explain
-    post: (body: string) => Promise<void>
+    post: (body: string, idempotencyKey: string) => Promise<void>
     // inline: the parent's replies are drawn where it stands. Otherwise the block re-roots on the
     // parent, so the reader sees the reply in its place
-    reply: (parentId: string, body: string, inline: boolean) => Promise<void>
+    reply: (
+        parentId: string,
+        body: string,
+        inline: boolean,
+        idempotencyKey: string
+    ) => Promise<void>
     // the parent whose author ignores the reader, told once after the reply went up
     mutedUnder: string | null
     // text taken from a reply whose parent is gone, for the top-level form
@@ -197,25 +202,28 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
     }, [load])
 
     const post = useCallback(
-        async (body: string) => {
-            const { comment } = await createComment(subjectType, subjectId, body)
+        async (body: string, idempotencyKey: string) => {
+            const { comment } = await createComment(subjectType, subjectId, body, idempotencyKey)
             dispatch({ type: 'posted', comment })
         },
         [subjectType, subjectId]
     )
 
-    const reply = useCallback(async (parentId: string, body: string, inline: boolean) => {
-        const { comment, mutedByRecipient } = await createReply(parentId, body)
-        setReplyingTo(null)
-        if (inline) {
-            setMutedUnder(mutedByRecipient ? parentId : null)
-            dispatch({ type: 'replied', parentId, comment })
-            return
-        }
-        pendingHighlight.current = comment.id
-        pendingMuted.current = mutedByRecipient ? parentId : null
-        window.location.hash = hashFor(parentId)
-    }, [])
+    const reply = useCallback(
+        async (parentId: string, body: string, inline: boolean, idempotencyKey: string) => {
+            const { comment, mutedByRecipient } = await createReply(parentId, body, idempotencyKey)
+            setReplyingTo(null)
+            if (inline) {
+                setMutedUnder(mutedByRecipient ? parentId : null)
+                dispatch({ type: 'replied', parentId, comment })
+                return
+            }
+            pendingHighlight.current = comment.id
+            pendingMuted.current = mutedByRecipient ? parentId : null
+            window.location.hash = hashFor(parentId)
+        },
+        []
+    )
 
     const promote = useCallback(
         (text: string) => {
