@@ -43,16 +43,19 @@ public class CommentController {
     private final ReportService reportService;
     private final CurrentUser currentUser;
     private final CommentResponses responses;
+    private final ViewerResponses viewers;
 
     public CommentController(
             CommentService commentService,
             ReportService reportService,
             CurrentUser currentUser,
-            CommentResponses responses) {
+            CommentResponses responses,
+            ViewerResponses viewers) {
         this.commentService = commentService;
         this.reportService = reportService;
         this.currentUser = currentUser;
         this.responses = responses;
+        this.viewers = viewers;
     }
 
     /** Top-level comments under a subject; each carries replyCount for the "show N replies" control. */
@@ -65,8 +68,9 @@ public class CommentController {
             @RequestParam(required = false) Integer limit,
             @RequestParam(required = false) String cursor,
             @AuthenticationPrincipal Jwt jwt) {
-        var page = commentService.listTopLevel(subjectType, subjectId, currentUser.idOrNull(jwt), limit, cursor);
-        return new CommentPageResponse(responses.of(page.items()), page.nextCursor());
+        var viewerId = currentUser.idOrNull(jwt);
+        var page = commentService.listTopLevel(subjectType, subjectId, viewerId, limit, cursor);
+        return new CommentPageResponse(responses.of(page.items()), page.nextCursor(), viewers.of(viewerId));
     }
 
     @PostMapping
@@ -109,14 +113,15 @@ public class CommentController {
             @RequestParam(required = false) String cursor,
             @AuthenticationPrincipal Jwt jwt) {
         var page = commentService.replies(id, currentUser.idOrNull(jwt), limit, cursor);
-        return new CommentPageResponse(responses.of(page.items()), page.nextCursor());
+        return new CommentPageResponse(responses.of(page.items()), page.nextCursor(), null);
     }
 
     /** Permalink: the chain of parents from the thread root down to this comment. */
     @GetMapping("/{id}/ancestry")
     public AncestryResponse ancestry(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
-        var chain = commentService.ancestry(id, currentUser.idOrNull(jwt));
-        return new AncestryResponse(responses.of(chain));
+        var viewerId = currentUser.idOrNull(jwt);
+        var chain = commentService.ancestry(id, viewerId);
+        return new AncestryResponse(responses.of(chain), viewers.of(viewerId));
     }
 
     /**
