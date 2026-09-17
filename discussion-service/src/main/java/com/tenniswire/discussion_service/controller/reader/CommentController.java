@@ -12,6 +12,7 @@ import com.tenniswire.discussion_service.service.CommentService;
 import com.tenniswire.discussion_service.service.ReportService;
 import jakarta.validation.Valid;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -32,6 +34,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/discussion/comments")
 public class CommentController {
+
+    // Optional on both writes. A client that sends one keeps it for as long as it goes on trying the
+    // same text: sent again, it gets the comment written the first time rather than a second one.
+    private static final String IDEMPOTENCY_KEY = "Idempotency-Key";
 
     private final CommentService commentService;
     private final ReportService reportService;
@@ -66,20 +72,26 @@ public class CommentController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public CommentCreatedResponse create(
-            @Valid @RequestBody CreateCommentRequest request, @AuthenticationPrincipal Jwt jwt) {
+            @Valid @RequestBody CreateCommentRequest request,
+            @RequestHeader(name = IDEMPOTENCY_KEY, required = false) @Nullable UUID idempotencyKey,
+            @AuthenticationPrincipal Jwt jwt) {
         var authorId = currentUser.id(jwt);
         var profile = responses.profileBeforeWriting(authorId);
-        var created = commentService.create(authorId, request.subjectType(), request.subjectId(), request.body());
+        var created = commentService.create(
+                authorId, request.subjectType(), request.subjectId(), request.body(), idempotencyKey);
         return responses.created(created, profile);
     }
 
     @PostMapping("/{id}/replies")
     @ResponseStatus(HttpStatus.CREATED)
     public CommentCreatedResponse reply(
-            @PathVariable UUID id, @Valid @RequestBody CreateReplyRequest request, @AuthenticationPrincipal Jwt jwt) {
+            @PathVariable UUID id,
+            @Valid @RequestBody CreateReplyRequest request,
+            @RequestHeader(name = IDEMPOTENCY_KEY, required = false) @Nullable UUID idempotencyKey,
+            @AuthenticationPrincipal Jwt jwt) {
         var authorId = currentUser.id(jwt);
         var profile = responses.profileBeforeWriting(authorId);
-        return responses.created(commentService.reply(authorId, id, request.body()), profile);
+        return responses.created(commentService.reply(authorId, id, request.body(), idempotencyKey), profile);
     }
 
     // "Show replies": the comment with the part of its subtree one response carries

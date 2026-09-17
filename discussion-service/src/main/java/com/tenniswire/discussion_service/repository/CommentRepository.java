@@ -4,6 +4,7 @@ import com.tenniswire.discussion_service.entity.Comment;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -61,6 +62,14 @@ limit :limit
     @Transactional(propagation = Propagation.MANDATORY)
     @Query(value = "select 1 from pg_advisory_xact_lock(:key)", nativeQuery = true)
     int lockTree(@Param("key") long key);
+
+    Optional<Comment> findByAuthorIdAndIdempotencyKey(UUID authorId, UUID idempotencyKey);
+
+    // The two-argument lock is a key space apart from lockTree's single one, so a client's key is
+    // never taken for a tree; 1 is this lock's name within it. Held until the transaction ends.
+    @Transactional(propagation = Propagation.MANDATORY)
+    @Query(value = "select 1 from pg_advisory_xact_lock(1, :key)", nativeQuery = true)
+    int lockIdempotencyKey(@Param("key") int key);
 
     // Depth-capped and budgeted: an unbounded subtree makes the work of one request a property of
     // how far the thread grew, and a depth cap alone does not fix that - a comment with five

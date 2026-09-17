@@ -11,6 +11,7 @@ import com.tenniswire.discussion_service.event.DomainEventPublisher;
 import com.tenniswire.discussion_service.exception.CommentingRestrictedException;
 import com.tenniswire.discussion_service.exception.ForbiddenException;
 import com.tenniswire.discussion_service.exception.HiddenByBlockException;
+import com.tenniswire.discussion_service.exception.IdempotencyKeyReusedException;
 import com.tenniswire.discussion_service.exception.ParentDeletedException;
 import com.tenniswire.discussion_service.exception.ResolutionNotApplicableException;
 import com.tenniswire.discussion_service.exception.ResourceNotFoundException;
@@ -85,16 +86,36 @@ public class CommentService {
     }
 
     public CreatedComment create(UUID authorId, String subjectType, UUID subjectId, String body) {
+        return create(authorId, subjectType, subjectId, body, null);
+    }
+
+    // Under a key this author has sent before, the comment written then comes back instead of a new
+    // one, provided it was the same text sent to the same place. Nothing is checked again: that send
+    // passed the gate, and it is answered as it would have been, whatever became of the comment since.
+    public CreatedComment create(
+            UUID authorId, String subjectType, UUID subjectId, String body, @Nullable UUID idempotencyKey) {
         // Only here and on the listing: a reply takes its subject from the parent, so a kind
         // dropped from the list stops taking new threads without cutting the ones already standing.
         subjects.assertKnown(subjectType);
+        var earlier = sentBefore(authorId, idempotencyKey);
+        if (earlier.isPresent()) {
+            var sent = earlier.get();
+            if (!sent.isRoot()
+                    || !sent.subjectType().equals(subjectType)
+                    || !sent.subjectId().equals(subjectId)
+                    || !body.equals(sent.body())) {
+                throw new IdempotencyKeyReusedException(idempotencyKey);
+            }
+            return new CreatedComment(sent, false);
+        }
         assertMayComment(authorId);
 
         var comment = new Comment()
                 .subjectType(subjectType)
                 .subjectId(subjectId)
                 .authorId(authorId)
-                .body(body);
+                .body(body)
+                .idempotencyKey(idempotencyKey);
         // flush now: path, root_id and the timestamps come back from the INSERT ... RETURNING
         var saved = comments.saveAndFlush(comment);
 
@@ -103,6 +124,19 @@ public class CommentService {
     }
 
     public CreatedComment reply(UUID authorId, UUID parentId, String body) {
+        return reply(authorId, parentId, body, null);
+    }
+
+    // A key sent before works as for a top-level comment, with the parent in place of the subject
+    public CreatedComment reply(UUID authorId, UUID parentId, String body, @Nullable UUID idempotencyKey) {
+        var earlier = sentBefore(authorId, idempotencyKey);
+        if (earlier.isPresent()) {
+            var sent = earlier.get();
+            if (!parentId.equals(sent.inReplyToId()) || !body.equals(sent.body())) {
+                throw new IdempotencyKeyReusedException(idempotencyKey);
+            }
+            return new CreatedComment(sent, mutedByParentAuthor(sent, authorId));
+        }
         assertMayComment(authorId);
         // Before the parent is read: a delete that got to the tree first has committed by the time
         // this goes on, and the check below finds the parent down or gone.
@@ -120,7 +154,8 @@ public class CommentService {
                 .subjectId(parent.subjectId())
                 .inReplyToId(parent.id())
                 .authorId(authorId)
-                .body(body);
+                .body(body)
+                .idempotencyKey(idempotencyKey);
         var saved = comments.saveAndFlush(comment);
         comments.incrementReplyCount(parent.id());
 
@@ -270,6 +305,25 @@ public class CommentService {
     }
 
     // Helpers
+
+    // A send repeated while the first is still being written waits here for that one to commit, then
+    // finds its comment. Taken before the tree lock, never after one.
+    private Optional<Comment> sentBefore(UUID authorId, @Nullable UUID idempotencyKey) {
+        if (idempotencyKey == null) {
+            return Optional.empty();
+        }
+        comments.lockIdempotencyKey(idempotencyKey.hashCode());
+        return comments.findByAuthorIdAndIdempotencyKey(authorId, idempotencyKey);
+    }
+
+    // For a reply sent again. Its parent may have lost its author to an erase since, and then there is
+    // nobody left to mute anyone.
+    private boolean mutedByParentAuthor(Comment reply, UUID authorId) {
+        return comments.findById(reply.inReplyToId())
+                .map(Comment::authorId)
+                .map(parentAuthor -> blocks.existsById(new BlockId(parentAuthor, authorId)))
+                .orElse(false);
+    }
 
     private void assertMayComment(UUID authorId) {
         var active = restrictions.findActive(authorId, UserRestriction.CAPABILITY_COMMENT, Instant.now());
