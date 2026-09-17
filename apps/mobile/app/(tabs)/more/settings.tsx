@@ -1,6 +1,59 @@
-import { ScrollView, View, Pressable, Switch } from 'react-native'
-import { useTheme, PALETTES, FONT_PAIRS, type PaletteKey, type FontPairKey } from '../../../theme'
+import { ScrollView, View, Pressable } from 'react-native'
+import {
+    useTheme,
+    PALETTES,
+    FONT_PAIRS,
+    type PaletteKey,
+    type FontPairKey,
+    type ThemeMode,
+} from '../../../theme'
 import { Text, Card, Divider, Screen } from '../../../components/ui'
+
+const MODES: { value: ThemeMode; label: string; icon: string; hint: string }[] = [
+    { value: 'light', label: 'Светлая', icon: '☀️', hint: 'По умолчанию' },
+    { value: 'dark', label: 'Тёмная', icon: '🌙', hint: 'Для вечерних матчей' },
+    { value: 'system', label: 'Как в системе', icon: '📱', hint: 'Переключается сама' },
+]
+
+function ModeOption({
+    label,
+    icon,
+    hint,
+    isActive,
+    onPress,
+}: {
+    label: string
+    icon: string
+    hint: string
+    isActive: boolean
+    onPress: () => void
+}) {
+    const { colors } = useTheme()
+
+    return (
+        <Pressable
+            onPress={onPress}
+            style={{
+                flex: 1,
+                alignItems: 'center',
+                paddingVertical: 14,
+                paddingHorizontal: 8,
+                borderRadius: 10,
+                borderWidth: isActive ? 2 : 1,
+                borderColor: isActive ? colors.primary : colors.border,
+                backgroundColor: isActive ? colors.bgAlt : 'transparent',
+            }}
+        >
+            <Text style={{ fontSize: 22, marginBottom: 6 }}>{icon}</Text>
+            <Text variant="label" style={{ fontWeight: isActive ? '600' : '400' }}>
+                {label}
+            </Text>
+            <Text variant="caption" style={{ marginTop: 2, textAlign: 'center' }}>
+                {hint}
+            </Text>
+        </Pressable>
+    )
+}
 
 function PaletteOption({
     id,
@@ -109,7 +162,7 @@ function FontOption({
 }
 
 export default function SettingsScreen() {
-    const { colors, palette, fontPair, isDark, setPalette, setFontPair, toggleDark } = useTheme()
+    const { palette, fontPair, mode, setPalette, setFontPair, setMode } = useTheme()
 
     const paletteEntries = Object.entries(PALETTES) as [PaletteKey, (typeof PALETTES)[PaletteKey]][]
     const fontEntries = Object.entries(FONT_PAIRS) as [
@@ -120,27 +173,22 @@ export default function SettingsScreen() {
     return (
         <Screen>
             <ScrollView contentContainerStyle={{ padding: 16 }}>
-                {/* Dark mode */}
-                <Card style={{ padding: 16, marginBottom: 20 }}>
-                    <View
-                        style={{
-                            flexDirection: 'row',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                        }}
-                    >
-                        <View>
-                            <Text variant="h3">Тёмная тема</Text>
-                            <Text variant="caption">{isDark ? 'Включена' : 'Выключена'}</Text>
-                        </View>
-                        <Switch
-                            value={isDark}
-                            onValueChange={toggleDark}
-                            trackColor={{ false: colors.border, true: colors.primaryLight }}
-                            thumbColor={isDark ? colors.primary : colors.surface}
+                {/* Theme mode */}
+                <Text variant="h2" style={{ marginBottom: 12 }}>
+                    Тема
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
+                    {MODES.map((option) => (
+                        <ModeOption
+                            key={option.value}
+                            label={option.label}
+                            icon={option.icon}
+                            hint={option.hint}
+                            isActive={mode === option.value}
+                            onPress={() => setMode(option.value)}
                         />
-                    </View>
-                </Card>
+                    ))}
+                </View>
 
                 {/* Palettes */}
                 <Text variant="h2" style={{ marginBottom: 12 }}>

@@ -1,41 +1,28 @@
-/**
- * Tennis Wire Mobile: ThemeContext
- * Mirrors public-web/theme/ThemeContext.tsx API:
- *   colors, fonts, palette, fontPair, isDark, setPalette, setFontPair, toggleDark
- *
- * Differences from web:
- * - AsyncStorage instead of localStorage (async load)
- * - isReady flag for splash screen gating
- * - fonts returns expo-google-fonts names instead of CSS strings
- */
+// Mirrors public-web/theme/ThemeContext.tsx API: colors, fonts, palette, fontPair,
+// mode, isDark, setPalette, setFontPair, setMode
+//
+// Differences from web:
+// - AsyncStorage instead of localStorage (async load, gated by isReady)
+// - 'system' mode is read from react-native's useColorScheme, which already
+//   subscribes to OS appearance changes, instead of a matchMedia listener
+// - fonts returns expo-google-fonts names instead of CSS strings
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react'
 import { useColorScheme } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { PALETTES, type PaletteKey, type PaletteColors } from './palettes'
 import { FONT_PAIRS, type FontPairKey, type FontPairMobile } from './fonts'
-
-const STORAGE_KEY = 'tw-theme'
-
-interface ThemeState {
-    palette: PaletteKey
-    fontPair: FontPairKey
-    isDark: boolean
-}
+import { STORAGE_KEY, DEFAULTS, modeOf, type ThemeMode, type ThemeState } from './state'
 
 interface ThemeContextValue extends ThemeState {
     colors: PaletteColors
     fonts: FontPairMobile
+    // what `mode` comes to right now: under 'system' it is the device's answer
+    isDark: boolean
     isReady: boolean
     setPalette: (key: PaletteKey) => void
     setFontPair: (key: FontPairKey) => void
-    toggleDark: () => void
-}
-
-const DEFAULTS: ThemeState = {
-    palette: 'courtGreen',
-    fontPair: 'editorialClassic',
-    isDark: false,
+    setMode: (mode: ThemeMode) => void
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
@@ -52,7 +39,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                 if (stored) {
                     try {
                         const parsed = JSON.parse(stored)
-                        setState((prev) => ({ ...prev, ...parsed }))
+                        setState((prev) => ({ ...prev, ...parsed, mode: modeOf(parsed) }))
                     } catch {
                         // corrupted data, use defaults
                     }
@@ -76,12 +63,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         setState((prev) => ({ ...prev, fontPair: key }))
     }, [])
 
-    const toggleDark = useCallback(() => {
-        setState((prev) => ({ ...prev, isDark: !prev.isDark }))
+    const setMode = useCallback((mode: ThemeMode) => {
+        setState((prev) => ({ ...prev, mode }))
     }, [])
 
+    const isDark = state.mode === 'system' ? systemScheme === 'dark' : state.mode === 'dark'
     const palette = PALETTES[state.palette]
-    const colors = state.isDark ? palette.darkColors : palette.colors
+    const colors = isDark ? palette.darkColors : palette.colors
     const fonts = FONT_PAIRS[state.fontPair]
 
     const value = useMemo<ThemeContextValue>(
@@ -89,12 +77,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             ...state,
             colors,
             fonts,
+            isDark,
             isReady,
             setPalette,
             setFontPair,
-            toggleDark,
+            setMode,
         }),
-        [state, colors, fonts, isReady, setPalette, setFontPair, toggleDark]
+        [state, colors, fonts, isDark, isReady, setPalette, setFontPair, setMode]
     )
 
     return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
