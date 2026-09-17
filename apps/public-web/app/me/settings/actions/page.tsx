@@ -62,7 +62,7 @@ function Body({ session }: { session: ReturnType<typeof useReaderSession>['sessi
     return (
         <>
             <NicknameForm displayName={session.displayName} chosen={session.displayNameChosen} />
-            <DeleteAccount displayName={session.displayName} userId={session.userId} />
+            <DeleteAccount userId={session.userId} />
         </>
     )
 }

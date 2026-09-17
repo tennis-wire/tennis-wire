@@ -14,13 +14,15 @@ export async function GET(request: NextRequest) {
 
     const authorizationUrl = client.buildAuthorizationUrl(config, {
         redirect_uri: callbackUrl(),
-        // offline_access is what makes the session outlive the eight-hour SSO
-        // session: the refresh token keeps working for thirty idle days.
+        // offline_access keeps the refresh token working for thirty idle days. Since
+        // Keycloak 26.1 such a login leaves no SSO session behind.
         scope: 'openid profile email offline_access',
         code_challenge: await client.calculatePKCECodeChallenge(codeVerifier),
         code_challenge_method: 'S256',
         state,
         nonce,
+        // Only "login", which deleting an account asks for. No other value is passed on.
+        ...(request.nextUrl.searchParams.get('prompt') === 'login' ? { prompt: 'login' } : {}),
     })
 
     const flow = await sealFlow({

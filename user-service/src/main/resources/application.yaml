@@ -67,6 +67,11 @@ user:
     # handed off to another one rather than kept on his.
     read-timeout: 15s
 
+  deletion:
+    # How old the login behind DELETE /api/users/me may be. The site sends the reader through a login
+    # right before the last button, so this only has to cover the way back to it.
+    login-max-age: 5m
+
   erasure:
     # ISO-8601: @Scheduled reads this as a plain string and parses it itself, without Boot's
     # relaxed binding. The rest of this block goes through @ConfigurationProperties and does not.

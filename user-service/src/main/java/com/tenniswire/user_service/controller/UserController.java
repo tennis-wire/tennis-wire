@@ -3,6 +3,7 @@ package com.tenniswire.user_service.controller;
 import com.tenniswire.user_service.dto.ProfileResponse;
 import com.tenniswire.user_service.dto.UpdateProfileRequest;
 import com.tenniswire.user_service.security.CurrentUser;
+import com.tenniswire.user_service.security.RecentLogin;
 import com.tenniswire.user_service.service.AccountDeletionService;
 import com.tenniswire.user_service.service.ProfileService;
 import jakarta.validation.Valid;
@@ -24,11 +25,17 @@ public class UserController {
     private final CurrentUser currentUser;
     private final ProfileService profiles;
     private final AccountDeletionService deletions;
+    private final RecentLogin recentLogin;
 
-    public UserController(CurrentUser currentUser, ProfileService profiles, AccountDeletionService deletions) {
+    public UserController(
+            CurrentUser currentUser,
+            ProfileService profiles,
+            AccountDeletionService deletions,
+            RecentLogin recentLogin) {
         this.currentUser = currentUser;
         this.profiles = profiles;
         this.deletions = deletions;
+        this.recentLogin = recentLogin;
     }
 
     @GetMapping("/me")
@@ -46,6 +53,8 @@ public class UserController {
     @DeleteMapping("/me")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void delete(@AuthenticationPrincipal Jwt jwt) {
+        // Ahead of resolving the reader: a refused request leaves nothing behind, not even a profile
+        recentLogin.require(jwt);
         deletions.request(currentUser.id(jwt));
     }
 }
