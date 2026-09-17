@@ -41,6 +41,12 @@ class JobStatusResponse(BaseModel):
     error: str | None = None
 
 
+class JobListResponse(BaseModel):
+    """The caller's jobs, newest first."""
+
+    jobs: list[JobStatusResponse]
+
+
 class JobResultResponse(BaseModel):
     """Response with job result."""
 

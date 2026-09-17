@@ -6,17 +6,26 @@ import uuid
 from pathlib import Path
 from typing import IO, Annotated
 
+import structlog
 from arq.connections import ArqRedis
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 
-from transcription.api.deps import get_arq_redis, get_job_storage, get_s3_storage
+from transcription.api.deps import (
+    get_arq_redis,
+    get_job_storage,
+    get_owned_job,
+    get_s3_storage,
+    require_author,
+)
 from transcription.api.schemas import (
     HealthResponse,
     JobCreatedResponse,
+    JobListResponse,
     JobResultResponse,
     JobStatusResponse,
     TranscribeUrlRequest,
 )
+from transcription.auth import Principal
 from transcription.config import Settings, get_settings
 from transcription.constants import TRANSCRIBE_TASK_NAME
 from transcription.models import JobStatus, TranscriptionJob
@@ -24,7 +33,14 @@ from transcription.security import check_media_url_allowed
 from transcription.storage.jobs import JobStorage
 from transcription.storage.s3 import S3Storage
 
-router = APIRouter()
+logger = structlog.get_logger()
+
+# Anonymous: probes call it without a token. The gateway does not route it.
+health_router = APIRouter()
+
+# Every route here needs an author, including the ones added later: the check sits on the
+# router, not on each handler.
+transcribe_router = APIRouter(prefix="/transcribe", dependencies=[Depends(require_author)])
 
 
 def _gpu_available() -> bool:
@@ -39,7 +55,7 @@ def _gpu_available() -> bool:
 # ============== Routes ==============
 
 
-@router.get("/health", response_model=HealthResponse)
+@health_router.get("/health", response_model=HealthResponse)
 async def health_check(
     arq: Annotated[ArqRedis, Depends(get_arq_redis)],
 ) -> HealthResponse:
@@ -61,13 +77,14 @@ async def health_check(
     )
 
 
-@router.post(
-    "/transcribe/url",
+@transcribe_router.post(
+    "/url",
     response_model=JobCreatedResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def transcribe_url(
     request: TranscribeUrlRequest,
+    author: Annotated[Principal, Depends(require_author)],
     job_storage: Annotated[JobStorage, Depends(get_job_storage)],
     arq: Annotated[ArqRedis, Depends(get_arq_redis)],
     settings: Annotated[Settings, Depends(get_settings)],
@@ -85,13 +102,16 @@ async def transcribe_url(
 
     job = TranscriptionJob(
         id=job_id,
+        owner_sub=author.sub,
+        owner_username=author.username,
         source_url=str(request.url),
         language=request.language,
         enable_diarization=request.enable_diarization,
     )
 
-    await job_storage.save(job)
+    await job_storage.create(job)
     await arq.enqueue_job(TRANSCRIBE_TASK_NAME, job_id)
+    logger.info("Job created", job_id=job_id, owner=author.username, source="url")
 
     return JobCreatedResponse(
         job_id=job_id,
@@ -125,13 +145,14 @@ def _safe_suffix(filename: str | None) -> str:
     return suffix if re.fullmatch(r"\.[a-z0-9]{1,8}", suffix) else ""
 
 
-@router.post(
-    "/transcribe/file",
+@transcribe_router.post(
+    "/file",
     response_model=JobCreatedResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def transcribe_file(
     file: UploadFile,
+    author: Annotated[Principal, Depends(require_author)],
     job_storage: Annotated[JobStorage, Depends(get_job_storage)],
     s3: Annotated[S3Storage, Depends(get_s3_storage)],
     arq: Annotated[ArqRedis, Depends(get_arq_redis)],
@@ -164,13 +185,16 @@ async def transcribe_file(
 
     job = TranscriptionJob(
         id=job_id,
+        owner_sub=author.sub,
+        owner_username=author.username,
         source_file=s3_key,
         language=language,
         enable_diarization=enable_diarization,
     )
 
-    await job_storage.save(job)
+    await job_storage.create(job)
     await arq.enqueue_job(TRANSCRIBE_TASK_NAME, job_id)
+    logger.info("Job created", job_id=job_id, owner=author.username, source="file")
 
     return JobCreatedResponse(
         job_id=job_id,
@@ -179,19 +203,7 @@ async def transcribe_file(
     )
 
 
-@router.get("/transcribe/{job_id}", response_model=JobStatusResponse)
-async def get_job_status(
-    job_id: str,
-    job_storage: Annotated[JobStorage, Depends(get_job_storage)],
-) -> JobStatusResponse:
-    """Get transcription job status."""
-    job = await job_storage.get(job_id)
-    if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Job not found",
-        )
-
+def _status(job: TranscriptionJob) -> JobStatusResponse:
     return JobStatusResponse(
         job_id=job.id,
         status=job.status,
@@ -204,20 +216,32 @@ async def get_job_status(
     )
 
 
-@router.get("/transcribe/{job_id}/result", response_model=JobResultResponse)
-async def get_job_result(
-    job_id: str,
+# Declared before /{job_id}, which would otherwise take "jobs" for an id.
+@transcribe_router.get("/jobs", response_model=JobListResponse)
+async def list_my_jobs(
+    author: Annotated[Principal, Depends(require_author)],
     job_storage: Annotated[JobStorage, Depends(get_job_storage)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> JobListResponse:
+    """The caller's jobs still in storage, newest first."""
+    jobs = await job_storage.list_for_owner(author.sub, limit)
+    return JobListResponse(jobs=[_status(job) for job in jobs])
+
+
+@transcribe_router.get("/{job_id}", response_model=JobStatusResponse)
+async def get_job_status(
+    job: Annotated[TranscriptionJob, Depends(get_owned_job)],
+) -> JobStatusResponse:
+    """Get transcription job status."""
+    return _status(job)
+
+
+@transcribe_router.get("/{job_id}/result", response_model=JobResultResponse)
+async def get_job_result(
+    job: Annotated[TranscriptionJob, Depends(get_owned_job)],
     s3: Annotated[S3Storage, Depends(get_s3_storage)],
 ) -> JobResultResponse:
     """Get transcription result."""
-    job = await job_storage.get(job_id)
-    if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Job not found",
-        )
-
     if job.status == JobStatus.FAILED:
         return JobResultResponse(
             job_id=job.id,
@@ -244,19 +268,12 @@ async def get_job_result(
     )
 
 
-@router.delete("/transcribe/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
+@transcribe_router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def cancel_job(
-    job_id: str,
+    job: Annotated[TranscriptionJob, Depends(get_owned_job)],
     job_storage: Annotated[JobStorage, Depends(get_job_storage)],
 ) -> None:
     """Cancel a pending job."""
-    job = await job_storage.get(job_id)
-    if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Job not found",
-        )
-
     if job.is_terminal:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

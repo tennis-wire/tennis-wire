@@ -9,7 +9,7 @@ from arq.connections import RedisSettings, create_pool
 from fastapi import FastAPI
 
 from transcription import __version__
-from transcription.api.routes import router
+from transcription.api.routes import health_router, transcribe_router
 from transcription.config import get_settings
 
 # Configure structlog
@@ -73,7 +73,8 @@ def create_app() -> FastAPI:
     )
 
     # Routes
-    app.include_router(router, prefix="/api", tags=["transcription"])
+    app.include_router(health_router, prefix="/api", tags=["health"])
+    app.include_router(transcribe_router, prefix="/api", tags=["transcription"])
 
     return app
 

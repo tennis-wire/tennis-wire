@@ -19,6 +19,8 @@ dependencies = [
     "boto3>=1.35",               # S3-compatible
     # HTTP client
     "httpx>=0.28",
+    # Token validation: RS256 needs the crypto extra
+    "pyjwt[crypto]>=2.10",
     # Configuration
     "pydantic-settings>=2.6",
     # Logging
@@ -41,6 +43,7 @@ dev = [
     "pytest-cov>=6.0",
     "pytest-xdist>=3.5",
     "respx>=0.22",               # HTTP mocking
+    "fakeredis>=2.26",           # Redis for storage tests
     # Linting & formatting
     "ruff>=0.8",
     "mypy>=1.13",
