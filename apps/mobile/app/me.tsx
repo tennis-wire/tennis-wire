@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { ActivityIndicator, ScrollView, TextInput, View } from 'react-native'
 
@@ -6,6 +7,7 @@ import { Text, Card, Screen } from '../components/ui'
 import { useReaderSession } from '../components/auth/ReaderSessionProvider'
 import { updateDisplayName } from '../lib/gateway/client'
 import { isValidNickname } from '../lib/auth/nickname'
+import { strings } from '../components/discussion/strings'
 
 function SignedOut() {
     const { colors } = useTheme()
@@ -153,12 +155,16 @@ function SignedIn({
     displayNameChosen: boolean
 }) {
     const { colors } = useTheme()
+    const router = useRouter()
     const { logout } = useReaderSession()
     const [loggingOut, setLoggingOut] = useState(false)
 
     return (
         <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
             <NicknameField displayName={displayName ?? '…'} chosen={displayNameChosen} />
+            <Card onPress={() => router.push('/me/ignore')} style={{ padding: 14 }}>
+                <Text variant="h3">{strings.ignoreList}</Text>
+            </Card>
             <Card
                 onPress={
                     loggingOut

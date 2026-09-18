@@ -2,7 +2,7 @@
 // The web version defaults to crypto.randomUUID(), which Hermes does not provide without a
 // polyfill; expo-crypto's randomUUID() is the mobile equivalent, but importing it here would
 // pull expo-crypto's native module into a file meant to stay loadable under plain Node/vitest
-// (see freshness.ts for the same reasoning). Callers pass it in instead - useDiscussion does.
+// (see freshness.ts for the same reasoning). Callers pass it in instead - ComposeForm does.
 import { DiscussionError, NetworkError } from './api'
 import { countLinks } from './text'
 
