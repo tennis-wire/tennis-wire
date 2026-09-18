@@ -263,6 +263,7 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
             if (!(error instanceof DiscussionError && error.status === 404)) throw error
         }
         setReplyingTo((open) => (open === id ? null : open))
+        setEditing((open) => (open === id ? null : open))
         dispatch({ type: 'deleted', id })
     }, [])
 
