@@ -59,6 +59,30 @@ public interface ReportRepository extends JpaRepository<Report, UUID> {
         """)
     List<ReasonTally> findOpenTallies(@Param("commentIds") Collection<UUID> commentIds);
 
+    // Run by an edit, before the new text replaces the old one. Reports filed after it start at null
+    // again and are left alone here, which is why the card reads the earliest open report and not
+    // any of them: that one carries the text the complaint was actually about.
+    @Modifying
+    @Query("""
+        update Report r
+        set r.bodyAtReport = :body
+        where r.commentId = :commentId and r.resolvedAt is null and r.bodyAtReport is null
+        """)
+    int snapshotOpen(@Param("commentId") UUID commentId, @Param("body") String body);
+
+    // Null bodies come back too: the caller cannot tell a comment nobody edited from one the query
+    // skipped, and the first means "the text is the one on the comment".
+    @Query("""
+        select new com.tenniswire.discussion_service.repository.ReportedBody(r.commentId, r.bodyAtReport)
+        from Report r
+        where r.commentId in :commentIds
+          and r.resolvedAt is null
+          and r.createdAt = (
+              select min(r2.createdAt) from Report r2
+              where r2.commentId = r.commentId and r2.resolvedAt is null)
+        """)
+    List<ReportedBody> findBodyAtFirstOpenReport(@Param("commentIds") Collection<UUID> commentIds);
+
     long countByCommentIdAndResolvedAtIsNull(UUID commentId);
 
     // Which of these comments carry a report at all, decided or not. Such a comment is never taken
@@ -70,14 +94,16 @@ public interface ReportRepository extends JpaRepository<Report, UUID> {
 
     // Closes every open report on a comment at once and erases the hashes with them: once a
     // decision is taken there is nothing left to deduplicate, and the reporter was only ever kept
-    // for that. The timestamp comes from the database so that one decision carries one time
+    // for that. The snapshot goes the same way: it existed to be read on this card.
+    // The timestamp comes from the database so that one decision carries one time
     @Modifying
     @Query("""
         update Report r
         set r.resolvedAt = current_timestamp,
             r.resolution = :resolution,
             r.resolvedBy = :resolvedBy,
-            r.reporterHash = null
+            r.reporterHash = null,
+            r.bodyAtReport = null
         where r.commentId = :commentId and r.resolvedAt is null
         """)
     int closeOpen(
@@ -95,7 +121,8 @@ public interface ReportRepository extends JpaRepository<Report, UUID> {
         set r.resolvedAt = current_timestamp,
             r.resolution = :resolution,
             r.resolvedBy = null,
-            r.reporterHash = null
+            r.reporterHash = null,
+            r.bodyAtReport = null
         where r.commentId in :commentIds and r.resolvedAt is null
         """)
     int closeOpenOn(@Param("commentIds") Collection<UUID> commentIds, @Param("resolution") ReportResolution resolution);

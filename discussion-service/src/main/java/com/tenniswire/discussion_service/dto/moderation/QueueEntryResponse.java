@@ -1,5 +1,6 @@
 package com.tenniswire.discussion_service.dto.moderation;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -11,6 +12,9 @@ public record QueueEntryResponse(
         UUID subjectId,
         UUID rootId,
         String body,
+        // Absent unless the author rewrote the comment after it was reported. Where it is present,
+        // it is what the complaint was about and body is what stands there now.
+        @JsonInclude(JsonInclude.Include.NON_NULL) @Nullable String bodyAtFirstReport,
         boolean deletedByAuthor,
         QueueAuthor author,
         long reportCount,

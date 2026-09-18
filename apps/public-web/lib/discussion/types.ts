@@ -28,6 +28,8 @@ export type Comment = {
     repliesTruncated: boolean
     createdAt: string
     updatedAt: string
+    // the author rewrote the text: updatedAt is when he last did
+    edited: boolean
     // empty on a listing and on an ancestry chain, nested on a branch
     replies: Comment[]
 }
@@ -42,6 +44,9 @@ export type Viewer = { restriction: Restriction | null }
 export type CommentPage = { items: Comment[]; nextCursor: string | null; viewer?: Viewer }
 export type Branch = { root: Comment }
 export type Ancestry = { chain: Comment[]; viewer?: Viewer }
+
+// What a PATCH answers: only the fields an edit moves
+export type Edited = { id: string; body: string; updatedAt: string; edited: boolean }
 
 // What a POST answers: the comment as its author sees it, and whether the author of the comment
 // replied to ignores him

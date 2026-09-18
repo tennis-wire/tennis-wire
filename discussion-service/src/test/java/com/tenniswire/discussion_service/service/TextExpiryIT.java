@@ -142,6 +142,22 @@ class TextExpiryIT {
     }
 
     @Test
+    void theSnapshotOfAReportedTextGoesWithTheTextItself() {
+        var his = comment(alice, "as reported");
+        reportService.report(bob, his, "spam");
+        commentService.editOwn(alice, his, "rewritten");
+        commentService.deleteOwn(alice, his);
+        downLongAgo(his);
+
+        job.pass();
+
+        assertThat(reportsOn(his)).singleElement().satisfies(report -> {
+            assertThat(report.resolution()).isEqualTo(ReportResolution.EXPIRED);
+            assertThat(report.bodyAtReport()).isNull();
+        });
+    }
+
+    @Test
     void onePassGoesOnPastAFullBatch() {
         var inTwos = new TextExpiryJob(writer, new TextExpiryProperties(properties.after(), 2));
         var down = new ArrayList<UUID>();

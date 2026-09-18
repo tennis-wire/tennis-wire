@@ -48,7 +48,7 @@ async function toError(response: Response): Promise<DiscussionError> {
 }
 
 export async function once<T>(
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     path: string,
     body?: unknown,
     idempotencyKey?: string
@@ -94,7 +94,7 @@ export async function read<T>(path: string): Promise<T> {
 // A write: one request and no retry of its own; a retry is the reader's, by hand. A comment goes
 // with an idempotency key, and a retry under the same key cannot land it twice.
 export function write<T>(
-    method: 'POST' | 'PUT' | 'DELETE',
+    method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     path: string,
     body?: unknown,
     idempotencyKey?: string

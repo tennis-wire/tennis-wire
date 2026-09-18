@@ -51,6 +51,16 @@ export const strings = {
     restrictedUntil: (when: string) => `Вы не можете комментировать до ${when}`,
     restrictedIndefinitely: 'Комментирование недоступно',
 
+    // editing one's own comment
+    edit: 'Изменить',
+    edited: 'изменено',
+    editedAt: (when: string) => `Изменено ${when}`,
+    saveEdit: 'Сохранить',
+    editFailed: 'Не удалось сохранить',
+    editTooLate: 'Время на правку истекло',
+    editGone: 'Комментарий уже удалён',
+    editRemoved: 'Комментарий удалён модерацией',
+
     // the comment menu
     actions: 'Действия',
     remove: 'Удалить',

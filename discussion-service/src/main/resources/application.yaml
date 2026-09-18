@@ -67,6 +67,11 @@ discussion:
     # a second layer here would only double the wait before the 503 and add nothing.
     read-timeout: 2s
 
+  comment:
+    # How long after publishing the author may still change his text. Counted from created_at and
+    # not from the last edit: the rules put no ceiling on how many edits fit inside the window.
+    edit-window: 15m
+
   report:
     # Open set on purpose: anything outside it is a 400, and adding
     # a code is a config change rather than a migration.

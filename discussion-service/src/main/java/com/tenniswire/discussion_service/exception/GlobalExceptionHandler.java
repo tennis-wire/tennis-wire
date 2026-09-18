@@ -60,6 +60,21 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("COMMENT_ALREADY_REMOVED", ex.getMessage()));
     }
 
+    @ExceptionHandler(CommentDeletedException.class)
+    public ResponseEntity<ErrorResponse> handleCommentDeleted(CommentDeletedException ex) {
+        // Told apart from COMMENT_ALREADY_REMOVED because the rules give the author two wordings:
+        // one for a comment he took down himself, another for one moderation removed.
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of("COMMENT_DELETED", ex.getMessage()));
+    }
+
+    @ExceptionHandler(EditWindowClosedException.class)
+    public ResponseEntity<ErrorResponse> handleEditWindowClosed(EditWindowClosedException ex) {
+        // 403 rather than 409: nothing about the comment changed, the author simply may no longer
+        // do this. The client keeps his text in the field so he can copy it out.
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ErrorResponse.of("EDIT_WINDOW_CLOSED", ex.getMessage()));
+    }
+
     @ExceptionHandler(ParentDeletedException.class)
     public ResponseEntity<ErrorResponse> handleParentDeleted(ParentDeletedException ex) {
         // 409 rather than 404: the node may well still be there carrying other replies, and what

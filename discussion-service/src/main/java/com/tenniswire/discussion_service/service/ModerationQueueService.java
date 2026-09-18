@@ -9,6 +9,7 @@ import com.tenniswire.discussion_service.repository.CommentRepository;
 import com.tenniswire.discussion_service.repository.OpenReportGroup;
 import com.tenniswire.discussion_service.repository.ReasonTally;
 import com.tenniswire.discussion_service.repository.ReportRepository;
+import com.tenniswire.discussion_service.repository.ReportedBody;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +17,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.jspecify.annotations.Nullable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,10 +50,18 @@ public class ModerationQueueService {
         var ids = groups.stream().map(OpenReportGroup::commentId).toList();
         var byId = comments.findAllById(ids).stream().collect(Collectors.toMap(Comment::id, Function.identity()));
         var tallies = reports.findOpenTallies(ids).stream().collect(Collectors.groupingBy(ReasonTally::commentId));
+        // Only the ones an edit has filled in; the rest read as "the text is the comment's own"
+        var reported = reports.findBodyAtFirstOpenReport(ids).stream()
+                .filter(row -> row.body() != null)
+                .collect(Collectors.toMap(ReportedBody::commentId, ReportedBody::body, (first, later) -> first));
 
         // The order comes from the grouping query and is kept: heaviest first, oldest to break a tie.
         return groups.stream()
-                .map(group -> card(group, byId.get(group.commentId()), tallies.get(group.commentId())))
+                .map(group -> card(
+                        group,
+                        byId.get(group.commentId()),
+                        tallies.get(group.commentId()),
+                        reported.get(group.commentId())))
                 .filter(Objects::nonNull)
                 .toList();
     }
@@ -92,7 +102,8 @@ public class ModerationQueueService {
         }
     }
 
-    private static QueuedComment card(OpenReportGroup group, Comment comment, List<ReasonTally> tallies) {
+    private static QueuedComment card(
+            OpenReportGroup group, Comment comment, List<ReasonTally> tallies, @Nullable String bodyAtFirstReport) {
         if (comment == null || comment.hasNoText() || tallies == null) {
             // Only reachable if the comment went away or lost its text between the two queries, which
             // the erase and the wipe can both do. One missing card beats a failed page or a blank one.
@@ -106,6 +117,7 @@ public class ModerationQueueService {
         }
         return new QueuedComment(
                 comment,
+                bodyAtFirstReport,
                 group.reportCount(),
                 group.firstReportedAt(),
                 group.lastReportedAt(),
