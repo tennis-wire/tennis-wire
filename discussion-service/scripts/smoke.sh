@@ -109,6 +109,13 @@ expect 201 -X POST "$API/comments" -H "Authorization: Bearer $READER" -H "$json"
   -d "{\"subjectType\":\"publication\",\"subjectId\":\"$SUBJECT\",\"body\":\"back\"}" > /dev/null
 expect 200 "$API/comments/$ROOT/branch" | jq -e '.root.author.displayName != null and .root.author.restricted == null' > /dev/null
 
+echo "# edit: only the author, and the branch shows the new text with edited=true"
+expect 403 -X PATCH "$API/comments/$ROOT" -H "Authorization: Bearer $DEV" -H "$json" \
+  -d '{"body":"not his to change"}' > /dev/null
+expect 200 -X PATCH "$API/comments/$ROOT" -H "Authorization: Bearer $READER" -H "$json" \
+  -d '{"body":"edited root"}' | jq -e '.body == "edited root" and .edited == true' > /dev/null
+expect 200 "$API/comments/$ROOT/branch" | jq -e '.root.body == "edited root" and .root.edited == true' > /dev/null
+
 echo "# soft delete: dev cannot delete reader's root; reader can; node survives with visibility=deleted, no body, no author"
 expect 403 -X DELETE "$API/comments/$ROOT" -H "Authorization: Bearer $DEV" > /dev/null
 expect 204 -X DELETE "$API/comments/$ROOT" -H "Authorization: Bearer $READER" > /dev/null
