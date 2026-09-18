@@ -44,6 +44,11 @@ public class Report {
     @Column(nullable = false, updatable = false)
     private String reason;
 
+    // The text this report was filed against, written by an edit and only while the report is open.
+    // null means it still matches the comment's own body. Erased with reporterHash on a decision.
+    @Column(name = "body_at_report")
+    private String bodyAtReport;
+
     @Generated(event = EventType.INSERT)
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;

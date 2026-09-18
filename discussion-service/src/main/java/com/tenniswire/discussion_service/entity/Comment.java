@@ -135,6 +135,12 @@ public class Comment {
         return hiddenAt != null;
     }
 
+    // The updated_at trigger fires on a body change alone, so the two timestamps part only when the
+    // author has rewritten his text. Emptying the body does not count and leaves them as they were.
+    public boolean isEdited() {
+        return updatedAt.isAfter(createdAt);
+    }
+
     // True once the author erased his account: no name to show and no text left to read
     public boolean hasNoAuthor() {
         return authorId == null;

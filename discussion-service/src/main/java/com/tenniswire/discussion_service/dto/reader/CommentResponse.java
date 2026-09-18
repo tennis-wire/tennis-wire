@@ -36,6 +36,7 @@ public record CommentResponse(
         boolean repliesTruncated,
         Instant createdAt,
         Instant updatedAt,
+        boolean edited,
         List<CommentResponse> replies) {
 
     public static CommentResponse from(CommentView view, Map<UUID, AuthorResponse> authors) {
@@ -55,6 +56,7 @@ public record CommentResponse(
                 view.repliesTruncated(),
                 c.createdAt(),
                 c.updatedAt(),
+                c.isEdited(),
                 view.replies().stream().map(reply -> from(reply, authors)).toList());
     }
 }

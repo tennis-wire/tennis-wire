@@ -81,6 +81,14 @@ class SecurityConfigTest {
     }
 
     @Test
+    void editingRejectsAnonymous() throws Exception {
+        mvc.perform(patch(COMMENTS + "/" + UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"body\":\"changed\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void theAuthorComesFromTheResolverNotFromTheSub() throws Exception {
         var me = UUID.randomUUID();
         when(resolver.resolve(any())).thenReturn(me);

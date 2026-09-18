@@ -264,3 +264,11 @@ CREATE UNIQUE INDEX uq_comment_idempotency ON comment (author_id, idempotency_ke
 -- comment: Partial, so it holds about a month's worth of taken-down comments rather than the whole table.
 CREATE INDEX idx_comment_text_kept ON comment (deleted_at)
     WHERE deleted_at IS NOT NULL AND body IS NOT NULL;
+
+-- changeset andrei:17
+-- comment: The text as the reporter saw it, kept only once the author has rewritten the comment
+-- comment: since the report (rules 10.19, 7.19). NULL means it still matches comment.body, so rows
+-- comment: written before this column need no backfill: there was no edit for them to diverge from.
+-- comment: Written by the edit rather than by the report, and erased together with reporter_hash
+-- comment: when the card is closed - so no copy of a text outlives the terms of 8.20 and 13.14.
+ALTER TABLE report ADD COLUMN body_at_report TEXT;

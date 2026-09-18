@@ -7,6 +7,8 @@ import com.tenniswire.discussion_service.dto.reader.CommentPageResponse;
 import com.tenniswire.discussion_service.dto.reader.CreateCommentRequest;
 import com.tenniswire.discussion_service.dto.reader.CreateReplyRequest;
 import com.tenniswire.discussion_service.dto.reader.CreateReportRequest;
+import com.tenniswire.discussion_service.dto.reader.EditCommentRequest;
+import com.tenniswire.discussion_service.dto.reader.EditedCommentResponse;
 import com.tenniswire.discussion_service.security.CurrentUser;
 import com.tenniswire.discussion_service.service.CommentService;
 import com.tenniswire.discussion_service.service.ReportService;
@@ -18,6 +20,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -133,6 +136,15 @@ public class CommentController {
     public void report(
             @PathVariable UUID id, @Valid @RequestBody CreateReportRequest request, @AuthenticationPrincipal Jwt jwt) {
         reportService.report(currentUser.id(jwt), id, request.reason());
+    }
+
+    /** Author's own correction. No idempotency key: sending the same text twice changes nothing. */
+    @PatchMapping("/{id}")
+    public EditedCommentResponse edit(
+            @PathVariable UUID id,
+            @Valid @RequestBody EditCommentRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        return EditedCommentResponse.from(commentService.editOwn(currentUser.id(jwt), id, request.body()));
     }
 
     /** Author's own soft delete. */

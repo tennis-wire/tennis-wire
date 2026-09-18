@@ -78,6 +78,7 @@ public class ModerationQueueResponses {
                 comment.subjectId(),
                 comment.rootId(),
                 comment.body(),
+                card.bodyAtFirstReport(),
                 comment.isDeleted() && !comment.isHiddenByModeration(),
                 author,
                 card.reportCount(),

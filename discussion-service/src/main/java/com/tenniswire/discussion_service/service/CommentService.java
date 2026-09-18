@@ -1,5 +1,6 @@
 package com.tenniswire.discussion_service.service;
 
+import com.tenniswire.discussion_service.config.CommentProperties;
 import com.tenniswire.discussion_service.entity.Block;
 import com.tenniswire.discussion_service.entity.BlockId;
 import com.tenniswire.discussion_service.entity.BlockMode;
@@ -8,7 +9,10 @@ import com.tenniswire.discussion_service.entity.ReportResolution;
 import com.tenniswire.discussion_service.entity.UserRestriction;
 import com.tenniswire.discussion_service.event.CommentCreatedEvent;
 import com.tenniswire.discussion_service.event.DomainEventPublisher;
+import com.tenniswire.discussion_service.exception.CommentAlreadyRemovedException;
+import com.tenniswire.discussion_service.exception.CommentDeletedException;
 import com.tenniswire.discussion_service.exception.CommentingRestrictedException;
+import com.tenniswire.discussion_service.exception.EditWindowClosedException;
 import com.tenniswire.discussion_service.exception.ForbiddenException;
 import com.tenniswire.discussion_service.exception.HiddenByBlockException;
 import com.tenniswire.discussion_service.exception.IdempotencyKeyReusedException;
@@ -20,6 +24,7 @@ import com.tenniswire.discussion_service.repository.ChildTally;
 import com.tenniswire.discussion_service.repository.CommentRepository;
 import com.tenniswire.discussion_service.repository.ReportRepository;
 import com.tenniswire.discussion_service.repository.UserRestrictionRepository;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -65,6 +70,7 @@ public class CommentService {
     private final ReportRepository reports;
     private final DomainEventPublisher events;
     private final SubjectTypes subjects;
+    private final Duration editWindow;
 
     public CommentService(
             CommentRepository comments,
@@ -74,7 +80,8 @@ public class CommentService {
             UserRestrictionRepository restrictions,
             ReportRepository reports,
             DomainEventPublisher events,
-            SubjectTypes subjects) {
+            SubjectTypes subjects,
+            CommentProperties properties) {
         this.comments = comments;
         this.collapse = collapse;
         this.treeLock = treeLock;
@@ -83,6 +90,7 @@ public class CommentService {
         this.reports = reports;
         this.events = events;
         this.subjects = subjects;
+        this.editWindow = properties.editWindow();
     }
 
     public CreatedComment create(UUID authorId, String subjectType, UUID subjectId, String body) {
@@ -164,6 +172,42 @@ public class CommentService {
         var muted = blocks.existsById(new BlockId(parent.authorId(), authorId));
         events.publish(toEvent(saved));
         return new CreatedComment(saved, muted);
+    }
+
+    /**
+     * The author's own correction, within the window and while the comment still stands. Returns the
+     * comment either way: sending back the text it already carries is not an edit and writes nothing.
+     */
+    public Comment editOwn(UUID actorId, UUID commentId, String body) {
+        // Against the erase and the wipe rather than against the tree: both empty a body, and an
+        // edit that raced one of them would put back a text we undertook to be rid of.
+        treeLock.hold(commentId);
+        var comment = findOrThrow(commentId);
+        if (!actorId.equals(comment.authorId())) {
+            throw new ForbiddenException("Not the author of comment " + commentId);
+        }
+        // Removal before deletion: a comment moderation took down is deleted too, and the author is
+        // told which of the two happened.
+        if (comment.isHiddenByModeration()) {
+            throw new CommentAlreadyRemovedException(commentId);
+        }
+        if (comment.isDeleted()) {
+            throw new CommentDeletedException(commentId);
+        }
+        if (Instant.now().isAfter(comment.createdAt().plus(editWindow))) {
+            throw new EditWindowClosedException(commentId);
+        }
+        assertMayComment(actorId);
+        if (body.equals(comment.body())) {
+            return comment;
+        }
+        // Before the old text is gone: it is what a moderator has to be shown on any card still open
+        // on this comment, and nothing else keeps a copy of it.
+        reports.snapshotOpen(commentId, comment.body());
+        comment.body(body);
+        // The trigger writes updated_at, and isEdited is read off it
+        comments.flush();
+        return comment;
     }
 
     public void deleteOwn(UUID actorId, UUID commentId) {

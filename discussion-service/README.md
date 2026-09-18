@@ -58,6 +58,7 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
 |---|---|---|---|
 | POST | `/comments` `{subjectType, subjectId, body}` | `user` | 201 `{comment, mutedByRecipient: false}`. `body` до 2000. Профиль автора запрашивается до записи, поэтому 503 не оставляет комментарий. Необязательный `Idempotency-Key` (UUID) — ниже |
 | POST | `/comments/{id}/replies` `{body}` | `user` | 201 `{comment, mutedByRecipient}`: `true`, если автор родителя игнорирует пишущего. Subject наследуется от родителя; родитель удалён — 409 `PARENT_DELETED`, ушёл целиком — 404 `NOT_FOUND`. Необязательный `Idempotency-Key` — ниже |
+| PATCH | `/comments/{id}` `{body}` | `user`, только автор | 200 `{id, body, updatedAt, edited}`. Требования к тексту те же, что при публикации. Окно правки задаёт `discussion.comment.edit-window`, счёт от `createdAt`; после него 403 `EDIT_WINDOW_CLOSED`. Удалён автором: 409 `COMMENT_DELETED`, снят модерацией: 409 `COMMENT_ALREADY_REMOVED`, чужой: 403 `FORBIDDEN`. Тот же текст ничего не меняет и не ставит `edited` |
 | DELETE | `/comments/{id}` | `user`, только автор | 204, идемпотентно |
 | POST | `/comments/{id}/reports` `{reason}` | `user` | 204 на любую принятую, в том числе повторную. `reason` из `discussion.reports.reasons`. Свой комментарий или автор в игноре не в режиме `soft` — 403, снят модерацией — 409 `COMMENT_ALREADY_REMOVED`, текста уже нет (стёрт аккаунт или вышел срок) — 404 `NOT_FOUND` |
 
@@ -65,6 +66,8 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
 и комментарий, записанный первым запросом, `mutedByRecipient` пересчитан; второго комментария нет.
 Тот же ключ с другим текстом или местом — 422 `IDEMPOTENCY_KEY_REUSED`. Повтор, пришедший, пока
 первый запрос ещё пишется, ждёт его и получает тот же ответ. Без заголовка — как раньше.
+
+Правка не трогает ответы, счётчики и ссылки и никого не уведомляет. `edited` есть у каждого комментария в чтениях и считается как `updatedAt > createdAt`: триггер `updated_at` срабатывает только на смене текста, так что ни стирание, ни модерация за правку не считаются. Правка возвращает комментарий в очередь, если модератор его оставил, и запоминает прежний текст в открытых жалобах (`body_at_report`), откуда карточка берёт `bodyAtFirstReport`. Снимок стирается вместе с хешем пожаловавшегося при любом закрытии карточки.
 
 Отказ гейта на запись — 403 `COMMENTING_RESTRICTED` с `details.restrictedUntil` (`null` —
 бессрочно).

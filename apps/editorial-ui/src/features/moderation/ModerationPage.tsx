@@ -176,9 +176,26 @@ function Card({
                 )}
             </Stack>
 
-            <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mb: 1 }}>
-                {entry.body}
-            </Typography>
+            {entry.bodyAtFirstReport === undefined ? (
+                <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mb: 1 }}>
+                    {entry.body}
+                </Typography>
+            ) : (
+                <Box sx={{ mb: 1 }}>
+                    <Typography variant="caption" color="text.secondary">
+                        Текст на момент жалобы
+                    </Typography>
+                    <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mb: 1 }}>
+                        {entry.bodyAtFirstReport}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                        Сейчас (изменён автором)
+                    </Typography>
+                    <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                        {entry.body}
+                    </Typography>
+                </Box>
+            )}
 
             <Typography variant="body2" color="text.secondary">
                 {entry.author.displayName ?? `Автор ${entry.author.id}`}

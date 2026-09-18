@@ -26,6 +26,9 @@ export interface QueueEntry {
     subjectId: string
     rootId: string
     body: string
+    // Present only when the author rewrote the comment after it was reported: the text the
+    // complaint was about, while body is what stands there now.
+    bodyAtFirstReport?: string
     // The author took it down himself: it can be counted against him, but not removed again
     deletedByAuthor: boolean
     author: QueueAuthor
