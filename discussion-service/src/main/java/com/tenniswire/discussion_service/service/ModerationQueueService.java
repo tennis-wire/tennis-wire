@@ -103,10 +103,7 @@ public class ModerationQueueService {
     }
 
     private static QueuedComment card(
-            OpenReportGroup group,
-            Comment comment,
-            List<ReasonTally> tallies,
-            @Nullable String bodyAtFirstReport) {
+            OpenReportGroup group, Comment comment, List<ReasonTally> tallies, @Nullable String bodyAtFirstReport) {
         if (comment == null || comment.hasNoText() || tallies == null) {
             // Only reachable if the comment went away or lost its text between the two queries, which
             // the erase and the wipe can both do. One missing card beats a failed page or a blank one.

@@ -157,14 +157,11 @@ class CommentEditIT {
     // The window is counted from created_at, so the comment is moved rather than the clock. updated_at
     // goes with it: left where it was it would read as an edit that never happened.
     private void publishedLongAgo(UUID commentId) {
-        new JdbcTemplate(dataSource)
-                .update(
-                        """
+        new JdbcTemplate(dataSource).update("""
                         update comment
                         set created_at = now() - interval '1 hour', updated_at = now() - interval '1 hour'
                         where id = ?
-                        """,
-                        commentId);
+                        """, commentId);
     }
 
     private long openReportsOn(UUID commentId) {

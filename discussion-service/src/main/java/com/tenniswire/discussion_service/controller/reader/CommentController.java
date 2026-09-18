@@ -141,9 +141,7 @@ public class CommentController {
     /** Author's own correction. No idempotency key: sending the same text twice changes nothing. */
     @PatchMapping("/{id}")
     public EditedCommentResponse edit(
-            @PathVariable UUID id,
-            @Valid @RequestBody EditCommentRequest request,
-            @AuthenticationPrincipal Jwt jwt) {
+            @PathVariable UUID id, @Valid @RequestBody EditCommentRequest request, @AuthenticationPrincipal Jwt jwt) {
         return EditedCommentResponse.from(commentService.editOwn(currentUser.id(jwt), id, request.body()));
     }
 
