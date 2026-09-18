@@ -9,6 +9,7 @@ import {
     createComment,
     createReply,
     deleteComment,
+    editComment,
     listTopLevel,
     removeBlock,
     replies,
@@ -82,6 +83,12 @@ export type Discussion = {
     promote: (text: string) => void
     // the reader's own comment taken down; throws for the caller to explain
     remove: (id: string) => Promise<void>
+    // which of the reader's own comments has its edit form open
+    editing: string | null
+    openEdit: (id: string) => void
+    closeEdit: () => void
+    // the reader's own comment rewritten; throws for the caller to explain
+    edit: (id: string, body: string) => Promise<void>
     // a comment the server no longer has, met on the way: out of the tree
     drop: (id: string) => void
     // a report on someone else's comment; throws for the caller to explain. A comment that is
@@ -97,6 +104,7 @@ export type Discussion = {
 export function useDiscussion(subjectType: string, subjectId: string): Discussion {
     const [state, dispatch] = useReducer(reduce, initial)
     const [replyingTo, setReplyingTo] = useState<string | null>(null)
+    const [editing, setEditing] = useState<string | null>(null)
     const [mutedUnder, setMutedUnder] = useState<string | null>(null)
     const [seed, setSeed] = useState<Seed | null>(null)
     // the generation of the last full load: an answer to an earlier one is dropped
@@ -241,6 +249,12 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
         [backToAll]
     )
 
+    const edit = useCallback(async (id: string, body: string) => {
+        const edited = await editComment(id, body)
+        setEditing(null)
+        dispatch({ type: 'edited', id, body: edited.body, updatedAt: edited.updatedAt })
+    }, [])
+
     const remove = useCallback(async (id: string) => {
         try {
             await deleteComment(id)
@@ -318,6 +332,10 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
         seed,
         promote,
         remove,
+        editing,
+        openEdit: setEditing,
+        closeEdit: () => setEditing(null),
+        edit,
         drop,
         report,
         ignore,

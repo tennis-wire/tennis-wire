@@ -67,6 +67,8 @@ export type Action =
     | { type: 'posted'; comment: Comment }
     // the reader's own reply, just accepted, under a comment whose replies are drawn here
     | { type: 'replied'; parentId: string; comment: Comment }
+    // the reader's own comment, just rewritten: only the text and the two marks on it move
+    | { type: 'edited'; id: string; body: string; updatedAt: string }
     // the reader's own comment, just taken down: a placeholder while replies stand under it,
     // gone otherwise
     | { type: 'deleted'; id: string }
@@ -341,6 +343,16 @@ export function reduce(state: State, action: Action): State {
             }))
             return next.phase === 'ready' ? { ...next, highlight: action.comment.id } : next
         }
+        case 'edited':
+            return inView(state, action.id, (node) => ({
+                ...node,
+                comment: {
+                    ...node.comment,
+                    body: action.body,
+                    updatedAt: action.updatedAt,
+                    edited: true,
+                },
+            }))
         case 'deleted': {
             if (state.phase !== 'ready') return state
             const node = findNode(state.view, action.id)

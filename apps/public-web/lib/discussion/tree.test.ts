@@ -19,6 +19,7 @@ function comment(over: Partial<Comment> = {}): Comment {
         repliesTruncated: false,
         createdAt: '2026-09-15T10:00:00Z',
         updatedAt: '2026-09-15T10:00:00Z',
+        edited: false,
         replies: [],
         ...over,
     }
@@ -46,6 +47,21 @@ describe('reduce', () => {
         expect(items(state)[0].hasMore).toBe(false)
         if (state.phase === 'ready' && state.view.kind === 'list')
             expect(state.view.nextCursor).toBe('next')
+    })
+
+    it('puts an edited text and its mark on the comment', () => {
+        const top = comment({ body: 'frist' })
+        const state = reduce(listed([top]), {
+            type: 'edited',
+            id: top.id,
+            body: 'first',
+            updatedAt: '2026-09-15T10:05:00Z',
+        })
+
+        const [node] = items(state)
+        expect(node.comment.body).toBe('first')
+        expect(node.comment.edited).toBe(true)
+        expect(node.comment.updatedAt).toBe('2026-09-15T10:05:00Z')
     })
 
     it('appends the next page and keeps its cursor', () => {

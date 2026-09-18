@@ -2,7 +2,15 @@ import { read, write } from './api'
 import type { BlockMode } from './modes'
 import { readQueue } from './queue'
 import type { ReportReason } from './reasons'
-import type { Ancestry, Block, BlockPage, Branch, CommentCreated, CommentPage } from './types'
+import type {
+    Ancestry,
+    Block,
+    BlockPage,
+    Branch,
+    CommentCreated,
+    CommentPage,
+    Edited,
+} from './types'
 
 const COMMENTS = '/api/discussion/comments'
 const BLOCKS = '/api/discussion/blocks'
@@ -52,6 +60,11 @@ export function createReply(parentId: string, body: string, idempotencyKey: stri
         { body },
         idempotencyKey
     )
+}
+
+// No idempotency key: the same text sent twice is the same comment either way
+export function editComment(id: string, body: string) {
+    return write<Edited>('PATCH', `${COMMENTS}/${id}`, { body })
 }
 
 export function deleteComment(id: string) {

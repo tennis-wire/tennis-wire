@@ -2,6 +2,7 @@
 
 import Avatar from '@/components/Avatar'
 import { loginHere } from '@/lib/auth/loginHref'
+import { canEdit } from '@/lib/discussion/edit'
 import type { BlockMode } from '@/lib/discussion/modes'
 import type { ReportReason } from '@/lib/discussion/reasons'
 import type { Node } from '@/lib/discussion/tree'
@@ -10,6 +11,7 @@ import type { Author, Comment, Restriction } from '@/lib/discussion/types'
 import CommentBody, { Placeholder, placeholderFor } from './CommentBody'
 import CommentMenu from './CommentMenu'
 import ComposeForm from './ComposeForm'
+import EditForm from './EditForm'
 import RestrictionPlate from './RestrictionPlate'
 import { formatWhen } from './format'
 import { strings } from './strings'
@@ -42,6 +44,11 @@ export type Ctx = {
     onPromote: (text: string) => void
     onSessionExpired: () => void
     onRemove: (id: string) => Promise<void>
+    // which comment has its edit form open, and the three handlers around it
+    editing: string | null
+    onOpenEdit: (id: string) => void
+    onCloseEdit: () => void
+    onEdit: (id: string, body: string) => Promise<void>
     onReport: (id: string, reason: ReportReason) => Promise<void>
     onIgnore: (commentId: string, authorId: string, mode: BlockMode) => Promise<void>
     onUnignore: (authorId: string) => Promise<void>
@@ -153,6 +160,7 @@ export default function CommentItem({ node, inline, ctx }: Props) {
         comment.visibility === 'visible' || (comment.visibility === 'soft_hidden' && node.revealed)
     const replying = ctx.replyingTo === comment.id
     const own = ctx.userId !== null && comment.author?.id === ctx.userId
+    const editing = ctx.editing === comment.id
     // a line down to a button would say there is a thread where there is only an offer to load one
     const threaded = (replying && readable) || (node.replies?.length ?? 0) > 0
 
@@ -180,10 +188,23 @@ export default function CommentItem({ node, inline, ctx }: Props) {
                             <div style={byline}>
                                 <AuthorName author={comment.author} />
                                 <span style={muted}>{formatWhen(comment.createdAt)}</span>
+                                {comment.edited && (
+                                    <span
+                                        style={muted}
+                                        title={strings.editedAt(formatWhen(comment.updatedAt))}
+                                    >
+                                        {strings.edited}
+                                    </span>
+                                )}
                                 <CommentMenu
                                     comment={comment}
                                     own={own}
                                     signedIn={ctx.signedIn}
+                                    onEdit={
+                                        own && canEdit(comment)
+                                            ? () => ctx.onOpenEdit(comment.id)
+                                            : undefined
+                                    }
                                     onRemove={() => ctx.onRemove(comment.id)}
                                     onReport={(reason) => ctx.onReport(comment.id, reason)}
                                     onIgnore={(authorId, mode) =>
@@ -193,16 +214,29 @@ export default function CommentItem({ node, inline, ctx }: Props) {
                                     onSessionExpired={ctx.onSessionExpired}
                                 />
                             </div>
-                            {comment.body !== undefined && <CommentBody body={comment.body} />}
-                            <p style={{ margin: '10px 0 0' }}>
-                                <button
-                                    type="button"
-                                    style={action}
-                                    onClick={() => ctx.onOpenReply(comment.id)}
-                                >
-                                    {strings.reply}
-                                </button>
-                            </p>
+                            {editing && comment.body !== undefined ? (
+                                <EditForm
+                                    body={comment.body}
+                                    onSave={(body) => ctx.onEdit(comment.id, body)}
+                                    onCancel={ctx.onCloseEdit}
+                                    onSessionExpired={ctx.onSessionExpired}
+                                />
+                            ) : (
+                                <>
+                                    {comment.body !== undefined && (
+                                        <CommentBody body={comment.body} />
+                                    )}
+                                    <p style={{ margin: '10px 0 0' }}>
+                                        <button
+                                            type="button"
+                                            style={action}
+                                            onClick={() => ctx.onOpenReply(comment.id)}
+                                        >
+                                            {strings.reply}
+                                        </button>
+                                    </p>
+                                </>
+                            )}
                         </>
                     ) : (
                         <>

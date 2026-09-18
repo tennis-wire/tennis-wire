@@ -19,6 +19,8 @@ type Props = {
     // the reader wrote it: the menu offers to take it down, and nothing to report
     own: boolean
     signedIn: boolean
+    // missing when the edit window has run out: then there is no item
+    onEdit?: () => void
     onRemove: () => Promise<void>
     onReport: (reason: ReportReason) => Promise<void>
     // a new ignore of the author, or a change of mode; and lifting it. Both throw to be explained
@@ -109,6 +111,7 @@ export default function CommentMenu({
     comment,
     own,
     signedIn,
+    onEdit,
     onRemove,
     onReport,
     onIgnore,
@@ -232,16 +235,31 @@ export default function CommentMenu({
                     >
                         {panel.kind === 'menu' &&
                             (own ? (
-                                <button
-                                    type="button"
-                                    role="menuitem"
-                                    style={danger}
-                                    onClick={() =>
-                                        setPanel({ kind: 'remove', busy: false, failed: false })
-                                    }
-                                >
-                                    {strings.remove}
-                                </button>
+                                <>
+                                    {onEdit && (
+                                        <button
+                                            type="button"
+                                            role="menuitem"
+                                            style={item}
+                                            onClick={() => {
+                                                setPanel({ kind: 'closed' })
+                                                onEdit()
+                                            }}
+                                        >
+                                            {strings.edit}
+                                        </button>
+                                    )}
+                                    <button
+                                        type="button"
+                                        role="menuitem"
+                                        style={danger}
+                                        onClick={() =>
+                                            setPanel({ kind: 'remove', busy: false, failed: false })
+                                        }
+                                    >
+                                        {strings.remove}
+                                    </button>
+                                </>
                             ) : (
                                 <>
                                     <button
