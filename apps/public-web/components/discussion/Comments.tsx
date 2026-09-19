@@ -11,6 +11,7 @@ import CommentItem, { AuthorName, type Ctx } from './CommentItem'
 import ComposeForm from './ComposeForm'
 import HiddenBranch from './HiddenBranch'
 import RestrictionPlate from './RestrictionPlate'
+import SortPicker from './SortPicker'
 import { formatWhen } from './format'
 import { strings } from './strings'
 import { action, linkButton, muted } from './styles'
@@ -151,7 +152,7 @@ type BodyProps = {
 }
 
 function Body({ discussion, ctx, sessionKnown, sessionExpired, draftKey }: BodyProps) {
-    const { state, load, loadMore, reroot, backToAll, post, seed } = discussion
+    const { state, load, loadMore, reroot, backToAll, post, seed, sort, setSort } = discussion
 
     switch (state.phase) {
         case 'idle':
@@ -278,6 +279,9 @@ function Body({ discussion, ctx, sessionKnown, sessionExpired, draftKey }: BodyP
                     )}
                 </div>
             )}
+            {/* Only where there is something to order, and not on a re-rooted view: a branch is
+                always read oldest first */}
+            {view.items.length > 1 && <SortPicker sort={sort} onChange={setSort} />}
             {view.items.length === 0 ? (
                 <p style={muted}>{strings.none}</p>
             ) : (

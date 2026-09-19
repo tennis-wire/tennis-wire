@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.tenniswire.discussion_service.exception.UnknownSubjectTypeException;
 import com.tenniswire.discussion_service.service.CommentService;
+import com.tenniswire.discussion_service.service.CommentSort;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +32,7 @@ class SubjectTypeGateIT {
 
     @Test
     void anUnknownSubjectIsRefusedOnTheListingRatherThanAnsweredWithNothing() {
-        assertThatThrownBy(() -> commentService.listTopLevel("artcle", subjectId, null, null, null))
+        assertThatThrownBy(() -> commentService.listTopLevel("artcle", subjectId, null, null, null, CommentSort.OLDEST))
                 .isInstanceOf(UnknownSubjectTypeException.class);
     }
 
@@ -42,7 +43,8 @@ class SubjectTypeGateIT {
         var reply = commentService.reply(alice, root.id(), "reply").comment();
 
         assertThat(reply.subjectType()).isEqualTo("publication");
-        assertThatCode(() -> commentService.listTopLevel("publication", subjectId, null, null, null))
+        assertThatCode(() ->
+                        commentService.listTopLevel("publication", subjectId, null, null, null, CommentSort.OLDEST))
                 .doesNotThrowAnyException();
     }
 }

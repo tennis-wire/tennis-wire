@@ -259,24 +259,49 @@ public class CommentService {
             UUID subjectId,
             @Nullable UUID viewerId,
             @Nullable Integer limit,
-            @Nullable String cursor) {
+            @Nullable String cursor,
+            CommentSort sort) {
         // On the read path too: an unknown type matches nothing, and an empty list is what a page
         // with no comments yet looks like. A misspelt client would look like a quiet article.
         subjects.assertKnown(subjectType);
         var size = limit == null ? DEFAULT_LIMIT : Math.clamp(limit, MIN_LIMIT, MAX_LIMIT);
-        var after = CommentCursor.decode(cursor);
+        var after = TopLevelCursor.decode(cursor, sort);
 
         var rows = after == null
-                ? comments.findTopLevelFirstPage(subjectType, subjectId, size + 1)
-                : comments.findTopLevelAfter(subjectType, subjectId, after.createdAt(), after.id(), size + 1);
+                ? firstPage(subjectType, subjectId, size + 1, sort)
+                : nextPage(subjectType, subjectId, size + 1, sort, after);
         var more = rows.size() > size;
         var page = more ? rows.subList(0, size) : rows;
 
         // Taken from the last row of the page, not from the last one this viewer will see: blocks
         // are applied below, and a page he has removed in full would otherwise end the listing for
         // him while comments are still waiting behind it.
-        var nextCursor = more ? CommentCursor.encode(page.getLast()) : null;
+        var nextCursor = more ? TopLevelCursor.encode(sort, page.getLast()) : null;
         return new CommentPage(render(CommentTree.forest(page), blocksOf(viewerId)), nextCursor);
+    }
+
+    private List<Comment> firstPage(String subjectType, UUID subjectId, int limit, CommentSort sort) {
+        return switch (sort) {
+            case OLDEST -> comments.findTopLevelFirstPage(subjectType, subjectId, limit);
+            case NEWEST -> comments.findTopLevelNewestFirstPage(subjectType, subjectId, limit);
+            case TOP -> comments.findTopLevelTopFirstPage(subjectType, subjectId, limit);
+            case BOTTOM -> comments.findTopLevelBottomFirstPage(subjectType, subjectId, limit);
+        };
+    }
+
+    private List<Comment> nextPage(
+            String subjectType, UUID subjectId, int limit, CommentSort sort, TopLevelCursor.Position after) {
+        return switch (sort) {
+            case OLDEST -> comments.findTopLevelAfter(subjectType, subjectId, after.createdAt(), after.id(), limit);
+            case NEWEST ->
+                comments.findTopLevelNewestAfter(subjectType, subjectId, after.createdAt(), after.id(), limit);
+            case TOP ->
+                comments.findTopLevelTopAfter(
+                        subjectType, subjectId, after.score(), after.createdAt(), after.id(), limit);
+            case BOTTOM ->
+                comments.findTopLevelBottomAfter(
+                        subjectType, subjectId, after.score(), after.createdAt(), after.id(), limit);
+        };
     }
 
     // The comment with as much of its subtree as one response carries. NOT_FOUND when nobody is

@@ -5,6 +5,9 @@ import type { BlockMode } from './modes'
 
 export type Visibility = 'visible' | 'soft_hidden' | 'gravestone' | 'deleted' | 'removed'
 
+// Order of the top-level listing. Replies inside a branch are always oldest first.
+export type Sort = 'newest' | 'oldest' | 'top' | 'bottom'
+
 export type Vote = 'like' | 'dislike'
 // The two independent slots a reader fills on one comment
 export type ReactionSlot = 'vote' | 'emoji'

@@ -8,8 +8,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Builds trees from flat lists. Two passes, so the input order does not matter; children end up
- * oldest-first regardless of how the query sorted them.
+ * Builds trees from flat lists. Children end up oldest-first whatever order they arrived in, since
+ * they are collected through a map. Roots keep the order of the input: that is the order the query
+ * was asked for, and the top-level listing has four of them to choose from.
  */
 final class CommentTree {
 
@@ -69,7 +70,6 @@ final class CommentTree {
             // and what a viewer removed for himself is not something we withheld from him.
             node.repliesTruncated(node.children().size() < node.comment().replyCount());
         }
-        roots.sort(OLDEST_FIRST);
         return roots;
     }
 }

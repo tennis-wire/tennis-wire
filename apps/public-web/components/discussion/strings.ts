@@ -51,6 +51,15 @@ export const strings = {
     restrictedUntil: (when: string) => `Вы не можете комментировать до ${when}`,
     restrictedIndefinitely: 'Комментирование недоступно',
 
+    // order of the top-level listing
+    sortLabel: 'Порядок комментариев',
+    sorts: {
+        newest: 'Сначала новые',
+        oldest: 'Сначала старые',
+        top: 'Сначала плюсовые',
+        bottom: 'Сначала минусовые',
+    },
+
     // reactions
     like: 'Нравится',
     dislike: 'Не нравится',

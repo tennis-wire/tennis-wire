@@ -81,7 +81,7 @@ class ReplyCountAccountingIT {
                 .isOne();
         assertThat(commentRepository.findById(staying.id())).isPresent();
         var listed = commentService
-                .listTopLevel("publication", subjectId, null, null, null)
+                .listTopLevel("publication", subjectId, null, null, null, CommentSort.OLDEST)
                 .items();
         assertThat(listed).hasSize(1);
         assertThat(listed.getFirst().repliesTruncated()).isTrue();

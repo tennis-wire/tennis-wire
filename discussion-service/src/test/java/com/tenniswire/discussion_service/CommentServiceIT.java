@@ -13,6 +13,7 @@ import com.tenniswire.discussion_service.repository.CommentRepository;
 import com.tenniswire.discussion_service.repository.ReportRepository;
 import com.tenniswire.discussion_service.service.BlockService;
 import com.tenniswire.discussion_service.service.CommentService;
+import com.tenniswire.discussion_service.service.CommentSort;
 import com.tenniswire.discussion_service.service.ReportService;
 import com.tenniswire.discussion_service.service.RestrictionService;
 import com.tenniswire.discussion_service.service.Visibility;
@@ -255,7 +256,7 @@ class CommentServiceIT {
         blockService.block(alice, bob, BlockMode.SUBTREE_REMOVAL);
 
         assertThat(commentService
-                        .listTopLevel("publication", subjectId, alice, null, null)
+                        .listTopLevel("publication", subjectId, alice, null, null, CommentSort.OLDEST)
                         .items())
                 .hasSize(1);
         assertThat(commentService.branch(root.id(), alice).replies()).isEmpty();
@@ -289,7 +290,7 @@ class CommentServiceIT {
 
         // an anonymous viewer: an immutable empty block map, the one that throws on a null key
         var listed = commentService
-                .listTopLevel("publication", subjectId, null, null, null)
+                .listTopLevel("publication", subjectId, null, null, null, CommentSort.OLDEST)
                 .items();
         assertThat(listed).hasSize(1);
         assertThat(listed.getFirst().visibility()).isEqualTo(Visibility.DELETED);
@@ -298,7 +299,7 @@ class CommentServiceIT {
                 .containsExactly(b.id());
         // and a viewer who has blocks, which is the other side of the render policy
         assertThat(commentService
-                        .listTopLevel("publication", subjectId, bob, null, null)
+                        .listTopLevel("publication", subjectId, bob, null, null, CommentSort.OLDEST)
                         .items())
                 .hasSize(1);
 
