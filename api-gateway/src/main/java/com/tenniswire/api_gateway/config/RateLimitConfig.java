@@ -61,6 +61,11 @@ public class RateLimitConfig {
         return limiter(properties.reports());
     }
 
+    @Bean
+    RedisRateLimiter reactionRateLimiter(RateLimitProperties properties) {
+        return limiter(properties.reactions());
+    }
+
     private static RedisRateLimiter limiter(RateLimitProperties.Bucket bucket) {
         return new RedisRateLimiter(bucket.replenishRate(), bucket.burstCapacity(), bucket.requestedTokens());
     }

@@ -83,6 +83,22 @@ spring:
                     rate-limiter: "#{@reportRateLimiter}"
                     deny-empty-key: false
 
+            # A reaction is one tap, reversible, and publishes nothing, so it gets a wider burst than
+            # a comment and does not share a bucket with one: a reader who worked down a page should
+            # not find he has spent his allowance for writing.
+            - id: discussion-reactions
+              uri: http://localhost:8093
+              order: -1
+              predicates:
+                - Path=/api/discussion/comments/*/reactions/**
+                - Method=PUT,DELETE
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@readerOrAddressKeyResolver}"
+                    rate-limiter: "#{@reactionRateLimiter}"
+                    deny-empty-key: false
+
             - id: discussion-writes
               uri: http://localhost:8093
               predicates:
@@ -162,6 +178,12 @@ gateway:
       replenish-rate: 1
       burst-capacity: 10
       requested-tokens: 5
+    # A page holds twenty top-level comments, and someone who reacted to most of them on the way
+    # down is doing nothing unusual. Anything above one a second after that is not a hand.
+    reactions:
+      replenish-rate: 1
+      burst-capacity: 15
+      requested-tokens: 1
 
 # Actuator: health check and info
 management:

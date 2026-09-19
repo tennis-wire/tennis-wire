@@ -18,8 +18,8 @@ class RateLimitConfigTest {
 
     private static final int ONE_PROXY = 1;
 
-    private final KeyResolver resolver =
-            new RateLimitConfig().readerOrAddressKeyResolver(new RateLimitProperties(ONE_PROXY, null, null, null));
+    private final KeyResolver resolver = new RateLimitConfig()
+            .readerOrAddressKeyResolver(new RateLimitProperties(ONE_PROXY, null, null, null, null));
 
     @Test
     void aReaderIsCountedByHisSubject() {
