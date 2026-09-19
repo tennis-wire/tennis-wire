@@ -73,7 +73,7 @@ public class CommentController {
             @AuthenticationPrincipal Jwt jwt) {
         var viewerId = currentUser.idOrNull(jwt);
         var page = commentService.listTopLevel(subjectType, subjectId, viewerId, limit, cursor);
-        return new CommentPageResponse(responses.of(page.items()), page.nextCursor(), viewers.of(viewerId));
+        return new CommentPageResponse(responses.of(page.items(), viewerId), page.nextCursor(), viewers.of(viewerId));
     }
 
     @PostMapping
@@ -104,8 +104,8 @@ public class CommentController {
     // "Show replies": the comment with the part of its subtree one response carries
     @GetMapping("/{id}/branch")
     public BranchResponse branch(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
-        var view = commentService.branch(id, currentUser.idOrNull(jwt));
-        return new BranchResponse(responses.of(view));
+        var viewerId = currentUser.idOrNull(jwt);
+        return new BranchResponse(responses.of(commentService.branch(id, viewerId), viewerId));
     }
 
     // Direct replies of one comment, paged: how a reader gets past what a branch handed over
@@ -115,8 +115,9 @@ public class CommentController {
             @RequestParam(required = false) Integer limit,
             @RequestParam(required = false) String cursor,
             @AuthenticationPrincipal Jwt jwt) {
-        var page = commentService.replies(id, currentUser.idOrNull(jwt), limit, cursor);
-        return new CommentPageResponse(responses.of(page.items()), page.nextCursor(), null);
+        var viewerId = currentUser.idOrNull(jwt);
+        var page = commentService.replies(id, viewerId, limit, cursor);
+        return new CommentPageResponse(responses.of(page.items(), viewerId), page.nextCursor(), null);
     }
 
     /** Permalink: the chain of parents from the thread root down to this comment. */
@@ -124,7 +125,7 @@ public class CommentController {
     public AncestryResponse ancestry(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
         var viewerId = currentUser.idOrNull(jwt);
         var chain = commentService.ancestry(id, viewerId);
-        return new AncestryResponse(responses.of(chain), viewers.of(viewerId));
+        return new AncestryResponse(responses.of(chain, viewerId), viewers.of(viewerId));
     }
 
     /**

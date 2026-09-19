@@ -236,6 +236,29 @@ class ReactionServiceIT {
         assertThat(rows.findByUser(bob)).isEmpty();
     }
 
+    @Test
+    void aViewerGetsBackWhatHePutAndNothingOfAnyoneElses() {
+        var one = comment("one");
+        var two = comment("two");
+        reactions.setVote(bob, one, "like");
+        reactions.setEmoji(bob, one, "laugh");
+        reactions.setVote(carol, two, "dislike");
+
+        var his = reactions.of(bob, List.of(one, two));
+
+        assertThat(his).containsOnlyKeys(one);
+        assertThat(his.get(one).vote()).isEqualTo("like");
+        assertThat(his.get(one).emoji()).isEqualTo("laugh");
+    }
+
+    @Test
+    void aReaderWhoIsNotSignedInHasNothingOfHisOwn() {
+        var hers = comment("hers");
+        reactions.setVote(bob, hers, "like");
+
+        assertThat(reactions.of(null, List.of(hers))).isEmpty();
+    }
+
     private UUID comment(String body) {
         return commentService
                 .create(alice, "publication", subjectId, body)
