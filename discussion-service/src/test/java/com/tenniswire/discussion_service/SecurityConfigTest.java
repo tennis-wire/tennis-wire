@@ -144,6 +144,17 @@ class SecurityConfigTest {
     }
 
     @Test
+    void anAbsentClearReactionsFlagIsNotAMalformedRequest() throws Exception {
+        // It arrives as null, so the record boxes it; a primitive would turn every request that
+        // leaves the flag out into a 400.
+        mvc.perform(post(RESTRICTIONS)
+                        .with(tokenWith("ROLE_moderator"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userId\":\"" + UUID.randomUUID() + "\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void reportingRejectsAnonymous() throws Exception {
         mvc.perform(post(REPORTS).contentType(MediaType.APPLICATION_JSON).content(reason()))
                 .andExpect(status().isUnauthorized());

@@ -11,6 +11,7 @@ import com.tenniswire.discussion_service.entity.BlockId;
 import com.tenniswire.discussion_service.entity.BlockMode;
 import com.tenniswire.discussion_service.entity.Comment;
 import com.tenniswire.discussion_service.entity.CommentReaction;
+import com.tenniswire.discussion_service.entity.UserRestriction;
 import com.tenniswire.discussion_service.exception.CommentAlreadyRemovedException;
 import com.tenniswire.discussion_service.exception.CommentDeletedException;
 import com.tenniswire.discussion_service.exception.CommentingRestrictedException;
@@ -20,6 +21,8 @@ import com.tenniswire.discussion_service.exception.UnknownReactionException;
 import com.tenniswire.discussion_service.repository.BlockRepository;
 import com.tenniswire.discussion_service.repository.CommentReactionRepository;
 import com.tenniswire.discussion_service.repository.CommentRepository;
+import com.tenniswire.discussion_service.repository.UserRestrictionRepository;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -42,7 +45,7 @@ public class ReactionService {
     private final CommentRepository comments;
     private final CommentReactionRepository reactions;
     private final BlockRepository blocks;
-    private final RestrictionService restrictions;
+    private final UserRestrictionRepository restrictions;
     private final AuthorTotals totals;
     private final Set<String> emoji;
 
@@ -50,7 +53,7 @@ public class ReactionService {
             CommentRepository comments,
             CommentReactionRepository reactions,
             BlockRepository blocks,
-            RestrictionService restrictions,
+            UserRestrictionRepository restrictions,
             AuthorTotals totals,
             ReactionProperties properties) {
         this.comments = comments;
@@ -182,7 +185,7 @@ public class ReactionService {
     // Same gate as writing a comment: a temporary ban stops a reaction being set or changed, and
     // rules 6.10 lets it be taken back, which is why this is absent from clear().
     private void assertNotBanned(UUID actorId) {
-        var active = restrictions.activeFor(actorId);
+        var active = restrictions.findActive(actorId, UserRestriction.CAPABILITY_COMMENT, Instant.now());
         if (!active.isEmpty()) {
             throw new CommentingRestrictedException(active.getFirst().expiresAt());
         }

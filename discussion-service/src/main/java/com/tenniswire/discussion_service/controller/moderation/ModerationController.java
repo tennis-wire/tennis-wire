@@ -108,7 +108,11 @@ public class ModerationController {
     public RestrictionResponse restrict(
             @Valid @RequestBody CreateRestrictionRequest request, @AuthenticationPrincipal Jwt jwt) {
         var restriction = restrictionService.restrictCommenting(
-                request.userId(), currentUser.id(jwt), request.expiresAt(), request.reason());
+                request.userId(),
+                currentUser.id(jwt),
+                request.expiresAt(),
+                request.reason(),
+                Boolean.TRUE.equals(request.clearReactions()));
         return RestrictionResponse.from(restriction);
     }
 
