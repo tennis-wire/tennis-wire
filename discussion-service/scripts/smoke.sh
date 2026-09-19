@@ -116,6 +116,30 @@ expect 200 -X PATCH "$API/comments/$ROOT" -H "Authorization: Bearer $READER" -H 
   -d '{"body":"edited root"}' | jq -e '.body == "edited root" and .edited == true' > /dev/null
 expect 200 "$API/comments/$ROOT/branch" | jq -e '.root.body == "edited root" and .root.edited == true' > /dev/null
 
+echo "# reactions: not on one's own, one per slot, last value wins, and the viewer sees his own"
+expect 403 -X PUT "$API/comments/$ROOT/reactions/vote" -H "Authorization: Bearer $READER" -H "$json" \
+  -d '{"value":"like"}' > /dev/null
+expect 400 -X PUT "$API/comments/$ROOT/reactions/emoji" -H "Authorization: Bearer $DEV" -H "$json" \
+  -d '{"value":"rocket"}' | jq -e '.error == "UNKNOWN_REACTION"' > /dev/null
+expect 204 -X PUT "$API/comments/$ROOT/reactions/vote" -H "Authorization: Bearer $DEV" -H "$json" \
+  -d '{"value":"like"}' > /dev/null
+expect 204 -X PUT "$API/comments/$ROOT/reactions/vote" -H "Authorization: Bearer $DEV" -H "$json" \
+  -d '{"value":"dislike"}' > /dev/null
+expect 204 -X PUT "$API/comments/$ROOT/reactions/emoji" -H "Authorization: Bearer $DEV" -H "$json" \
+  -d '{"value":"clown"}' > /dev/null
+expect 200 "$API/comments/$ROOT/branch" -H "Authorization: Bearer $DEV" \
+  | jq -e '.root.likeCount == 0 and .root.dislikeCount == 1 and .root.emojiCounts.clown == 1 and .root.viewerVote == "dislike" and .root.viewerEmoji == "clown"' > /dev/null
+
+echo "# another reader is not shown anyone else's choices, only the counts"
+expect 200 "$API/comments/$ROOT/branch" -H "Authorization: Bearer $READER" \
+  | jq -e '.root.dislikeCount == 1 and .root.viewerVote == null and .root.viewerEmoji == null' > /dev/null
+
+echo "# taking it back is idempotent and brings the count down"
+expect 204 -X DELETE "$API/comments/$ROOT/reactions/vote" -H "Authorization: Bearer $DEV" > /dev/null
+expect 204 -X DELETE "$API/comments/$ROOT/reactions/vote" -H "Authorization: Bearer $DEV" > /dev/null
+expect 200 "$API/comments/$ROOT/branch" -H "Authorization: Bearer $DEV" \
+  | jq -e '.root.dislikeCount == 0 and .root.viewerVote == null and .root.emojiCounts.clown == 1' > /dev/null
+
 echo "# soft delete: dev cannot delete reader's root; reader can; node survives with visibility=deleted, no body, no author"
 expect 403 -X DELETE "$API/comments/$ROOT" -H "Authorization: Bearer $DEV" > /dev/null
 expect 204 -X DELETE "$API/comments/$ROOT" -H "Authorization: Bearer $READER" > /dev/null
