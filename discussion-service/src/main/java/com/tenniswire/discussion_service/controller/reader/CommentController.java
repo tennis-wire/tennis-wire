@@ -11,6 +11,7 @@ import com.tenniswire.discussion_service.dto.reader.EditCommentRequest;
 import com.tenniswire.discussion_service.dto.reader.EditedCommentResponse;
 import com.tenniswire.discussion_service.security.CurrentUser;
 import com.tenniswire.discussion_service.service.CommentService;
+import com.tenniswire.discussion_service.service.CommentSort;
 import com.tenniswire.discussion_service.service.ReportService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -70,9 +71,13 @@ public class CommentController {
             // decision and belong in one place.
             @RequestParam(required = false) Integer limit,
             @RequestParam(required = false) String cursor,
+            // A cursor is cut for one order and refused by the others, so the client sends the same
+            // sort with every page of a listing.
+            @RequestParam(required = false) String sort,
             @AuthenticationPrincipal Jwt jwt) {
         var viewerId = currentUser.idOrNull(jwt);
-        var page = commentService.listTopLevel(subjectType, subjectId, viewerId, limit, cursor);
+        var page = commentService.listTopLevel(
+                subjectType, subjectId, viewerId, limit, cursor, CommentSort.fromValue(sort));
         return new CommentPageResponse(responses.of(page.items(), viewerId), page.nextCursor(), viewers.of(viewerId));
     }
 

@@ -7,6 +7,7 @@ import com.tenniswire.discussion_service.entity.BlockMode;
 import com.tenniswire.discussion_service.exception.InvalidCursorException;
 import com.tenniswire.discussion_service.service.BlockService;
 import com.tenniswire.discussion_service.service.CommentService;
+import com.tenniswire.discussion_service.service.CommentSort;
 import java.util.ArrayList;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,7 @@ class CommentPagingIT {
         String cursor = null;
         var pages = 0;
         do {
-            var page = commentService.listTopLevel("publication", subjectId, null, PAGE, cursor);
+            var page = commentService.listTopLevel("publication", subjectId, null, PAGE, cursor, CommentSort.OLDEST);
             page.items().forEach(view -> seen.add(view.comment().id()));
             cursor = page.nextCursor();
             pages++;
@@ -58,12 +59,13 @@ class CommentPagingIT {
         commentService.create(alice, "publication", subjectId, "quiet");
         blockService.block(alice, loud, BlockMode.SUBTREE_REMOVAL);
 
-        var first = commentService.listTopLevel("publication", subjectId, alice, PAGE, null);
+        var first = commentService.listTopLevel("publication", subjectId, alice, PAGE, null, CommentSort.OLDEST);
         assertThat(first.items()).isEmpty();
         // the whole point: an empty page is not the end, and the reader must be able to page past it
         assertThat(first.nextCursor()).isNotNull();
 
-        var second = commentService.listTopLevel("publication", subjectId, alice, PAGE, first.nextCursor());
+        var second = commentService.listTopLevel(
+                "publication", subjectId, alice, PAGE, first.nextCursor(), CommentSort.OLDEST);
         assertThat(second.items()).hasSize(1);
         assertThat(second.nextCursor()).isNull();
     }
@@ -74,7 +76,7 @@ class CommentPagingIT {
             commentService.create(alice, "publication", subjectId, "c" + i);
         }
 
-        var only = commentService.listTopLevel("publication", subjectId, null, PAGE, null);
+        var only = commentService.listTopLevel("publication", subjectId, null, PAGE, null, CommentSort.OLDEST);
 
         assertThat(only.items()).hasSize(PAGE);
         assertThat(only.nextCursor()).isNull();
@@ -86,14 +88,15 @@ class CommentPagingIT {
         commentService.create(alice, "publication", subjectId, "two");
 
         assertThat(commentService
-                        .listTopLevel("publication", subjectId, null, 0, null)
+                        .listTopLevel("publication", subjectId, null, 0, null, CommentSort.OLDEST)
                         .items())
                 .hasSize(1);
     }
 
     @Test
     void aCursorWeDidNotIssueIsRefused() {
-        assertThatThrownBy(() -> commentService.listTopLevel("publication", subjectId, null, PAGE, "not-a-cursor"))
+        assertThatThrownBy(() -> commentService.listTopLevel(
+                        "publication", subjectId, null, PAGE, "not-a-cursor", CommentSort.OLDEST))
                 .isInstanceOf(InvalidCursorException.class);
     }
 }

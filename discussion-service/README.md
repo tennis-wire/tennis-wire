@@ -37,7 +37,7 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
 
 | Метод | Путь | Роль | Что |
 |---|---|---|---|
-| GET | `/comments?subjectType=&subjectId=&limit=&cursor=` | аноним | верхний уровень от старых к новым, `{items, nextCursor, viewer?}`. `limit` по умолчанию 50, вне 1–200 приводится к границе. `subjectType` не из allowlist — 400 `UNKNOWN_SUBJECT_TYPE`, битый курсор — 400 `INVALID_CURSOR` |
+| GET | `/comments?subjectType=&subjectId=&limit=&cursor=&sort=` | аноним | верхний уровень, `{items, nextCursor, viewer?}`. `sort`: `newest` (по умолчанию), `oldest`, `top`, `bottom`; `top`/`bottom` — по разности лайков и дизлайков, эмодзи не считаются, при равенстве счёта порядок идёт в ту же сторону, что и сортировка. Ответы внутри ветки всегда от старых к новым. Курсор выписан под одну сортировку и с другой даёт 400 `INVALID_CURSOR`. `limit` по умолчанию 50, вне 1–200 приводится к границе. `subjectType` не из allowlist: 400 `UNKNOWN_SUBJECT_TYPE`, неизвестный `sort`: 400 `BAD_REQUEST` |
 | GET | `/comments/{id}/branch` | аноним | `{root}`: комментарий и ответы под ним на 5 уровней, до 20 прямых ответов у узла и до 500 строк на ответ |
 | GET | `/comments/{id}/replies?limit=&cursor=` | аноним | прямые ответы страницами, `{items, nextCursor}`, лимиты как у верхнего уровня |
 | GET | `/comments/{id}/ancestry` | аноним | `{chain: [корень … id], viewer?}` без вложенных ответов |

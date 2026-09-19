@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.tenniswire.discussion_service.exception.ResourceNotFoundException;
 import com.tenniswire.discussion_service.repository.CommentRepository;
 import com.tenniswire.discussion_service.service.CommentService;
+import com.tenniswire.discussion_service.service.CommentSort;
 import com.tenniswire.discussion_service.service.ReportService;
 import com.tenniswire.discussion_service.service.Visibility;
 import java.util.List;
@@ -43,7 +44,7 @@ class RemovedCommentVisibilityIT {
 
         assertThat(commentRepository.findById(comment.id())).isPresent();
         assertThat(commentService
-                        .listTopLevel("publication", subjectId, null, null, null)
+                        .listTopLevel("publication", subjectId, null, null, null, CommentSort.OLDEST)
                         .items())
                 .isEmpty();
     }
@@ -58,7 +59,7 @@ class RemovedCommentVisibilityIT {
         commentService.hideByModerator(comment.id(), moderator);
 
         var listed = commentService
-                .listTopLevel("publication", subjectId, null, null, null)
+                .listTopLevel("publication", subjectId, null, null, null, CommentSort.OLDEST)
                 .items();
         assertThat(listed).hasSize(1);
         // and says who took it down, which a deletion by the author does not
@@ -75,7 +76,7 @@ class RemovedCommentVisibilityIT {
         commentService.hideByBot(comment.id());
 
         var listed = commentService
-                .listTopLevel("publication", subjectId, null, null, null)
+                .listTopLevel("publication", subjectId, null, null, null, CommentSort.OLDEST)
                 .items();
         assertThat(listed.getFirst().visibility()).isEqualTo(Visibility.REMOVED);
     }
@@ -91,7 +92,7 @@ class RemovedCommentVisibilityIT {
         commentRepository.anonymize(List.of(comment.id()));
 
         var listed = commentService
-                .listTopLevel("publication", subjectId, null, null, null)
+                .listTopLevel("publication", subjectId, null, null, null, CommentSort.OLDEST)
                 .items();
         assertThat(listed.getFirst().visibility()).isEqualTo(Visibility.REMOVED);
     }
@@ -114,7 +115,7 @@ class RemovedCommentVisibilityIT {
                 .isZero();
 
         var listed = commentService
-                .listTopLevel("publication", subjectId, null, null, null)
+                .listTopLevel("publication", subjectId, null, null, null, CommentSort.OLDEST)
                 .items();
         assertThat(listed).hasSize(1);
         assertThat(listed.getFirst().replies()).isEmpty();
@@ -150,7 +151,7 @@ class RemovedCommentVisibilityIT {
         // the queue card outlives the deletion, so the row is held back
         assertThat(commentRepository.findById(comment.id())).isPresent();
         assertThat(commentService
-                        .listTopLevel("publication", subjectId, null, null, null)
+                        .listTopLevel("publication", subjectId, null, null, null, CommentSort.OLDEST)
                         .items())
                 .isEmpty();
     }

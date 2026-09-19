@@ -7,6 +7,7 @@ import com.tenniswire.discussion_service.entity.BlockMode;
 import com.tenniswire.discussion_service.exception.ResourceNotFoundException;
 import com.tenniswire.discussion_service.service.BlockService;
 import com.tenniswire.discussion_service.service.CommentService;
+import com.tenniswire.discussion_service.service.CommentSort;
 import com.tenniswire.discussion_service.service.CommentView;
 import com.tenniswire.discussion_service.service.Visibility;
 import java.util.UUID;
@@ -75,7 +76,7 @@ class ViewerReplyCountIT {
 
         assertThat(listed(null).visibility()).isEqualTo(Visibility.DELETED);
         assertThat(commentService
-                        .listTopLevel("publication", subjectId, viewer, null, null)
+                        .listTopLevel("publication", subjectId, viewer, null, null, CommentSort.OLDEST)
                         .items())
                 .isEmpty();
         assertThatThrownBy(() -> commentService.branch(root.id(), viewer))
@@ -117,7 +118,7 @@ class ViewerReplyCountIT {
 
     private CommentView listed(UUID viewerId) {
         return commentService
-                .listTopLevel("publication", subjectId, viewerId, null, null)
+                .listTopLevel("publication", subjectId, viewerId, null, null, CommentSort.OLDEST)
                 .items()
                 .getFirst();
     }

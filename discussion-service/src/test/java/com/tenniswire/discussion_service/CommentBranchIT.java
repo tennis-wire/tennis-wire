@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.tenniswire.discussion_service.entity.BlockMode;
 import com.tenniswire.discussion_service.service.BlockService;
 import com.tenniswire.discussion_service.service.CommentService;
+import com.tenniswire.discussion_service.service.CommentSort;
 import com.tenniswire.discussion_service.service.CommentView;
 import java.util.ArrayList;
 import java.util.UUID;
@@ -110,7 +111,7 @@ class CommentBranchIT {
         commentService.create(alice, "publication", subjectId, "alone");
 
         var listed = commentService
-                .listTopLevel("publication", subjectId, null, null, null)
+                .listTopLevel("publication", subjectId, null, null, null, CommentSort.OLDEST)
                 .items();
 
         assertThat(listed).hasSize(2);

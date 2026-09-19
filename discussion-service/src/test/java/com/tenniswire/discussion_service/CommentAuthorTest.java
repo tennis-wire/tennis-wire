@@ -224,8 +224,13 @@ class CommentAuthorTest {
                 .isEmpty();
     }
 
+    // Oldest first, so that the comments below read in the order they are written here. Nothing in
+    // this class is about the order itself, and the
     private MockHttpServletRequestBuilder listing() {
-        return get(COMMENTS).param("subjectType", "publication").param("subjectId", subjectId.toString());
+        return get(COMMENTS)
+                .param("subjectType", "publication")
+                .param("subjectId", subjectId.toString())
+                .param("sort", "oldest");
     }
 
     private String commentBody(String text) {

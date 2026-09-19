@@ -46,6 +46,82 @@ limit :limit
             @Param("afterId") UUID afterId,
             @Param("limit") int limit);
 
+    // The three orders the first page can take besides the oldest-first one above. Each is the
+    // matching index read one way or the other: idx_comment_top_level for the two by time,
+    // idx_comment_top_score for the two by score.
+    @Query(value = """
+select * from comment
+where subject_type = :subjectType and subject_id = :subjectId and in_reply_to_id is null
+order by created_at desc, id desc
+limit :limit
+""", nativeQuery = true)
+    List<Comment> findTopLevelNewestFirstPage(
+            @Param("subjectType") String subjectType, @Param("subjectId") UUID subjectId, @Param("limit") int limit);
+
+    @Query(value = """
+select * from comment
+where subject_type = :subjectType and subject_id = :subjectId and in_reply_to_id is null
+order by score desc, created_at desc, id desc
+limit :limit
+""", nativeQuery = true)
+    List<Comment> findTopLevelTopFirstPage(
+            @Param("subjectType") String subjectType, @Param("subjectId") UUID subjectId, @Param("limit") int limit);
+
+    @Query(value = """
+select * from comment
+where subject_type = :subjectType and subject_id = :subjectId and in_reply_to_id is null
+order by score, created_at, id
+limit :limit
+""", nativeQuery = true)
+    List<Comment> findTopLevelBottomFirstPage(
+            @Param("subjectType") String subjectType, @Param("subjectId") UUID subjectId, @Param("limit") int limit);
+
+    @Query(value = """
+select * from comment
+where subject_type = :subjectType and subject_id = :subjectId and in_reply_to_id is null
+  and (created_at, id) < (:afterCreatedAt, :afterId)
+order by created_at desc, id desc
+limit :limit
+""", nativeQuery = true)
+    List<Comment> findTopLevelNewestAfter(
+            @Param("subjectType") String subjectType,
+            @Param("subjectId") UUID subjectId,
+            @Param("afterCreatedAt") Instant afterCreatedAt,
+            @Param("afterId") UUID afterId,
+            @Param("limit") int limit);
+
+    // Row values again, all three columns at once: score alone repeats heavily, and a comment whose
+    // score moved between two pages is the reason the client still has to drop what it has seen.
+    @Query(value = """
+select * from comment
+where subject_type = :subjectType and subject_id = :subjectId and in_reply_to_id is null
+  and (score, created_at, id) < (:afterScore, :afterCreatedAt, :afterId)
+order by score desc, created_at desc, id desc
+limit :limit
+""", nativeQuery = true)
+    List<Comment> findTopLevelTopAfter(
+            @Param("subjectType") String subjectType,
+            @Param("subjectId") UUID subjectId,
+            @Param("afterScore") int afterScore,
+            @Param("afterCreatedAt") Instant afterCreatedAt,
+            @Param("afterId") UUID afterId,
+            @Param("limit") int limit);
+
+    @Query(value = """
+select * from comment
+where subject_type = :subjectType and subject_id = :subjectId and in_reply_to_id is null
+  and (score, created_at, id) > (:afterScore, :afterCreatedAt, :afterId)
+order by score, created_at, id
+limit :limit
+""", nativeQuery = true)
+    List<Comment> findTopLevelBottomAfter(
+            @Param("subjectType") String subjectType,
+            @Param("subjectId") UUID subjectId,
+            @Param("afterScore") int afterScore,
+            @Param("afterCreatedAt") Instant afterCreatedAt,
+            @Param("afterId") UUID afterId,
+            @Param("limit") int limit);
+
     List<Comment> findByRootIdOrderByCreatedAtAscIdAsc(UUID rootId);
 
     // Ids only: the erase anonymises them in one statement and never needs the rows themselves
