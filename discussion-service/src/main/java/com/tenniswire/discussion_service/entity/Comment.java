@@ -6,14 +6,18 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.Generated;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.generator.EventType;
+import org.hibernate.type.SqlTypes;
 
 /**
  * One node of a comment tree. The adjacency list ({@link #inReplyToId}) is the source of truth;
@@ -80,6 +84,17 @@ public class Comment {
     // loaded earlier can never write a stale count back.
     @Column(name = "reply_count", insertable = false, updatable = false)
     private int replyCount;
+
+    @Column(name = "like_count", nullable = false)
+    private int likeCount;
+
+    @Column(name = "dislike_count", nullable = false)
+    private int dislikeCount;
+
+    // Keys the configured set no longer holds are left where they are and simply not read out
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "emoji_counts", nullable = false)
+    private Map<String, Integer> emojiCounts = new HashMap<>();
 
     @Column(name = "deleted_at")
     private Instant deletedAt;

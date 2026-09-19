@@ -272,3 +272,59 @@ CREATE INDEX idx_comment_text_kept ON comment (deleted_at)
 -- comment: Written by the edit rather than by the report, and erased together with reporter_hash
 -- comment: when the card is closed - so no copy of a text outlives the terms of 8.20 and 13.14.
 ALTER TABLE report ADD COLUMN body_at_report TEXT;
+
+-- changeset andrei:18
+-- comment: One row per person per comment per slot: 'vote' holds like or dislike, 'emoji' holds one
+-- comment: of the configured keys. The two are independent, and a new value in a slot replaces the
+-- comment: old one, which is what the unique index below is for. The emoji keys are NOT constrained
+-- comment: here on purpose: the set is still being chosen, and adding one must stay a line of
+-- comment: config rather than a migration. The service checks them against that config.
+CREATE TABLE comment_reaction (
+    id UUID PRIMARY KEY,
+    comment_id UUID NOT NULL REFERENCES comment(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL,
+    slot TEXT NOT NULL,
+    value TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_reaction_slot CHECK (slot IN ('vote', 'emoji')),
+    CONSTRAINT chk_reaction_vote CHECK (slot <> 'vote' OR value IN ('like', 'dislike'))
+);
+
+CREATE UNIQUE INDEX uq_reaction_slot ON comment_reaction (comment_id, user_id, slot);
+
+-- comment: Everything one person put anywhere: read when his account goes and when a permanent ban
+-- comment: is issued with the reactions cleared.
+CREATE INDEX idx_reaction_user ON comment_reaction (user_id);
+
+-- changeset andrei:19
+-- comment: Counts live on the comment rather than being read off the rows above, because the rows
+-- comment: go when the comment does (rules 6.17) and the numbers have to outlive them. Emoji counts
+-- comment: are one JSONB object, again so that a new key costs no migration: a key that is not
+-- comment: there reads as zero, and the reply is built from the configured set, not from what the
+-- comment: object happens to hold.
+ALTER TABLE comment
+    ADD COLUMN like_count INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN dislike_count INTEGER NOT NULL DEFAULT 0,
+    ADD COLUMN emoji_counts JSONB NOT NULL DEFAULT '{}',
+    ADD COLUMN score INTEGER GENERATED ALWAYS AS (like_count - dislike_count) STORED;
+
+-- comment: Read forward this orders top-level comments by score ascending and, on a tie, oldest
+-- comment: first; read backward it gives score descending, newest first. The two sorts by score are
+-- comment: the same index in opposite directions, which is why the tie-break follows the sort
+-- comment: rather than always favouring the newer comment.
+CREATE INDEX idx_comment_top_score ON comment (subject_type, subject_id, score, created_at, id)
+    WHERE in_reply_to_id IS NULL;
+
+-- changeset andrei:20
+-- comment: What an author collected on comments that no longer exist. Filled when a comment stops
+-- comment: being shown, from its own counts, which are zeroed in the same step so that a second
+-- comment: removal adds nothing. His live comments are summed separately, so his standing is this
+-- comment: row plus that sum, and neither counts anything twice.
+CREATE TABLE author_reaction_total (
+    author_id UUID PRIMARY KEY,
+    like_count BIGINT NOT NULL DEFAULT 0,
+    dislike_count BIGINT NOT NULL DEFAULT 0,
+    emoji_counts JSONB NOT NULL DEFAULT '{}',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_author_total_not_negative CHECK (like_count >= 0 AND dislike_count >= 0)
+);

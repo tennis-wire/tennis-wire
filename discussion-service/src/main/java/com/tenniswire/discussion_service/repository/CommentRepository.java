@@ -123,6 +123,13 @@ limit :limit
     @Query(value = "select * from comment where path @> cast(:path as ltree) order by nlevel(path)", nativeQuery = true)
     List<Comment> findAncestry(@Param("path") String path);
 
+    // Serializes everything that moves a comment's reaction counts: the reaction itself and the
+    // removal that sweeps them into the author's total. Taken before the row is read, or the
+    // counts in hand are already the ones another writer has just changed. FOR NO KEY UPDATE, so a
+    // reply pointing here by foreign key is not held up behind it.
+    @Query(value = "SELECT id FROM comment WHERE id = :id FOR NO KEY UPDATE", nativeQuery = true)
+    Optional<UUID> lockCounters(@Param("id") UUID id);
+
     @Modifying
     @Query("update Comment c set c.replyCount = c.replyCount + 1 where c.id = :id")
     int incrementReplyCount(@Param("id") UUID id);

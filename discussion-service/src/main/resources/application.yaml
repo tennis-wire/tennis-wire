@@ -72,6 +72,14 @@ discussion:
     # not from the last edit: the rules put no ceiling on how many edits fit inside the window.
     edit-window: 15m
 
+  reaction:
+    # Keys, not glyphs: the drawing belongs to the client, and changing it must not touch stored
+    # counts. Anything outside this list is a 400.
+    emoji:
+      - laugh
+      - clown
+      - vomit
+
   report:
     # Open set on purpose: anything outside it is a 400, and adding
     # a code is a config change rather than a migration.

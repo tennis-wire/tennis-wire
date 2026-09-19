@@ -60,6 +60,11 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("COMMENT_ALREADY_REMOVED", ex.getMessage()));
     }
 
+    @ExceptionHandler(UnknownReactionException.class)
+    public ResponseEntity<ErrorResponse> handleUnknownReaction(UnknownReactionException ex) {
+        return ResponseEntity.badRequest().body(ErrorResponse.of("UNKNOWN_REACTION", ex.getMessage()));
+    }
+
     @ExceptionHandler(CommentDeletedException.class)
     public ResponseEntity<ErrorResponse> handleCommentDeleted(CommentDeletedException ex) {
         // Told apart from COMMENT_ALREADY_REMOVED because the rules give the author two wordings:
