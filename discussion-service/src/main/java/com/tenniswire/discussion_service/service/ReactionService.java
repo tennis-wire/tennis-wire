@@ -20,10 +20,13 @@ import com.tenniswire.discussion_service.exception.UnknownReactionException;
 import com.tenniswire.discussion_service.repository.BlockRepository;
 import com.tenniswire.discussion_service.repository.CommentReactionRepository;
 import com.tenniswire.discussion_service.repository.CommentRepository;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -78,6 +81,27 @@ public class ReactionService {
 
     public void clearEmoji(UUID actorId, UUID commentId) {
         clear(actorId, commentId, SLOT_EMOJI);
+    }
+
+    /**
+     * What this viewer has on the comments of one page, so his own choices come back marked. Empty
+     * for a reader who is not signed in, and for every comment he has not touched.
+     */
+    @Transactional(readOnly = true)
+    public Map<UUID, ViewerReaction> of(@Nullable UUID viewerId, Collection<UUID> commentIds) {
+        if (viewerId == null || commentIds.isEmpty()) {
+            return Map.of();
+        }
+        var mine = new HashMap<UUID, ViewerReaction>();
+        for (var row : reactions.findByUserIdAndCommentIdIn(viewerId, commentIds)) {
+            var held = mine.getOrDefault(row.commentId(), ViewerReaction.NONE);
+            mine.put(
+                    row.commentId(),
+                    SLOT_VOTE.equals(row.slot())
+                            ? new ViewerReaction(row.value(), held.emoji())
+                            : new ViewerReaction(held.vote(), row.value()));
+        }
+        return mine;
     }
 
     /**

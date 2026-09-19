@@ -6,6 +6,8 @@ import com.tenniswire.discussion_service.dto.reader.CommentCreatedResponse;
 import com.tenniswire.discussion_service.dto.reader.CommentResponse;
 import com.tenniswire.discussion_service.service.CommentView;
 import com.tenniswire.discussion_service.service.CreatedComment;
+import com.tenniswire.discussion_service.service.ReactionService;
+import com.tenniswire.discussion_service.service.ViewerReaction;
 import com.tenniswire.discussion_service.service.Visibility;
 import java.util.ArrayDeque;
 import java.util.HashSet;
@@ -22,18 +24,24 @@ import org.springframework.stereotype.Component;
 public class CommentResponses {
 
     private final AuthorResponses authors;
+    private final ReactionService reactions;
 
-    public CommentResponses(AuthorResponses authors) {
+    public CommentResponses(AuthorResponses authors, ReactionService reactions) {
         this.authors = authors;
+        this.reactions = reactions;
     }
 
-    public List<CommentResponse> of(List<CommentView> views) {
+    public List<CommentResponse> of(List<CommentView> views, @Nullable UUID viewerId) {
         var byAuthor = authors.of(shownAuthors(views));
-        return views.stream().map(view -> CommentResponse.from(view, byAuthor)).toList();
+        // Placeholders carry no reaction, so only the comments the viewer is actually shown are asked
+        var byViewer = reactions.of(viewerId, shownComments(views));
+        return views.stream()
+                .map(view -> CommentResponse.from(view, byAuthor, byViewer))
+                .toList();
     }
 
-    public CommentResponse of(CommentView view) {
-        return of(List.of(view)).getFirst();
+    public CommentResponse of(CommentView view, @Nullable UUID viewerId) {
+        return of(List.of(view), viewerId).getFirst();
     }
 
     // The profile of someone about to write, fetched while nothing is written yet: if user-service
@@ -54,7 +62,22 @@ public class CommentResponses {
                 ? Map.<UUID, AuthorResponse>of()
                 : Map.of(comment.authorId(), AuthorResponse.named(profileFetchedBeforeWriting));
         var view = new CommentView(comment, Visibility.VISIBLE, comment.replyCount(), false, List.of());
-        return new CommentCreatedResponse(CommentResponse.from(view, byAuthor), created.mutedByRecipient());
+        // Nothing of his own can be on a comment he has just written
+        return new CommentCreatedResponse(
+                CommentResponse.from(view, byAuthor, Map.<UUID, ViewerReaction>of()), created.mutedByRecipient());
+    }
+
+    private static Set<UUID> shownComments(List<CommentView> views) {
+        var ids = new HashSet<UUID>();
+        var pending = new ArrayDeque<>(views);
+        while (!pending.isEmpty()) {
+            var view = pending.pop();
+            if (view.visibility() == Visibility.VISIBLE || view.visibility() == Visibility.SOFT_HIDDEN) {
+                ids.add(view.comment().id());
+            }
+            pending.addAll(view.replies());
+        }
+        return ids;
     }
 
     private static Set<UUID> shownAuthors(List<CommentView> views) {

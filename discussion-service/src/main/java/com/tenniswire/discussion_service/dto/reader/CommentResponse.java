@@ -2,11 +2,13 @@ package com.tenniswire.discussion_service.dto.reader;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.tenniswire.discussion_service.service.CommentView;
+import com.tenniswire.discussion_service.service.ViewerReaction;
 import com.tenniswire.discussion_service.service.Visibility;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A comment as the current viewer may see it. {@code body} and {@code author} are withheld
@@ -40,10 +42,15 @@ public record CommentResponse(
         int likeCount,
         int dislikeCount,
         Map<String, Integer> emojiCounts,
+        // What this viewer put here, absent when he put nothing or is not signed in
+        @JsonInclude(JsonInclude.Include.NON_NULL) @Nullable String viewerVote,
+        @JsonInclude(JsonInclude.Include.NON_NULL) @Nullable String viewerEmoji,
         List<CommentResponse> replies) {
 
-    public static CommentResponse from(CommentView view, Map<UUID, AuthorResponse> authors) {
+    public static CommentResponse from(
+            CommentView view, Map<UUID, AuthorResponse> authors, Map<UUID, ViewerReaction> viewer) {
         var c = view.comment();
+        var mine = viewer.getOrDefault(c.id(), ViewerReaction.NONE);
         var visibility = view.visibility();
         var showBody = visibility == Visibility.VISIBLE || visibility == Visibility.SOFT_HIDDEN;
         return new CommentResponse(
@@ -63,6 +70,10 @@ public record CommentResponse(
                 c.likeCount(),
                 c.dislikeCount(),
                 c.emojiCounts(),
-                view.replies().stream().map(reply -> from(reply, authors)).toList());
+                mine.vote(),
+                mine.emoji(),
+                view.replies().stream()
+                        .map(reply -> from(reply, authors, viewer))
+                        .toList());
     }
 }

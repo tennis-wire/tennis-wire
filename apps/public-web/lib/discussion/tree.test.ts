@@ -20,6 +20,9 @@ function comment(over: Partial<Comment> = {}): Comment {
         createdAt: '2026-09-15T10:00:00Z',
         updatedAt: '2026-09-15T10:00:00Z',
         edited: false,
+        likeCount: 0,
+        dislikeCount: 0,
+        emojiCounts: {},
         replies: [],
         ...over,
     }

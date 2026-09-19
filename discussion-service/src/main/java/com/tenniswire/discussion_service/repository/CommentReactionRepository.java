@@ -16,6 +16,8 @@ public interface CommentReactionRepository extends JpaRepository<CommentReaction
 
     List<CommentReaction> findByCommentIdIn(Collection<UUID> commentIds);
 
+    List<CommentReaction> findByUserIdAndCommentIdIn(UUID userId, Collection<UUID> commentIds);
+
     // Everything one person put anywhere, so his account going or a permanent ban can take the
     // counts down with the rows. Ordered by comment so the caller locks trees in a stable order.
     @Query("select r from CommentReaction r where r.userId = :userId order by r.commentId, r.id")

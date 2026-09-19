@@ -51,6 +51,10 @@ export const strings = {
     restrictedUntil: (when: string) => `Вы не можете комментировать до ${when}`,
     restrictedIndefinitely: 'Комментирование недоступно',
 
+    // reactions
+    like: 'Нравится',
+    dislike: 'Не нравится',
+
     // editing one's own comment
     edit: 'Изменить',
     edited: 'изменено',
