@@ -2,6 +2,7 @@ package com.tenniswire.discussion_service.service;
 
 import com.tenniswire.discussion_service.entity.Comment;
 import com.tenniswire.discussion_service.entity.ReportResolution;
+import com.tenniswire.discussion_service.repository.AuthorReactionTotalRepository;
 import com.tenniswire.discussion_service.repository.BlockRepository;
 import com.tenniswire.discussion_service.repository.CommentRepository;
 import com.tenniswire.discussion_service.repository.ReportRepository;
@@ -22,6 +23,8 @@ class ErasedReaderWriter {
     private final ReportRepository reports;
     private final BlockRepository blocks;
     private final UserRestrictionRepository restrictions;
+    private final ReactionService reactions;
+    private final AuthorReactionTotalRepository totals;
 
     ErasedReaderWriter(
             CommentRepository comments,
@@ -29,13 +32,17 @@ class ErasedReaderWriter {
             TreeLock treeLock,
             ReportRepository reports,
             BlockRepository blocks,
-            UserRestrictionRepository restrictions) {
+            UserRestrictionRepository restrictions,
+            ReactionService reactions,
+            AuthorReactionTotalRepository totals) {
         this.comments = comments;
         this.collapse = collapse;
         this.treeLock = treeLock;
         this.reports = reports;
         this.blocks = blocks;
         this.restrictions = restrictions;
+        this.reactions = reactions;
+        this.totals = totals;
     }
 
     // -batch of his comments: emptied of him, then taken away where nothing stands on them.
@@ -52,6 +59,9 @@ class ErasedReaderWriter {
                 .filter(comment -> !comment.isDeleted() || comment.replyCount() > 0)
                 .map(Comment::id)
                 .collect(Collectors.toSet());
+        // Before anonymize: what his comments collected has nowhere to go once he is gone, and the
+        // rows would outlive the text they sit under.
+        reactions.wipeAll(comments.findAllById(batch));
         comments.anonymize(batch);
         // read back: anonymize wrote around the entities and cleared the context behind it
         collapse.of(comments.findAllById(batch), wereShown);
@@ -62,5 +72,10 @@ class ErasedReaderWriter {
     void eraseTheRest(UUID readerId, Instant now) {
         blocks.deleteInvolving(readerId);
         restrictions.deleteExpiredFor(readerId, now);
+        // What he put on other people's comments comes off their counts; what he collected on his
+        // own goes with him. A count a removal already swept into someone's total stays: the
+        // comment it was collected on is not there to take it off.
+        reactions.clearAllBy(readerId);
+        totals.deleteFor(List.of(readerId));
     }
 }

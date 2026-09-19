@@ -68,6 +68,7 @@ public class CommentService {
     private final BlockRepository blocks;
     private final UserRestrictionRepository restrictions;
     private final ReportRepository reports;
+    private final ReactionService reactions;
     private final DomainEventPublisher events;
     private final SubjectTypes subjects;
     private final Duration editWindow;
@@ -79,6 +80,7 @@ public class CommentService {
             BlockRepository blocks,
             UserRestrictionRepository restrictions,
             ReportRepository reports,
+            ReactionService reactions,
             DomainEventPublisher events,
             SubjectTypes subjects,
             CommentProperties properties) {
@@ -88,6 +90,7 @@ public class CommentService {
         this.blocks = blocks;
         this.restrictions = restrictions;
         this.reports = reports;
+        this.reactions = reactions;
         this.events = events;
         this.subjects = subjects;
         this.editWindow = properties.editWindow();
@@ -212,6 +215,8 @@ public class CommentService {
 
     public void deleteOwn(UUID actorId, UUID commentId) {
         treeLock.hold(commentId);
+        // Both locks before the row is read: the counts about to be swept away must be settled
+        comments.lockCounters(commentId);
         var comment = findOrThrow(commentId);
         // actorId first: a comment left behind by an erased account answers to nobody.
         if (!actorId.equals(comment.authorId())) {
@@ -221,6 +226,8 @@ public class CommentService {
             return;
         }
         comment.deletedAt(Instant.now());
+        // the counts outlive the rows they were collected from, the rows do not outlive the comment
+        reactions.wipe(comment);
         // before the collapse reads it back: the mark is what decides the walk
         comments.flush();
         collapse.of(List.of(comment), Set.of(comment.id()));
@@ -232,12 +239,14 @@ public class CommentService {
      */
     public void hideByModerator(UUID commentId, UUID moderatorId) {
         treeLock.hold(commentId);
+        comments.lockCounters(commentId);
         hide(findOrThrow(commentId), Comment.HIDDEN_BY_MODERATOR, moderatorId);
     }
 
     /** Removal by the classifier. It has no reader profile, so the row records only that it acted. */
     public void hideByBot(UUID commentId) {
         treeLock.hold(commentId);
+        comments.lockCounters(commentId);
         hide(findOrThrow(commentId), Comment.HIDDEN_BY_BOT, null);
     }
 
@@ -387,6 +396,7 @@ public class CommentService {
         }
         var now = Instant.now();
         comment.deletedAt(now).hiddenAt(now).hiddenSource(source).hiddenBy(moderatorId);
+        reactions.wipe(comment);
         // However the comment came down, the queue is done with it - including when it was taken
         // down straight from the comment endpoint, with no card ever opened.
         reports.closeOpen(comment.id(), ReportResolution.HIDDEN, moderatorId);

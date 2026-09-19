@@ -60,6 +60,10 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
 | POST | `/comments/{id}/replies` `{body}` | `user` | 201 `{comment, mutedByRecipient}`: `true`, если автор родителя игнорирует пишущего. Subject наследуется от родителя; родитель удалён — 409 `PARENT_DELETED`, ушёл целиком — 404 `NOT_FOUND`. Необязательный `Idempotency-Key` — ниже |
 | PATCH | `/comments/{id}` `{body}` | `user`, только автор | 200 `{id, body, updatedAt, edited}`. Требования к тексту те же, что при публикации. Окно правки задаёт `discussion.comment.edit-window`, счёт от `createdAt`; после него 403 `EDIT_WINDOW_CLOSED`. Удалён автором: 409 `COMMENT_DELETED`, снят модерацией: 409 `COMMENT_ALREADY_REMOVED`, чужой: 403 `FORBIDDEN`. Тот же текст ничего не меняет и не ставит `edited` |
 | DELETE | `/comments/{id}` | `user`, только автор | 204, идемпотентно |
+| PUT | `/comments/{id}/reactions/vote` `{value}` | `user` | 204. `like` или `dislike`, иначе 400 `UNKNOWN_REACTION`. На свой комментарий и на автора в игноре (кроме `soft`): 403. Под баном 403 `COMMENTING_RESTRICTED` |
+| DELETE | `/comments/{id}/reactions/vote` | `user` | 204, идемпотентно. Работает и под баном |
+| PUT | `/comments/{id}/reactions/emoji` `{value}` | `user` | 204. Ключ из `discussion.reaction.emoji`, иначе 400 `UNKNOWN_REACTION`. Остальное как у `vote` |
+| DELETE | `/comments/{id}/reactions/emoji` | `user` | 204, идемпотентно |
 | POST | `/comments/{id}/reports` `{reason}` | `user` | 204 на любую принятую, в том числе повторную. `reason` из `discussion.reports.reasons`. Свой комментарий или автор в игноре не в режиме `soft` — 403, снят модерацией — 409 `COMMENT_ALREADY_REMOVED`, текста уже нет (стёрт аккаунт или вышел срок) — 404 `NOT_FOUND` |
 
 `Idempotency-Key` на обеих записях. Тот же ключ того же автора с тем же текстом в то же место — 201

@@ -37,6 +37,9 @@ public record CommentResponse(
         Instant createdAt,
         Instant updatedAt,
         boolean edited,
+        int likeCount,
+        int dislikeCount,
+        Map<String, Integer> emojiCounts,
         List<CommentResponse> replies) {
 
     public static CommentResponse from(CommentView view, Map<UUID, AuthorResponse> authors) {
@@ -57,6 +60,9 @@ public record CommentResponse(
                 c.createdAt(),
                 c.updatedAt(),
                 c.isEdited(),
+                c.likeCount(),
+                c.dislikeCount(),
+                c.emojiCounts(),
                 view.replies().stream().map(reply -> from(reply, authors)).toList());
     }
 }
