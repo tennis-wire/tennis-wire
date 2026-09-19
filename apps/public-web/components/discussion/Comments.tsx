@@ -122,6 +122,7 @@ export default function Comments({ subjectType, subjectId }: Props) {
         onOpenEdit: discussion.openEdit,
         onCloseEdit: discussion.closeEdit,
         onEdit: discussion.edit,
+        onReact: discussion.react,
         onReport: discussion.report,
         onIgnore: discussion.ignore,
         onUnignore: discussion.unignore,

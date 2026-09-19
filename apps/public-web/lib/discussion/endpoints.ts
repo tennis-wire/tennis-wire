@@ -10,6 +10,7 @@ import type {
     CommentCreated,
     CommentPage,
     Edited,
+    ReactionSlot,
 } from './types'
 
 const COMMENTS = '/api/discussion/comments'
@@ -65,6 +66,15 @@ export function createReply(parentId: string, body: string, idempotencyKey: stri
 // No idempotency key: the same text sent twice is the same comment either way
 export function editComment(id: string, body: string) {
     return write<Edited>('PATCH', `${COMMENTS}/${id}`, { body })
+}
+
+// Setting replaces whatever was in the slot, so the client never has to clear before it sets
+export function setReaction(id: string, slot: ReactionSlot, value: string) {
+    return write<void>('PUT', `${COMMENTS}/${id}/reactions/${slot}`, { value })
+}
+
+export function clearReaction(id: string, slot: ReactionSlot) {
+    return write<void>('DELETE', `${COMMENTS}/${id}/reactions/${slot}`)
 }
 
 export function deleteComment(id: string) {

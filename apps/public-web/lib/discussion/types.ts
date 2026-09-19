@@ -5,6 +5,10 @@ import type { BlockMode } from './modes'
 
 export type Visibility = 'visible' | 'soft_hidden' | 'gravestone' | 'deleted' | 'removed'
 
+export type Vote = 'like' | 'dislike'
+// The two independent slots a reader fills on one comment
+export type ReactionSlot = 'vote' | 'emoji'
+
 export type Author =
     | { id: string; displayName: string; avatarUrl: string | null }
     // an author under a commenting restriction: no name, the client picks the word
@@ -30,6 +34,13 @@ export type Comment = {
     updatedAt: string
     // the author rewrote the text: updatedAt is when he last did
     edited: boolean
+    likeCount: number
+    dislikeCount: number
+    // only the keys with a count; a key the set no longer holds simply stops arriving
+    emojiCounts: Record<string, number>
+    // what this reader put here, missing when he put nothing or is not signed in
+    viewerVote?: Vote
+    viewerEmoji?: string
     // empty on a listing and on an ancestry chain, nested on a branch
     replies: Comment[]
 }

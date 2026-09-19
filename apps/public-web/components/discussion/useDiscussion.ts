@@ -8,6 +8,7 @@ import {
     branch,
     createComment,
     createReply,
+    clearReaction,
     deleteComment,
     editComment,
     listTopLevel,
@@ -15,17 +16,25 @@ import {
     replies,
     reportComment,
     setBlock,
+    setReaction,
 } from '@/lib/discussion/endpoints'
 import type { BlockMode } from '@/lib/discussion/modes'
+import { heldBy } from '@/lib/discussion/reactions'
 import type { ReportReason } from '@/lib/discussion/reasons'
 import { markReported } from '@/lib/discussion/reported'
 import { initial, reduce, type Action, type State } from '@/lib/discussion/tree'
+
+import type { Comment, ReactionSlot } from '@/lib/discussion/types'
 
 import type { Seed } from './ComposeForm'
 
 // The URL names the comment the block is rooted on: `#c=<id>`. A permalink and a re-root are
 // the same thing, and the back button undoes either.
 const HASH = /^#c=([0-9a-f-]{36})$/i
+
+// How long a reaction waits before it goes out. Long enough to swallow a change of mind, short
+// enough that leaving the page right after a tap still sends it.
+const SETTLE_MS = 400
 
 export function rootedId(hash: string): string | null {
     return HASH.exec(hash)?.[1] ?? null
@@ -89,6 +98,9 @@ export type Discussion = {
     closeEdit: () => void
     // the reader's own comment rewritten; throws for the caller to explain
     edit: (id: string, body: string) => Promise<void>
+    // one of the reader's two slots on a comment, set or taken out. Drawn at once, sent once the
+    // tapping stops, and put back the way it was if the service refuses.
+    react: (comment: Comment, slot: ReactionSlot, to: string | null) => void
     // a comment the server no longer has, met on the way: out of the tree
     drop: (id: string) => void
     // a report on someone else's comment; throws for the caller to explain. A comment that is
@@ -249,6 +261,30 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
         [backToAll]
     )
 
+    // Per comment and slot: the timer still to fire, and the value the service last confirmed, kept
+    // from the first tap of a run so that a refusal puts back what was really there and not the
+    // half-way state a later tap drew.
+    const sending = useRef(
+        new Map<string, { timer: ReturnType<typeof setTimeout>; confirmed: string | null }>()
+    )
+
+    const react = useCallback((comment: Comment, slot: ReactionSlot, to: string | null) => {
+        const key = `${comment.id}:${slot}`
+        const held = sending.current.get(key)
+        const confirmed = held ? held.confirmed : heldBy(comment, slot)
+        if (held) clearTimeout(held.timer)
+        dispatch({ type: 'reacted', id: comment.id, slot, to })
+
+        // A reader who taps like, thinks again and taps dislike sends one request, not three
+        const timer = setTimeout(() => {
+            sending.current.delete(key)
+            const request =
+                to === null ? clearReaction(comment.id, slot) : setReaction(comment.id, slot, to)
+            request.catch(() => dispatch({ type: 'reacted', id: comment.id, slot, to: confirmed }))
+        }, SETTLE_MS)
+        sending.current.set(key, { timer, confirmed })
+    }, [])
+
     const edit = useCallback(async (id: string, body: string) => {
         const edited = await editComment(id, body)
         setEditing(null)
@@ -337,6 +373,7 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
         openEdit: setEditing,
         closeEdit: () => setEditing(null),
         edit,
+        react,
         drop,
         report,
         ignore,

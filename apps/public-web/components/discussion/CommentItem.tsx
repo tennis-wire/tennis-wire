@@ -6,12 +6,13 @@ import { canEdit } from '@/lib/discussion/edit'
 import type { BlockMode } from '@/lib/discussion/modes'
 import type { ReportReason } from '@/lib/discussion/reasons'
 import type { Node } from '@/lib/discussion/tree'
-import type { Author, Comment, Restriction } from '@/lib/discussion/types'
+import type { Author, Comment, ReactionSlot, Restriction } from '@/lib/discussion/types'
 
 import CommentBody, { Placeholder, placeholderFor } from './CommentBody'
 import CommentMenu from './CommentMenu'
 import ComposeForm from './ComposeForm'
 import EditForm from './EditForm'
+import ReactionBar from './ReactionBar'
 import RestrictionPlate from './RestrictionPlate'
 import { formatWhen } from './format'
 import { strings } from './strings'
@@ -49,6 +50,7 @@ export type Ctx = {
     onOpenEdit: (id: string) => void
     onCloseEdit: () => void
     onEdit: (id: string, body: string) => Promise<void>
+    onReact: (comment: Comment, slot: ReactionSlot, to: string | null) => void
     onReport: (id: string, reason: ReportReason) => Promise<void>
     onIgnore: (commentId: string, authorId: string, mode: BlockMode) => Promise<void>
     onUnignore: (authorId: string) => Promise<void>
@@ -226,6 +228,12 @@ export default function CommentItem({ node, inline, ctx }: Props) {
                                     {comment.body !== undefined && (
                                         <CommentBody body={comment.body} />
                                     )}
+                                    <ReactionBar
+                                        comment={comment}
+                                        canReact={ctx.signedIn && !own}
+                                        loginHref={own ? undefined : loginHere()}
+                                        onReact={ctx.onReact}
+                                    />
                                     <p style={{ margin: '10px 0 0' }}>
                                         <button
                                             type="button"

@@ -1,5 +1,6 @@
 import type { BlockMode } from './modes'
-import type { Comment, CommentPage, Restriction } from './types'
+import { shifted } from './reactions'
+import type { Comment, CommentPage, ReactionSlot, Restriction } from './types'
 
 // What the island holds and how it changes. Pure: the loaders in useDiscussion feed it, the
 // components draw it. Two views share one tree shape: the page's top-level list, and one
@@ -67,6 +68,9 @@ export type Action =
     | { type: 'posted'; comment: Comment }
     // the reader's own reply, just accepted, under a comment whose replies are drawn here
     | { type: 'replied'; parentId: string; comment: Comment }
+    // the reader put something in one of his two slots on this comment, or took it out. Applied
+    // before the request goes out and applied again in reverse if it fails.
+    | { type: 'reacted'; id: string; slot: ReactionSlot; to: string | null }
     // the reader's own comment, just rewritten: only the text and the two marks on it move
     | { type: 'edited'; id: string; body: string; updatedAt: string }
     // the reader's own comment, just taken down: a placeholder while replies stand under it,
@@ -343,6 +347,11 @@ export function reduce(state: State, action: Action): State {
             }))
             return next.phase === 'ready' ? { ...next, highlight: action.comment.id } : next
         }
+        case 'reacted':
+            return inView(state, action.id, (node) => ({
+                ...node,
+                comment: shifted(node.comment, action.slot, action.to),
+            }))
         case 'edited':
             return inView(state, action.id, (node) => ({
                 ...node,

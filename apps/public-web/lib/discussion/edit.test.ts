@@ -18,6 +18,9 @@ function comment(createdAt: string, visibility: Visibility = 'visible'): Comment
         createdAt,
         updatedAt: createdAt,
         edited: false,
+        likeCount: 0,
+        dislikeCount: 0,
+        emojiCounts: {},
         replies: [],
     }
 }
