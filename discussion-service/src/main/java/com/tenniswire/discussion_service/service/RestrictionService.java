@@ -19,15 +19,32 @@ import org.springframework.transaction.annotation.Transactional;
 public class RestrictionService {
 
     private final UserRestrictionRepository restrictions;
+    private final ReactionService reactions;
 
-    public RestrictionService(UserRestrictionRepository restrictions) {
+    public RestrictionService(UserRestrictionRepository restrictions, ReactionService reactions) {
         this.restrictions = restrictions;
+        this.reactions = reactions;
     }
 
     public UserRestriction restrictCommenting(
             UUID userId, UUID issuedBy, @Nullable Instant expiresAt, @Nullable String reason) {
+        return restrictCommenting(userId, issuedBy, expiresAt, reason, false);
+    }
+
+    /**
+     * clearReactions takes back everything he ever put anywhere. Only with an indefinite ban, and
+     * there is no undoing it: the rows are gone, and lifting the ban does not bring them back.
+     */
+    public UserRestriction restrictCommenting(
+            UUID userId, UUID issuedBy, @Nullable Instant expiresAt, @Nullable String reason, boolean clearReactions) {
         if (expiresAt != null && !expiresAt.isAfter(Instant.now())) {
             throw new IllegalArgumentException("expiresAt must be in the future");
+        }
+        if (clearReactions && expiresAt != null) {
+            throw new IllegalArgumentException("clearReactions is only allowed on an indefinite restriction");
+        }
+        if (clearReactions) {
+            reactions.clearAllBy(userId);
         }
         var restriction = new UserRestriction()
                 .userId(userId)

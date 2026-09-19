@@ -259,6 +259,42 @@ class ReactionServiceIT {
         assertThat(reactions.of(null, List.of(hers))).isEmpty();
     }
 
+    @Test
+    void anIndefiniteBanCanTakeBackEverythingHePut() {
+        var one = comment("one");
+        var two = comment("two");
+        reactions.setVote(bob, one, "like");
+        reactions.setEmoji(bob, two, "clown");
+        reactions.setVote(carol, one, "like");
+
+        restrictions.restrictCommenting(bob, moderator, null, "done with him", true);
+
+        assertThat(votes(one)).isEqualTo(new int[] {1, 0});
+        assertThat(emoji(two)).isEmpty();
+        assertThat(rows.findByUser(bob)).isEmpty();
+    }
+
+    @Test
+    void anIndefiniteBanLeavesThemAloneUnlessAsked() {
+        var hers = comment("hers");
+        reactions.setVote(bob, hers, "like");
+
+        restrictions.restrictCommenting(bob, moderator, null, "quiet for now");
+
+        assertThat(votes(hers)).isEqualTo(new int[] {1, 0});
+    }
+
+    @Test
+    void aTemporaryBanMayNotTakeThemBack() {
+        var hers = comment("hers");
+        reactions.setVote(bob, hers, "like");
+
+        assertThatThrownBy(() -> restrictions.restrictCommenting(
+                        bob, moderator, Instant.now().plus(Duration.ofHours(1)), "flood", true))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(votes(hers)).isEqualTo(new int[] {1, 0});
+    }
+
     private UUID comment(String body) {
         return commentService
                 .create(alice, "publication", subjectId, body)

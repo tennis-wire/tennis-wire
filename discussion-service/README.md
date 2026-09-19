@@ -98,7 +98,7 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
 | POST | `/moderation/reports` `{commentId, reason}` | `moderator-bot` | 204, жалоба классификатора; снят модерацией — 409, текста нет — 404, как у читательской |
 | GET | `/moderation/reports?status=open&page=&size=` | `moderator` | очередь, карточка на комментарий, `{items, page, size}`; `size` до 200. Карточку удалённого автором комментария сервис закрывает сам через 30 дней после удаления, вместе с текстом (`expired`) |
 | PATCH | `/moderation/reports/{commentId}` `{resolution}` | `moderator` | 204, закрывает карточку целиком: `hidden` \| `dismissed` \| `counted`. `counted` — только у удалённого автором и пока его текст хранится, иначе 409 `RESOLUTION_NOT_APPLICABLE`. `voided` и `expired` пишет только сам сервис — 400 |
-| POST | `/moderation/restrictions` `{userId, expiresAt?, reason?}` | `moderator` | 201, ограничение на комментирование; без `expiresAt` — бессрочное |
+| POST | `/moderation/restrictions` `{userId, expiresAt?, reason?, clearReactions?}` | `moderator` | 201, ограничение на комментирование; без `expiresAt` бессрочное. `clearReactions` снимает всё, что он когда-либо поставил, и допустим только при бессрочном, иначе 400 `BAD_REQUEST`. Необратимо: снятие бана реакции не возвращает |
 | GET | `/moderation/restrictions?userId=` | `moderator` | действующие ограничения |
 | DELETE | `/moderation/restrictions/{id}` | `moderator` | 204 |
 
