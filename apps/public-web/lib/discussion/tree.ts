@@ -252,6 +252,11 @@ function inView(state: State, id: string, change: (node: Node) => Node): State {
     return { ...state, view: mapView(state.view, id, change) }
 }
 
+function withoutSeen(shown: Node[], arriving: Comment[]): Node[] {
+    const seen = new Set(shown.map((node) => node.comment.id))
+    return arriving.filter((comment) => !seen.has(comment.id)).map(leaf)
+}
+
 export function reduce(state: State, action: Action): State {
     switch (action.type) {
         case 'loading':
@@ -283,7 +288,12 @@ export function reduce(state: State, action: Action): State {
                 ...state,
                 view: {
                     ...state.view,
-                    items: [...state.view.items, ...action.page.items.map(leaf)],
+                    // Dropped by id: under a sort by score a comment whose count moved between two
+                    // requests can be handed out twice, and the reader would see it twice.
+                    items: [
+                        ...state.view.items,
+                        ...withoutSeen(state.view.items, action.page.items),
+                    ],
                     nextCursor: action.page.nextCursor,
                     more: 'idle',
                 },

@@ -11,6 +11,7 @@ import type {
     CommentPage,
     Edited,
     ReactionSlot,
+    Sort,
 } from './types'
 
 const COMMENTS = '/api/discussion/comments'
@@ -26,8 +27,14 @@ function page(cursor?: string | null, size = PAGE_SIZE): string {
     return query.toString()
 }
 
-export function listTopLevel(subjectType: string, subjectId: string, cursor?: string | null) {
-    const query = new URLSearchParams({ subjectType, subjectId })
+// The same sort goes with every page: a cursor is cut for one order and refused by the others
+export function listTopLevel(
+    subjectType: string,
+    subjectId: string,
+    sort: Sort,
+    cursor?: string | null
+) {
+    const query = new URLSearchParams({ subjectType, subjectId, sort })
     return readQueue(() => read<CommentPage>(`${COMMENTS}?${query}&${page(cursor)}`))
 }
 

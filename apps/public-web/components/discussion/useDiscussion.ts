@@ -20,11 +20,12 @@ import {
 } from '@/lib/discussion/endpoints'
 import type { BlockMode } from '@/lib/discussion/modes'
 import { heldBy } from '@/lib/discussion/reactions'
+import { DEFAULT_SORT, rememberSort, storedSort } from '@/lib/discussion/sort'
 import type { ReportReason } from '@/lib/discussion/reasons'
 import { markReported } from '@/lib/discussion/reported'
 import { initial, reduce, type Action, type State } from '@/lib/discussion/tree'
 
-import type { Comment, ReactionSlot } from '@/lib/discussion/types'
+import type { Comment, ReactionSlot, Sort } from '@/lib/discussion/types'
 
 import type { Seed } from './ComposeForm'
 
@@ -101,6 +102,9 @@ export type Discussion = {
     // one of the reader's two slots on a comment, set or taken out. Drawn at once, sent once the
     // tapping stops, and put back the way it was if the service refuses.
     react: (comment: Comment, slot: ReactionSlot, to: string | null) => void
+    // Order of the top-level listing, remembered on this device
+    sort: Sort
+    setSort: (sort: Sort) => void
     // a comment the server no longer has, met on the way: out of the tree
     drop: (id: string) => void
     // a report on someone else's comment; throws for the caller to explain. A comment that is
@@ -117,6 +121,11 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
     const [state, dispatch] = useReducer(reduce, initial)
     const [replyingTo, setReplyingTo] = useState<string | null>(null)
     const [editing, setEditing] = useState<string | null>(null)
+    // DEFAULT_SORT on the first render, since localStorage is not there during the server pass and
+    // a differing first render would be a hydration mismatch. The stored one is picked up below,
+    // before anything is fetched.
+    const [sort, setSortState] = useState<Sort>(DEFAULT_SORT)
+    const sortRef = useRef(sort)
     const [mutedUnder, setMutedUnder] = useState<string | null>(null)
     const [seed, setSeed] = useState<Seed | null>(null)
     // the generation of the last full load: an answer to an earlier one is dropped
@@ -130,7 +139,7 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
         const mine = ++generation.current
         dispatch({ type: 'loading' })
         try {
-            const page = await listTopLevel(subjectType, subjectId)
+            const page = await listTopLevel(subjectType, subjectId, sortRef.current)
             if (mine === generation.current) {
                 setMutedUnder(null)
                 dispatch({ type: 'list', page })
@@ -181,13 +190,26 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
         else void loadList()
     }, [loadList, loadRooted])
 
+    // A fresh load, not a re-order in place: the cursor, the pages already shown and every branch
+    // opened under them belong to the old order.
+    const setSort = useCallback(
+        (next: Sort) => {
+            if (next === sortRef.current) return
+            sortRef.current = next
+            setSortState(next)
+            rememberSort(next)
+            void loadList()
+        },
+        [loadList]
+    )
+
     const loadMore = useCallback(async () => {
         if (state.phase !== 'ready' || state.view.kind !== 'list') return
         const { nextCursor, more } = state.view
         if (!nextCursor || more === 'loading') return
         dispatch({ type: 'more', status: 'loading' })
         try {
-            const page = await listTopLevel(subjectType, subjectId, nextCursor)
+            const page = await listTopLevel(subjectType, subjectId, sortRef.current, nextCursor)
             dispatch({ type: 'more-loaded', page })
         } catch {
             dispatch({ type: 'more', status: 'failed' })
@@ -336,6 +358,16 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
         dispatch({ type: 'unignored', authorId })
     }, [])
 
+    // Once, before the block asks for anything: the stored order is only readable on the client,
+    // and picking it up after the first request would mean fetching the list twice.
+    useEffect(() => {
+        const stored = storedSort()
+        if (stored !== sortRef.current) {
+            sortRef.current = stored
+            setSortState(stored)
+        }
+    }, [])
+
     useEffect(() => {
         const onHash = () => load()
         window.addEventListener('hashchange', onHash)
@@ -369,6 +401,8 @@ export function useDiscussion(subjectType: string, subjectId: string): Discussio
         seed,
         promote,
         remove,
+        sort,
+        setSort,
         editing,
         openEdit: setEditing,
         closeEdit: () => setEditing(null),

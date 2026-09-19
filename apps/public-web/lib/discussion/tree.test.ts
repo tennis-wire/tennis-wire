@@ -67,6 +67,17 @@ describe('reduce', () => {
         expect(node.comment.updatedAt).toBe('2026-09-15T10:05:00Z')
     })
 
+    it('drops a comment the next page repeats', () => {
+        const [a, b] = [comment(), comment()]
+        const state = reduce(listed([a, b], 'cursor'), {
+            type: 'more-loaded',
+            page: { items: [b, comment()], nextCursor: null },
+        })
+
+        expect(items(state).map((node) => node.comment.id)).toHaveLength(3)
+        expect(new Set(items(state).map((node) => node.comment.id)).size).toBe(3)
+    })
+
     it('appends the next page and keeps its cursor', () => {
         const first = comment()
         const second = comment()
