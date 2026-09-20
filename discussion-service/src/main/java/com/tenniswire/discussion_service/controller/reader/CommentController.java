@@ -64,8 +64,9 @@ public class CommentController {
     }
 
     /** Top-level comments under a subject; each carries replyCount for the "show N replies" control. */
-    // params: the author listing answers on the same path, and without it the two are ambiguous
-    @GetMapping(params = "subjectType")
+    // params: the author listing answers on the same path, and the two conditions have to exclude
+    // each other - a request carrying both matches both mappings and dispatch throws
+    @GetMapping(params = {"subjectType", "!authorId"})
     public CommentPageResponse listTopLevel(
             @RequestParam String subjectType,
             @RequestParam UUID subjectId,
@@ -85,7 +86,7 @@ public class CommentController {
 
     // His own cabinet and his profile as others see it read the same endpoint: the viewer's ignore
     // shapes the second one as it shapes a thread.
-    @GetMapping(params = "authorId")
+    @GetMapping(params = {"authorId", "!subjectType"})
     public CommentPageResponse listByAuthor(
             @RequestParam UUID authorId,
             @RequestParam(required = false) Integer limit,
