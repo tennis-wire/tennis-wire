@@ -71,6 +71,14 @@ a:hover {
     color: var(--tw-primary-dark);
 }
 
+/* The focus ring for every interactive element in the product. It lives here because an inline
+   style object cannot hold a pseudo-class, and because a control the keyboard is standing on has
+   to say so under all nine looks. */
+:focus-visible {
+    outline: 2px solid var(--tw-primary);
+    outline-offset: 2px;
+}
+
 /* Markup this app does not render: the article body arrives from the editor as HTML */
 .tw-article-body {
     font-size: 18px;

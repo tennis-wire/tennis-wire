@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
 import { loginHere } from '@/lib/auth/loginHref'
@@ -48,7 +48,7 @@ const anchor: React.CSSProperties = {
     display: 'inline-flex',
 }
 
-const toggle: React.CSSProperties = {
+const toggleStyle: React.CSSProperties = {
     ...linkButton,
     color: 'var(--tw-text-muted)',
     fontSize: 16,
@@ -120,6 +120,7 @@ export default function CommentMenu({
 }: Props) {
     const { setSession } = useReaderSession()
     const [panel, setPanel] = useState<Panel>({ kind: 'closed' })
+    const toggle = useRef<HTMLButtonElement>(null)
     // what this device already sent; the menu is client-only, so the read is safe here
     const [reported, setReported] = useState(() => wasReported(comment.id))
     const { author } = comment
@@ -127,10 +128,18 @@ export default function CommentMenu({
     // collapsed by his ignore and opened again
     const ignoring = comment.visibility === 'soft_hidden'
 
+    // The panel shuts and the keyboard goes back to the dots it hangs off, instead of falling to
+    // the top of the document. Where the comment changes under the reader — a removal, a new
+    // ignore — the menu goes with it and there is no longer anything here to stand on.
+    const close = useCallback(() => {
+        setPanel({ kind: 'closed' })
+        toggle.current?.focus()
+    }, [])
+
     function signedOut() {
         onSessionExpired()
         setSession({ authenticated: false })
-        setPanel({ kind: 'closed' })
+        close()
     }
 
     async function remove() {
@@ -138,7 +147,7 @@ export default function CommentMenu({
         try {
             await onRemove()
             // the node this menu sat on is a placeholder or gone by now
-            setPanel({ kind: 'closed' })
+            close()
         } catch (error) {
             if (error instanceof DiscussionError && error.status === 401) return signedOut()
             // a 403 cannot happen from here, the item is only offered on the reader's own; the
@@ -177,12 +186,12 @@ export default function CommentMenu({
 
     async function ignore(authorId: string, mode: BlockMode) {
         // collapsed already, and asked to stay that way
-        if (ignoring && mode === 'soft') return setPanel({ kind: 'closed' })
+        if (ignoring && mode === 'soft') return close()
         setPanel({ kind: 'ignore', busy: true, failure: null })
         try {
             // on success the comment collapses, hides or goes, and this menu with it
             await onIgnore(authorId, mode)
-            setPanel({ kind: 'closed' })
+            close()
         } catch (error) {
             if (error instanceof DiscussionError && error.status === 401) return signedOut()
             const failed = ignoring ? strings.saveFailed : strings.ignoreFailed
@@ -194,7 +203,7 @@ export default function CommentMenu({
         setPanel({ kind: 'ignore', busy: true, failure: null })
         try {
             await onUnignore(authorId)
-            setPanel({ kind: 'closed' })
+            close()
         } catch (error) {
             if (error instanceof DiscussionError && error.status === 401) return signedOut()
             const failure = ignoreFailure(error, strings.unignoreFailed)
@@ -205,17 +214,18 @@ export default function CommentMenu({
     useEffect(() => {
         if (panel.kind === 'closed') return
         const onKey = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') setPanel({ kind: 'closed' })
+            if (event.key === 'Escape') close()
         }
         document.addEventListener('keydown', onKey)
         return () => document.removeEventListener('keydown', onKey)
-    }, [panel.kind])
+    }, [panel.kind, close])
 
     return (
         <span style={anchor}>
             <button
+                ref={toggle}
                 type="button"
-                style={toggle}
+                style={toggleStyle}
                 aria-label={strings.actions}
                 aria-haspopup="menu"
                 aria-expanded={panel.kind !== 'closed'}
@@ -228,7 +238,7 @@ export default function CommentMenu({
 
             {panel.kind !== 'closed' && (
                 <>
-                    <span style={overlay} onClick={() => setPanel({ kind: 'closed' })} />
+                    <span style={overlay} onClick={close} />
                     <div
                         role="menu"
                         style={panel.kind === 'ignore' ? { ...popover, minWidth: 290 } : popover}
@@ -310,7 +320,7 @@ export default function CommentMenu({
                                         type="button"
                                         style={item}
                                         disabled={panel.busy}
-                                        onClick={() => setPanel({ kind: 'closed' })}
+                                        onClick={close}
                                     >
                                         {strings.cancel}
                                     </button>
@@ -406,7 +416,7 @@ export default function CommentMenu({
                                     busy={panel.busy}
                                     failure={panel.failure}
                                     onConfirm={(mode) => ignore(author.id, mode)}
-                                    onCancel={() => setPanel({ kind: 'closed' })}
+                                    onCancel={close}
                                 />
                                 {ignoring && (
                                     <p style={{ margin: '10px 0 0' }}>

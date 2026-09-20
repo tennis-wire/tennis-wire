@@ -40,7 +40,6 @@ const field: React.CSSProperties = {
     color: 'var(--tw-text)',
     background: 'transparent',
     border: 'none',
-    outline: 'none',
     resize: 'vertical',
     boxSizing: 'border-box',
 }
