@@ -81,6 +81,12 @@ class SecurityConfigTest {
     }
 
     @Test
+    void anotherReadersProfileIsAnonymous() throws Exception {
+        // 404 rather than 401: the chain let it through and the handler found no such reader
+        mvc.perform(get("/api/users/" + UUID.randomUUID())).andExpect(status().isNotFound());
+    }
+
+    @Test
     void renamingRejectsAShapeTheServiceWouldRefuse() throws Exception {
         mvc.perform(patch(ME)
                         .with(tokenWith("user"))

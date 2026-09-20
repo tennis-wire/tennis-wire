@@ -128,13 +128,25 @@ spring:
             # /api/users/** only. /internal/** is deliberately absent and must stay that way:
             # resolve and the batch lookup are reached over cluster DNS, never through the public
             # ingress
-            # Not split by method: everything here needs a token, so the key is always the
-            # reader, and reading one's own profile is not a different kind of traffic from
-            # renaming oneself.
-            - id: user-service
+            # Split by method since a reader's profile is readable without a token: an anonymous
+            # page view is keyed by address, and it must not spend the bucket a reader writes from.
+            - id: user-service-reads
               uri: http://localhost:8092
               predicates:
                 - Path=/api/users/**
+                - Method=GET
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@readerOrAddressKeyResolver}"
+                    rate-limiter: "#{@readRateLimiter}"
+                    deny-empty-key: false
+
+            - id: user-service-writes
+              uri: http://localhost:8092
+              predicates:
+                - Path=/api/users/**
+                - Method=POST,PUT,PATCH,DELETE
               filters:
                 - name: RequestRateLimiter
                   args:

@@ -52,6 +52,10 @@ public class SecurityConfig {
                         // admin-only, has to declare itself rather than inherit this rule.
                         .pathMatchers("/api/users/me/**")
                         .hasRole(Roles.USER)
+                        // A reader's profile by id, for the page his name under a comment leads
+                        // to: open to whoever can read the comment itself.
+                        .pathMatchers(HttpMethod.GET, "/api/users/*")
+                        .permitAll()
                         // Declaring itself, as that comment says it must: support deletes an
                         // account on a reader's behalf, which is the only way out for someone
                         // banned for good. Nothing else under /api/users/** is reachable.

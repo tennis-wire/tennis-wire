@@ -138,6 +138,7 @@ Realm-роли (client-роли не используем — проще мап�
 | `/api/discussion/**` (прочее) | `user` | запись комментариев и жалоб, игнор-лист; сервис пускает только `comments/**` и `blocks/**` |
 | `/api/discussion/moderation/**` | `moderator` или `moderator-bot` | сервис сужает: `/moderation/restrictions/**` и `GET`/`PATCH /moderation/reports/**` — только `moderator`; `POST /moderation/reports` — только `moderator-bot` |
 | `/api/users/me/**` | `user` | сюда же `DELETE /api/users/me` — читатель удаляет свой аккаунт; сервис дополнительно требует вход не старше 5 минут (`auth_time`) |
+| `GET /api/users/{id}` | анонимно | профиль читателя: имя, аватарка и дата регистрации, то есть то, что и так видно под его комментарием |
 | `DELETE /api/users/{id}` | `admin` | удаление аккаунта через поддержку: единственный выход для забаненного навсегда (`discussion-rules.md` §12.16) |
 | всё прочее | — | правила нет, значит `denyAll` — в gateway и в каждом сервисе. Новый путь объявляет себя сам |
 

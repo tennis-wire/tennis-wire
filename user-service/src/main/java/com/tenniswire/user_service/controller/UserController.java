@@ -1,18 +1,21 @@
 package com.tenniswire.user_service.controller;
 
 import com.tenniswire.user_service.dto.ProfileResponse;
+import com.tenniswire.user_service.dto.ReaderProfileResponse;
 import com.tenniswire.user_service.dto.UpdateProfileRequest;
 import com.tenniswire.user_service.security.CurrentUser;
 import com.tenniswire.user_service.security.RecentLogin;
 import com.tenniswire.user_service.service.AccountDeletionService;
 import com.tenniswire.user_service.service.ProfileService;
 import jakarta.validation.Valid;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -46,6 +49,13 @@ public class UserController {
     @PatchMapping("/me")
     public ProfileResponse rename(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody UpdateProfileRequest request) {
         return ProfileResponse.from(profiles.rename(currentUser.id(jwt), request.displayName()));
+    }
+
+    // Anyone's profile by id, for the page a name under a comment leads to. Anonymous, like the
+    // comments themselves. "/me" is a literal and wins over this pattern in Spring's own ordering.
+    @GetMapping("/{userId}")
+    public ReaderProfileResponse reader(@PathVariable UUID userId) {
+        return ReaderProfileResponse.from(profiles.byId(userId));
     }
 
     // 202 rather than 204: what is over when this returns is the reader's part. His account is shut

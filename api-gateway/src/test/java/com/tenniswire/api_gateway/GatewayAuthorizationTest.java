@@ -1,8 +1,10 @@
 package com.tenniswire.api_gateway;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockJwt;
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.springSecurity;
 
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -79,6 +81,21 @@ class GatewayAuthorizationTest {
                 .isEqualTo("UP")
                 .jsonPath("$.components")
                 .doesNotExist();
+    }
+
+    // The upstream is not running here, so what is asserted is that the chain did not stop it
+    @Test
+    void aReaderProfileByIdPassesWithoutAToken() {
+        client.get()
+                .uri("/api/users/" + UUID.randomUUID())
+                .exchange()
+                .expectStatus()
+                .value(code -> assertThat(code).isNotIn(401, 403));
+    }
+
+    @Test
+    void ownProfileStillRejectsAnonymous() {
+        client.get().uri("/api/users/me").exchange().expectStatus().isUnauthorized();
     }
 
     @Test
