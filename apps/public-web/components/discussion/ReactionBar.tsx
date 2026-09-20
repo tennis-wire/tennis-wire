@@ -55,7 +55,7 @@ export default function ReactionBar({ comment, canReact, loginHref, onReact }: P
             <Chip
                 held={vote === 'like'}
                 label={strings.like}
-                glyph="\u{1F44D}"
+                glyph="👍"
                 count={comment.likeCount}
                 onClick={canReact ? () => put('vote', 'like', vote === 'like') : undefined}
                 loginHref={canReact ? undefined : loginHref}
@@ -63,7 +63,7 @@ export default function ReactionBar({ comment, canReact, loginHref, onReact }: P
             <Chip
                 held={vote === 'dislike'}
                 label={strings.dislike}
-                glyph="\u{1F44E}"
+                glyph="👎"
                 count={comment.dislikeCount}
                 onClick={canReact ? () => put('vote', 'dislike', vote === 'dislike') : undefined}
                 loginHref={canReact ? undefined : loginHref}
