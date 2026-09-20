@@ -304,6 +304,30 @@ public class CommentService {
         };
     }
 
+    // Flat and newest first, only what still stands: the author is shown his own taken-down
+    // comments no differently from anyone else.
+    @Transactional(readOnly = true)
+    public CommentPage listByAuthor(
+            UUID authorId, @Nullable UUID viewerId, @Nullable Integer limit, @Nullable String cursor) {
+        var size = limit == null ? DEFAULT_LIMIT : Math.clamp(limit, MIN_LIMIT, MAX_LIMIT);
+        var after = CommentCursor.decode(cursor);
+
+        var rows = after == null
+                ? comments.findByAuthorFirstPage(authorId, size + 1)
+                : comments.findByAuthorAfter(authorId, after.createdAt(), after.id(), size + 1);
+        var more = rows.size() > size;
+        var page = more ? rows.subList(0, size) : rows;
+
+        // From the last row loaded, not the last one this viewer keeps: his ignore can empty a page.
+        var nextCursor = more ? CommentCursor.encode(page.getLast()) : null;
+        return new CommentPage(render(CommentTree.standalone(page), blocksOf(viewerId)), nextCursor);
+    }
+
+    @Transactional(readOnly = true)
+    public long countByAuthor(UUID authorId) {
+        return comments.countByAuthor(authorId);
+    }
+
     // The comment with as much of its subtree as one response carries. NOT_FOUND when nobody is
     // shown the head, HIDDEN_BY_BLOCK when the viewer's subtree_removal takes out the head or a
     // comment above it. Nodes whose replies did not fit come back marked.

@@ -24,6 +24,18 @@ final class CommentTree {
         return comment.isDeleted() && comment.replyCount() == 0;
     }
 
+    // One node per comment, nothing under any of them, input order kept: two comments of the same
+    // author can stand one under the other in the tree and are still two separate lines here.
+    static List<CommentNode> standalone(List<Comment> comments) {
+        return comments.stream()
+                .map(comment -> {
+                    var node = new CommentNode(comment);
+                    node.repliesTruncated(comment.replyCount() > 0);
+                    return node;
+                })
+                .toList();
+    }
+
     /** Roots are the nodes whose parent is not in the list: top-level comments, or the branch head. */
     static List<CommentNode> forest(List<Comment> comments) {
         return forest(comments, Integer.MAX_VALUE);

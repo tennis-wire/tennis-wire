@@ -2,6 +2,7 @@ package com.tenniswire.discussion_service.controller.reader;
 
 import com.tenniswire.discussion_service.dto.reader.AncestryResponse;
 import com.tenniswire.discussion_service.dto.reader.BranchResponse;
+import com.tenniswire.discussion_service.dto.reader.CommentCountResponse;
 import com.tenniswire.discussion_service.dto.reader.CommentCreatedResponse;
 import com.tenniswire.discussion_service.dto.reader.CommentPageResponse;
 import com.tenniswire.discussion_service.dto.reader.CreateCommentRequest;
@@ -63,7 +64,8 @@ public class CommentController {
     }
 
     /** Top-level comments under a subject; each carries replyCount for the "show N replies" control. */
-    @GetMapping
+    // params: the author listing answers on the same path, and without it the two are ambiguous
+    @GetMapping(params = "subjectType")
     public CommentPageResponse listTopLevel(
             @RequestParam String subjectType,
             @RequestParam UUID subjectId,
@@ -79,6 +81,26 @@ public class CommentController {
         var page = commentService.listTopLevel(
                 subjectType, subjectId, viewerId, limit, cursor, CommentSort.fromValue(sort));
         return new CommentPageResponse(responses.of(page.items(), viewerId), page.nextCursor(), viewers.of(viewerId));
+    }
+
+    // His own cabinet and his profile as others see it read the same endpoint: the viewer's ignore
+    // shapes the second one as it shapes a thread.
+    @GetMapping(params = "authorId")
+    public CommentPageResponse listByAuthor(
+            @RequestParam UUID authorId,
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) String cursor,
+            @AuthenticationPrincipal Jwt jwt) {
+        var viewerId = currentUser.idOrNull(jwt);
+        var page = commentService.listByAuthor(authorId, viewerId, limit, cursor);
+        // No viewer standing: this listing opens no thread and has nothing to write into
+        return new CommentPageResponse(responses.of(page.items(), viewerId), page.nextCursor(), null);
+    }
+
+    // The number under the name on a profile. Not viewer-shaped, unlike the listing above.
+    @GetMapping("/count")
+    public CommentCountResponse countByAuthor(@RequestParam UUID authorId) {
+        return new CommentCountResponse(commentService.countByAuthor(authorId));
     }
 
     @PostMapping

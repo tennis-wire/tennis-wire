@@ -122,6 +122,35 @@ limit :limit
             @Param("afterId") UUID afterId,
             @Param("limit") int limit);
 
+    // Every comment of his, replies included. idx_comment_author is cut for this predicate.
+    @Query(value = """
+select * from comment
+where author_id = :authorId and deleted_at is null
+order by created_at desc, id desc
+limit :limit
+""", nativeQuery = true)
+    List<Comment> findByAuthorFirstPage(@Param("authorId") UUID authorId, @Param("limit") int limit);
+
+    @Query(value = """
+select * from comment
+where author_id = :authorId and deleted_at is null
+  and (created_at, id) < (:afterCreatedAt, :afterId)
+order by created_at desc, id desc
+limit :limit
+""", nativeQuery = true)
+    List<Comment> findByAuthorAfter(
+            @Param("authorId") UUID authorId,
+            @Param("afterCreatedAt") Instant afterCreatedAt,
+            @Param("afterId") UUID afterId,
+            @Param("limit") int limit);
+
+    // Blocks are not applied: what the author wrote, not what one viewer is shown.
+    @Query(value = """
+select count(*) from comment
+where author_id = :authorId and deleted_at is null
+""", nativeQuery = true)
+    long countByAuthor(@Param("authorId") UUID authorId);
+
     List<Comment> findByRootIdOrderByCreatedAtAscIdAsc(UUID rootId);
 
     // Ids only: the erase anonymises them in one statement and never needs the rows themselves
