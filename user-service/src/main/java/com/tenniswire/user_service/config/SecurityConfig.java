@@ -35,6 +35,10 @@ public class SecurityConfig {
                         .hasRole(Roles.SERVICE)
                         .requestMatchers("/api/users/me/**")
                         .hasRole(Roles.USER)
+                        // After the /me rule: reading one's own profile keeps needing a token,
+                        // while anyone's profile by id is as open as the comments he wrote.
+                        .requestMatchers(HttpMethod.GET, "/api/users/*")
+                        .permitAll()
                         // After the /me rule, and for the same reason: deleting an account by id is
                         // support's, on behalf of someone who cannot reach his own path.
                         .requestMatchers(HttpMethod.DELETE, "/api/users/*")
