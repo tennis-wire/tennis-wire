@@ -328,3 +328,10 @@ CREATE TABLE author_reaction_total (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_author_total_not_negative CHECK (like_count >= 0 AND dislike_count >= 0)
 );
+
+-- changeset andrei:21
+-- comment: One author's comments, read backward for newest first. Partial, and the listing asks for
+-- comment: the same predicate: a comment that is down keeps deleted_at set whichever way it went
+-- comment: down. The two indexes on author_id above are cut for the moderation counters.
+CREATE INDEX idx_comment_author ON comment (author_id, created_at, id)
+    WHERE deleted_at IS NULL;
