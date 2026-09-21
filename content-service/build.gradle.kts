@@ -21,6 +21,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-liquibase")
     implementation(libs.springdoc.openapi.webmvc.ui)
+    implementation(libs.awssdk.s3)
 
     runtimeOnly("org.postgresql:postgresql")
 

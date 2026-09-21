@@ -376,7 +376,7 @@ intended behaviour, not a misconfiguration.
 |---|---|---|
 | api-gateway | 8090 | routes `/api/**` to the services below; terminates CORS |
 | editorial-bff | 8080 | AI chat and translation |
-| content-service | 8091 | requires PostgreSQL |
+| content-service | 8091 | requires PostgreSQL; MinIO for image uploads |
 | discussion-service | 8093 | requires PostgreSQL |
 | user-service | 8092 | requires PostgreSQL |
 | transcription-service | 8001 | requires Redis + MinIO |
