@@ -23,7 +23,7 @@ Individual components, when the full stack is not needed:
 
 ```bash
 docker compose up -d postgres keycloak mailpit   # java services only
-docker compose up -d redis minio minio-init      # transcription only
+docker compose up -d redis minio minio-init      # transcription, avatars
 ```
 
 Application services are not containerised yet and are expected to run from the
@@ -108,6 +108,14 @@ at the old path.
 MinIO emulates S3 locally. The `transcription` bucket is created on startup by
 the one-shot `minio-init` container, which exits once done and therefore does
 not appear in `docker compose ps` (use `ps -a`).
+
+The `avatars` bucket comes from the same container and is public-read
+(`mc anonymous set download`): browsers load avatars straight from
+`http://localhost:9000/avatars/<size>/<key>`, the way they will from the
+production bucket's own domain. Keys are random and never reused, so each object
+is written once with a year-long `immutable` Cache-Control. Locally the
+anonymous policy also lets anyone list the bucket; public access on R2 does not.
+The production bucket (Cloudflare R2) and its domain do not exist yet.
 
 The MinIO community edition is archived upstream: the image is pinned to the
 last release published to Docker Hub and will not receive updates. This is
@@ -417,6 +425,20 @@ with `USER_SERVICE_CLIENT_SECRET` — the server root and not the issuer, becaus
 the admin API sits above the realm. And discussion-service over
 `DISCUSSION_SERVICE_URL` (`http://localhost:8093`), on its own port and never
 through the gateway, to take away what a reader who has left wrote.
+
+Avatars live in the `avatars` bucket, which user-service writes over the S3 API
+(`tw.media.*` in `application.yaml`, overridden by `MEDIA_PUBLIC_BASE_URL`,
+`MEDIA_S3_ENDPOINT`, `MEDIA_S3_REGION`, `MEDIA_BUCKET`, `MEDIA_S3_ACCESS_KEY` and
+`MEDIA_S3_SECRET_KEY`; the defaults are local MinIO) and never serves itself. An
+upload (`POST /api/users/me/avatar`, multipart field `file`, up to 5 MB, JPEG, PNG
+or WebP) is decoded and drawn anew into two JPEG squares, 96 and 288 px, under
+`96/<key>` and `288/<key>`; the profile keeps only the key, and the URLs are
+built from `MEDIA_PUBLIC_BASE_URL`. Nothing of the upload but its pixels is
+kept, EXIF included. Without MinIO an upload answers 503 and the rest of the
+service works. Objects a profile no longer points at are deleted once the change
+has committed; if the bucket does not answer then, they stay behind. Moderators
+review new avatars in a queue of their own, `GET /api/users/moderation/avatars`,
+and pass or take one down; taking one down is not counted against the reader.
 
 Deleting an account finishes out of band: a job passes once a minute over the
 accounts on their way out, closing the identity, waiting until a token issued
