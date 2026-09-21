@@ -23,6 +23,12 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
 
+  servlet:
+    multipart:
+      # The avatar is the only upload. A cropped square is a small fraction of this.
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   security:
     oauth2:
       resourceserver:
@@ -67,6 +73,16 @@ user:
     # handed off to another one rather than kept on his.
     read-timeout: 15s
 
+  avatar:
+    # Read from the header before anything is decoded. Clients send a crop a few hundred pixels
+    # across; this is for a small file that would inflate into a huge bitmap.
+    max-pixels: 25000000
+    min-side: 96
+    quality: 0.85
+    # Each decode holds up to max-pixels * 4 bytes of heap. An upload that waits longer is 503.
+    parallel: 2
+    queue-wait: 5s
+
   deletion:
     # How old the login behind DELETE /api/users/me may be. The site sends the reader through a login
     # right before the last button, so this only has to cover the way back to it.
@@ -90,6 +106,24 @@ user:
     name-held: 30d
     lifespan-cache: 10m
     batch-size: 50
+
+tw:
+  media:
+    # Where browsers fetch avatars from, straight from the bucket. Locally MinIO, path-style; in
+    # production the bucket's own domain.
+    public-base-url: ${MEDIA_PUBLIC_BASE_URL:http://localhost:9000/avatars}
+    endpoint: ${MEDIA_S3_ENDPOINT:http://localhost:9000}
+    # R2 takes "auto"
+    region: ${MEDIA_S3_REGION:us-east-1}
+    bucket: ${MEDIA_BUCKET:avatars}
+    access-key: ${MEDIA_S3_ACCESS_KEY:minioadmin}
+    secret-key: ${MEDIA_S3_SECRET_KEY:minioadmin}
+    # MinIO needs it, R2 accepts it
+    path-style: true
+    # A key is never reused, so what is under it never changes
+    cache-control: public, max-age=31536000, immutable
+    connect-timeout: 2s
+    read-timeout: 5s
 
 server:
   port: 8092

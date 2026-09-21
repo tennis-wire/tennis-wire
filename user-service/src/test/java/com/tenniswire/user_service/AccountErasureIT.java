@@ -10,6 +10,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
+import com.tenniswire.user_service.client.AvatarStorage;
 import com.tenniswire.user_service.client.ErasedReader;
 import com.tenniswire.user_service.client.KeycloakAdmin;
 import com.tenniswire.user_service.client.ReaderTraceClient;
@@ -35,6 +36,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * The job is driven a pass at a time rather than left to its clock: which pass is being looked at is
@@ -60,6 +62,12 @@ class AccountErasureIT {
 
     @MockitoBean
     private ReaderTraceClient traces;
+
+    @MockitoBean
+    private AvatarStorage storage;
+
+    @Autowired
+    private TransactionTemplate transactions;
 
     @Autowired
     private AccountErasure erasure;
@@ -134,6 +142,23 @@ class AccountErasureIT {
         assertThat(profiles.findById(userId)).isEmpty();
         verify(keycloak).delete(subject);
         assertThat(pending.findById(userId)).isEmpty();
+    }
+
+    @Test
+    void theAvatarLeavesTheBucketOnlyWithTheProfile() {
+        var userId = askedToLeave();
+        var avatarKey = userId + "/00112233445566778899aabbccddeeff.jpg";
+        transactions.executeWithoutResult(status -> profiles.setAvatar(userId, avatarKey));
+
+        job.pass();
+        verify(storage, never()).delete(any());
+
+        pauseIsOver(userId);
+        job.pass();
+
+        assertThat(profiles.findById(userId)).isEmpty();
+        verify(storage).delete("96/" + avatarKey);
+        verify(storage).delete("288/" + avatarKey);
     }
 
     @Test

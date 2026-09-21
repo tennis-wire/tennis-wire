@@ -275,12 +275,17 @@ model {
       technology 'Java, Spring Boot'
 
       service userApi 'User API' {
-        description '/api/users/me: профиль и ник, удаление своего аккаунта (вход не старше 5 минут); DELETE /api/users/{id} для admin; /internal/**: resolve и имена пачкой. Удаление: запрос гасит учётку, остальное доделывает фоновая джоба'
+        description '/api/users/me: профиль и ник, аватар, удаление своего аккаунта (вход не старше 5 минут); очередь аватаров на постмодерации для moderator; DELETE /api/users/{id} для admin; /internal/**: resolve и имена пачкой. Удаление: запрос гасит учётку, остальное доделывает фоновая джоба'
       }
 
       database userDb 'User DB' {
-        description 'Профили; identity_link (provider, sub) → user_id; аккаунты на удалении; резервации имён'
+        description 'Профили с ключом аватара; identity_link (provider, sub) → user_id; аккаунты на удалении; резервации имён'
         technology 'PostgreSQL, Liquibase'
+      }
+
+      database avatarStorage 'Avatar Storage' {
+        description 'Аватары, JPEG 96 и 288 px, по ключу из профиля. Публичное чтение: картинки браузер берёт отсюда, минуя сервисы'
+        technology 'S3 (локально — MinIO; прод — Cloudflare R2, бакета пока нет)'
       }
     }
 
@@ -420,6 +425,7 @@ model {
 
   // --- User / Discussion internal ---
   tennisService.userService.userApi -> tennisService.userService.userDb 'Профили, identity_link, аккаунты на удалении, резервации имён'
+  tennisService.userService.userApi -> tennisService.userService.avatarStorage 'Аватары: запись двух размеров; старые удаляются после коммита'
   tennisService.discussionService.discussionApi -> tennisService.discussionService.discussionDb 'CRUD'
 
   // Оба направления между сервисами идут напрямую по кластерному DNS, /internal/** через gateway

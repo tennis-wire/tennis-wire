@@ -39,6 +39,16 @@ public class Profile {
     @Column(name = "display_name_chosen", nullable = false)
     private boolean displayNameChosen;
 
+    // Written by the bulk updates in ProfileRepository only, so both dates are the database's
+    @Column(name = "avatar_key")
+    private String avatarKey;
+
+    @Column(name = "avatar_updated_at")
+    private Instant avatarUpdatedAt;
+
+    @Column(name = "avatar_reviewed_at")
+    private Instant avatarReviewedAt;
+
     // Timestamps: DB-owned (defaults + trigger_profile_updated_at)
     @Generated(event = EventType.INSERT)
     @Column(name = "created_at", insertable = false, updatable = false)

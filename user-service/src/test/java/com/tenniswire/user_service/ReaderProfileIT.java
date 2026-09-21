@@ -47,6 +47,7 @@ class ReaderProfileIT {
                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
                 // on the wire before there is anything to put in it
                 .andExpect(jsonPath("$.avatarUrl").isEmpty())
+                .andExpect(jsonPath("$.avatarLargeUrl").isEmpty())
                 // nothing of his own: the reader's page shows what everyone is shown
                 .andExpect(jsonPath("$.displayNameChosen").doesNotExist())
                 .andExpect(jsonPath("$.updatedAt").doesNotExist());

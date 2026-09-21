@@ -3,6 +3,7 @@ package com.tenniswire.user_service.controller;
 import com.tenniswire.user_service.dto.PublicProfileResponse;
 import com.tenniswire.user_service.dto.ResolvedIdentityResponse;
 import com.tenniswire.user_service.security.CurrentUser;
+import com.tenniswire.user_service.service.AvatarUrls;
 import com.tenniswire.user_service.service.ProfileService;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
@@ -22,10 +23,12 @@ public class InternalUserController {
 
     private final CurrentUser currentUser;
     private final ProfileService profiles;
+    private final AvatarUrls urls;
 
-    public InternalUserController(CurrentUser currentUser, ProfileService profiles) {
+    public InternalUserController(CurrentUser currentUser, ProfileService profiles, AvatarUrls urls) {
         this.currentUser = currentUser;
         this.profiles = profiles;
+        this.urls = urls;
     }
 
     @PostMapping("/identities/resolve")
@@ -40,6 +43,8 @@ public class InternalUserController {
     @GetMapping("/users")
     public List<PublicProfileResponse> lookup(
             @RequestParam("ids") @NotEmpty @Size(max = ProfileService.MAX_LOOKUP_IDS) List<UUID> ids) {
-        return profiles.lookup(ids).stream().map(PublicProfileResponse::from).toList();
+        return profiles.lookup(ids).stream()
+                .map(profile -> PublicProfileResponse.from(profile, urls))
+                .toList();
     }
 }
