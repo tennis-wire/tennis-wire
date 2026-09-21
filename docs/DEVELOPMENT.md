@@ -24,6 +24,7 @@ Individual components, when the full stack is not needed:
 ```bash
 docker compose up -d postgres keycloak mailpit   # java services only
 docker compose up -d redis minio minio-init      # transcription, avatars
+docker compose up -d postgres keycloak minio minio-init   # content-service with uploads
 ```
 
 Application services are not containerised yet and are expected to run from the
@@ -116,6 +117,14 @@ production bucket's own domain. Keys are random and never reused, so each object
 is written once with a year-long `immutable` Cache-Control. Locally the
 anonymous policy also lets anyone list the bucket; public access on R2 does not.
 The production bucket (Cloudflare R2) and its domain do not exist yet.
+
+The `media` bucket is public-read as well: content-service writes covers and
+article-body images whose URLs are embedded directly in article HTML. Unlike
+transcription results, these URLs must outlive any signature. Keys are random,
+so a draft's cover is unlisted rather than secret.
+
+An object in `media` is served straight from
+`http://localhost:9000/media/<key>`.
 
 The MinIO community edition is archived upstream: the image is pinned to the
 last release published to Docker Hub and will not receive updates. This is
