@@ -22,6 +22,11 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
+
   security:
     oauth2:
       resourceserver:
@@ -34,6 +39,20 @@ spring:
 
 server:
   port: 8091
+
+media:
+  # What an uploaded object's URL starts with. Written into article HTML, so in production this is
+  # a domain of our own in front of the bucket: moving to another storage must not rewrite articles.
+  public-base-url: ${MEDIA_PUBLIC_BASE_URL:http://localhost:9000/media}
+  max-pixels: 50000000
+  s3:
+    endpoint: ${S3_ENDPOINT_URL:http://localhost:9000}
+    region: ${S3_REGION:us-east-1}
+    access-key: ${S3_ACCESS_KEY:minioadmin}
+    secret-key: ${S3_SECRET_KEY:minioadmin}
+    bucket: ${S3_MEDIA_BUCKET:media}
+    # MinIO and most S3-compatible stores address a bucket by path, not by subdomain
+    path-style: ${S3_PATH_STYLE:true}
 
 logging:
   level:

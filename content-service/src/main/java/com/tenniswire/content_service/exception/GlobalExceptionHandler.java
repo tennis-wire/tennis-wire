@@ -2,12 +2,15 @@ package com.tenniswire.content_service.exception;
 
 import java.time.Instant;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -39,6 +42,27 @@ public class GlobalExceptionHandler {
                 .toList();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse("BAD_REQUEST", "Validation failed", violations, Instant.now()));
+    }
+
+    @ExceptionHandler(UnsupportedImageException.class)
+    public ResponseEntity<ErrorResponse> handleUnsupportedImage(UnsupportedImageException ex) {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(new ErrorResponse("UNSUPPORTED_IMAGE", ex.getMessage(), null, Instant.now()));
+    }
+
+    // Raised while the request is still being parsed, before any controller is chosen. The status
+    // is a number because its constant was renamed between Spring versions.
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleUploadTooLarge(MaxUploadSizeExceededException ex) {
+        return ResponseEntity.status(413)
+                .body(new ErrorResponse("UPLOAD_TOO_LARGE", "The file is larger than allowed", null, Instant.now()));
+    }
+
+    @ExceptionHandler(StorageUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleStorageUnavailable(StorageUnavailableException ex) {
+        log.error("media upload failed", ex);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ErrorResponse("STORAGE_UNAVAILABLE", ex.getMessage(), null, Instant.now()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

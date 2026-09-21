@@ -13,11 +13,18 @@ import { defaultNewsMetadata } from '../types/content'
 // migrated: guessing whose draft it was is worse than losing one.
 const UNOWNED_KEYS = ['editor-content', 'editor-metadata']
 
+// Drafts saved before covers were uploaded hold the picture itself as a data: URL,
+// which the server has no room for. The cover is asked for again instead.
+function withoutInlineCover(metadata: ContentMetadata): ContentMetadata {
+    if (metadata.type !== 'article' || !metadata.coverImage?.startsWith('data:')) return metadata
+    return { ...metadata, coverImage: undefined }
+}
+
 function loadMetadata(key: string | null): ContentMetadata {
     const saved = key === null ? null : localStorage.getItem(key)
     if (saved) {
         try {
-            return JSON.parse(saved)
+            return withoutInlineCover(JSON.parse(saved))
         } catch (e) {
             console.error('Ошибка загрузки метаданных:', e)
         }

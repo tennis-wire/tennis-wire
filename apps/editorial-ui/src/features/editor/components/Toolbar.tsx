@@ -33,15 +33,23 @@ import {
 } from '@mui/icons-material'
 import type { Editor } from '@tiptap/react'
 import { useAppTheme } from '../../../theme'
+import { IMAGE_ACCEPT, uploadErrorMessage, uploadImage } from '../api/mediaApi'
 
 interface Props {
     editor: Editor | null
+    onError: (message: string) => void
     onTranslateClick?: () => void
     onTranscribeClick?: () => void
 }
 
-export const Toolbar: React.FC<Props> = ({ editor, onTranslateClick, onTranscribeClick }) => {
+export const Toolbar: React.FC<Props> = ({
+    editor,
+    onError,
+    onTranslateClick,
+    onTranscribeClick,
+}) => {
     const [aiAnchor, setAiAnchor] = useState<null | HTMLElement>(null)
+    const [imageUploading, setImageUploading] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const { colors } = useAppTheme()
 
@@ -69,18 +77,20 @@ export const Toolbar: React.FC<Props> = ({ editor, onTranslateClick, onTranscrib
         fileInputRef.current?.click()
     }
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
-        if (!file || !file.type.startsWith('image/')) return
-
-        const reader = new FileReader()
-        reader.onload = (e) => {
-            const url = e.target?.result as string
-            editor.chain().focus().setImage({ src: url }).run()
-        }
-        reader.readAsDataURL(file)
-
         event.target.value = ''
+        if (!file) return
+
+        setImageUploading(true)
+        try {
+            const { url } = await uploadImage(file)
+            editor.chain().focus().setImage({ src: url }).run()
+        } catch (error) {
+            onError(uploadErrorMessage(error))
+        } finally {
+            setImageUploading(false)
+        }
     }
 
     const extractYoutubeId = (url: string): string | null => {
@@ -268,7 +278,7 @@ export const Toolbar: React.FC<Props> = ({ editor, onTranslateClick, onTranscrib
                 type="file"
                 ref={fileInputRef}
                 style={{ display: 'none' }}
-                accept="image/*"
+                accept={IMAGE_ACCEPT}
                 onChange={handleFileChange}
             />
 
@@ -417,9 +427,12 @@ export const Toolbar: React.FC<Props> = ({ editor, onTranslateClick, onTranscrib
 
             {/* uploading images */}
             <Tooltip title="Загрузить изображение с компьютера">
-                <IconButton size="small" onClick={handleFileUpload}>
-                    <Upload fontSize="small" />
-                </IconButton>
+                {/* a disabled button fires no events, so the tooltip listens on the span */}
+                <span>
+                    <IconButton size="small" onClick={handleFileUpload} disabled={imageUploading}>
+                        <Upload fontSize="small" />
+                    </IconButton>
+                </span>
             </Tooltip>
 
             <Tooltip title="Вставить изображение по URL">

@@ -138,7 +138,7 @@ export interface NewsMetadata extends BaseMetadata {
 export interface ArticleMetadata extends BaseMetadata {
     type: 'article'
     subtitle: string
-    coverImage?: string // URL or base64 of cover
+    coverImage?: string // URL of the uploaded cover
 }
 
 export type ContentMetadata = NewsMetadata | ArticleMetadata

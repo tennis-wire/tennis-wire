@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import type { Editor } from '@tiptap/react'
+import { uploadErrorMessage, uploadImage } from '../api/mediaApi'
 
 interface ShowSnackbar {
     (message: string, severity: 'success' | 'error' | 'warning' | 'info'): void
@@ -21,7 +22,7 @@ export function useImageDrop(editor: Editor | null, showSnackbar: ShowSnackbar) 
     }, [])
 
     const handleDrop = useCallback(
-        (e: React.DragEvent) => {
+        async (e: React.DragEvent) => {
             e.preventDefault()
             e.stopPropagation()
             setIsDragging(false)
@@ -34,16 +35,24 @@ export function useImageDrop(editor: Editor | null, showSnackbar: ShowSnackbar) 
                 return
             }
 
-            imageFiles.forEach((file) => {
-                const reader = new FileReader()
-                reader.onload = (event) => {
-                    const url = event.target?.result as string
-                    editor?.chain().focus().setImage({ src: url }).run()
+            const results = await Promise.allSettled(imageFiles.map(uploadImage))
+            let added = 0
+            let failure: string | null = null
+            for (const result of results) {
+                if (result.status === 'fulfilled') {
+                    editor?.chain().focus().setImage({ src: result.value.url }).run()
+                    added++
+                } else {
+                    failure ??= uploadErrorMessage(result.reason)
                 }
-                reader.readAsDataURL(file)
-            })
+            }
 
-            showSnackbar(`Добавлено изображений: ${imageFiles.length}`, 'success')
+            if (failure !== null) {
+                const rest = added > 0 ? ` Добавлено: ${added} из ${imageFiles.length}` : ''
+                showSnackbar(`${failure}.${rest}`, 'error')
+            } else {
+                showSnackbar(`Добавлено изображений: ${added}`, 'success')
+            }
         },
         [editor, showSnackbar]
     )

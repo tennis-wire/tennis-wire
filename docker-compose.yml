@@ -122,6 +122,9 @@ services:
   # need no anonymous policy, locally as in production. avatars is public-read,
   # as it will be in production: browsers load the pictures straight from it.
   # Locally the policy also lets anyone list the bucket; R2 public access does not.
+  # media is public-read by design: its URLs are written into article HTML and
+  # have to outlive any signature. Keys are random, so a draft's cover is
+  # unlisted rather than secret.
   minio-init:
     image: minio/mc:RELEASE.2025-08-13T08-35-41Z
     container_name: tw-minio-init
@@ -133,7 +136,9 @@ services:
       mc alias set local http://minio:9000 minioadmin minioadmin &&
       mc mb --ignore-existing local/transcription &&
       mc mb --ignore-existing local/avatars &&
-      mc anonymous set download local/avatars
+      mc anonymous set download local/avatars &&
+      mc mb --ignore-existing local/media &&
+      mc anonymous set download local/media
       "
 
   # SMTP sink for Keycloak: registration, email verification, password reset.
