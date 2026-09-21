@@ -90,10 +90,24 @@ a:hover {
 }
 
 .tw-article-body img,
-.tw-article-body video,
-.tw-article-body iframe {
+.tw-article-body video {
     max-width: 100%;
     height: auto;
+    border-radius: 8px;
+}
+
+/* A frame keeps the height the editor gave it: a frame with height: auto is 150px tall, whatever
+   its attributes say */
+.tw-article-body iframe {
+    max-width: 100%;
+    border: 0;
+}
+
+/* The editor writes 640x480 here, the player's size; the video is wider than that */
+.tw-article-body [data-youtube-video] iframe {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
 }
 
 .tw-article-body blockquote {

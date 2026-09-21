@@ -38,7 +38,7 @@ const OPTIONS: sanitizeHtml.IOptions = {
         // no target: links open where they are, and there is no rel to get wrong
         a: ['href'],
         img: ['src', 'alt', 'width', 'height'],
-        div: ['data-video', 'data-telegram-post'],
+        div: ['data-video', 'data-telegram-post', 'data-youtube-video'],
         iframe: ['src', 'width', 'height', 'allow', 'allowfullscreen', 'frameborder'],
         video: ['src', 'controls', 'width', 'height', 'poster'],
     },
@@ -47,8 +47,10 @@ const OPTIONS: sanitizeHtml.IOptions = {
     },
     allowedSchemes: ['http', 'https', 'mailto'],
     allowedIframeHostnames: ['www.youtube.com', 'www.youtube-nocookie.com', 't.me'],
-    // A frame from anywhere else loses its src above and would stay as an empty box
-    exclusiveFilter: (frame) => frame.tag === 'iframe' && !frame.attribs.src,
+    // A frame from anywhere else loses its src above and would stay as an empty box. So does a
+    // picture pasted into the editor before it had uploads: a data: URL, dropped with its scheme.
+    exclusiveFilter: (frame) =>
+        (frame.tag === 'iframe' || frame.tag === 'img') && !frame.attribs.src,
     // inline style is decoration, and the Telegram embed's border-radius is not worth an attribute
     // that can carry url()
 }

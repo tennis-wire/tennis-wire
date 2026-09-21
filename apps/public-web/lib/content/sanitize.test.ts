@@ -22,7 +22,7 @@ describe('sanitizeArticle', () => {
 
     it('keeps the embeds the editor makes and no other frame', () => {
         const youtube =
-            '<iframe src="https://www.youtube-nocookie.com/embed/abc" allowfullscreen></iframe>'
+            '<div data-youtube-video><iframe src="https://www.youtube-nocookie.com/embed/abc" allowfullscreen></iframe></div>'
         const telegram =
             '<div data-telegram-post="chan/1" class="telegram-embed">' +
             '<iframe src="https://t.me/chan/1?embed=1" style="border: none"></iframe></div>'
@@ -34,5 +34,10 @@ describe('sanitizeArticle', () => {
                 '<iframe src="https://t.me/chan/1?embed=1"></iframe></div>'
         )
         expect(sanitizeArticle(foreign)).toBe('')
+    })
+
+    it('drops a picture that was never uploaded', () => {
+        const inline = '<p>a</p><img src="data:image/png;base64,AAAA"><p>b</p>'
+        expect(sanitizeArticle(inline)).toBe('<p>a</p><p>b</p>')
     })
 })
