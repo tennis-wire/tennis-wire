@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Editor from './features/editor/components/Editor.tsx'
 import CuratorPage from './features/curator/CuratorPage.tsx'
 import ModerationPage from './features/moderation/ModerationPage.tsx'
+import AvatarQueuePage from './features/moderation/AvatarQueuePage.tsx'
 import { ThemeProvider, useAppTheme, createAppTheme } from './theme'
 
 import RequireAuth from './auth/RequireAuth.tsx'
@@ -45,6 +46,14 @@ function AppRoutes() {
                         element={
                             <RequireRole role={MODERATOR}>
                                 <ModerationPage />
+                            </RequireRole>
+                        }
+                    />
+                    <Route
+                        path="/moderation/avatars"
+                        element={
+                            <RequireRole role={MODERATOR}>
+                                <AvatarQueuePage />
                             </RequireRole>
                         }
                     />

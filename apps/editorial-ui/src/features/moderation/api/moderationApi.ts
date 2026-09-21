@@ -1,7 +1,7 @@
 // Moderation API client. Everything goes through the gateway, as the rest does.
 
 import { apiFetch } from '../../../api/apiFetch'
-import type { ModerationQueue, Resolution } from '../types/moderation'
+import type { AvatarQueue, ModerationQueue, Resolution } from '../types/moderation'
 
 export class ModerationApiError extends Error {
     status: number
@@ -41,6 +41,32 @@ export const moderationApi = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ resolution }),
         })
+        await check(response)
+    },
+
+    // First page only: whatever is decided leaves the queue, so the next call is the next batch
+    async avatarQueue(size: number): Promise<AvatarQueue> {
+        const response = await apiFetch(`/api/users/moderation/avatars?size=${size}`)
+        await check(response)
+        return response.json() as Promise<AvatarQueue>
+    },
+
+    // Both decisions carry the key on screen: an avatar uploaded since answers 409 AVATAR_CHANGED
+    async approveAvatar(userId: string, avatarKey: string): Promise<void> {
+        const response = await apiFetch(`/api/users/${encodeURIComponent(userId)}/avatar/review`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ avatarKey }),
+        })
+        await check(response)
+    },
+
+    // Not counted against the reader anywhere
+    async takeDownAvatar(userId: string, avatarKey: string): Promise<void> {
+        const response = await apiFetch(
+            `/api/users/${encodeURIComponent(userId)}/avatar?avatarKey=${encodeURIComponent(avatarKey)}`,
+            { method: 'DELETE' }
+        )
         await check(response)
     },
 }
