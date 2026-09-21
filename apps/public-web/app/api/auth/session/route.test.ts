@@ -54,6 +54,8 @@ describe('GET /api/auth/session', () => {
             userId: 'user-1',
             displayName: 'reader-3fa9c2d1',
             displayNameChosen: false,
+            avatarUrl: 'http://media/96/k.jpg',
+            avatarLargeUrl: 'http://media/288/k.jpg',
             createdAt: '2026-09-01T10:00:00Z',
         })
 
@@ -67,6 +69,8 @@ describe('GET /api/auth/session', () => {
             displayName: 'reader-3fa9c2d1',
             displayNameChosen: false,
             createdAt: '2026-09-01T10:00:00Z',
+            avatarUrl: 'http://media/96/k.jpg',
+            avatarLargeUrl: 'http://media/288/k.jpg',
         })
         expect(JSON.stringify(body)).not.toContain('token')
         expect(response.headers.get('cache-control')).toBe('no-store')
@@ -83,6 +87,8 @@ describe('GET /api/auth/session', () => {
             displayName: null,
             displayNameChosen: true,
             createdAt: null,
+            avatarUrl: null,
+            avatarLargeUrl: null,
         })
     })
 })

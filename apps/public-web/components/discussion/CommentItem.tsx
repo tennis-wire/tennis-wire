@@ -158,7 +158,7 @@ export function AuthorName({ author }: { author?: Author }) {
 // The same circle the header draws, and the same emptiness where there is no author
 function authorFace(author?: Author) {
     if (!author || 'restricted' in author) return <Avatar size={36} />
-    return <Avatar name={author.displayName} size={36} />
+    return <Avatar name={author.displayName} src={author.avatarUrl} size={36} />
 }
 
 function elementId(comment: Comment) {

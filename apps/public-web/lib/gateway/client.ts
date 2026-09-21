@@ -8,6 +8,9 @@ export type Profile = {
     userId: string
     displayName: string
     displayNameChosen: boolean
+    // 96 px and 288 px, both null without a photo
+    avatarUrl: string | null
+    avatarLargeUrl: string | null
     createdAt: string
 }
 

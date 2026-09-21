@@ -29,6 +29,8 @@ export async function GET(request: NextRequest) {
             // no reason to send the reader to the rename screen.
             displayNameChosen: profile?.displayNameChosen ?? true,
             createdAt: profile?.createdAt ?? null,
+            avatarUrl: profile?.avatarUrl ?? null,
+            avatarLargeUrl: profile?.avatarLargeUrl ?? null,
         },
         { headers: NO_STORE }
     )

@@ -177,6 +177,7 @@ export default function ComposeForm({
     }
 
     const mine = session?.authenticated ? session.displayName : null
+    const face = session?.authenticated ? session.avatarUrl : null
 
     if (restrictedUntil !== undefined) {
         return (
@@ -192,7 +193,7 @@ export default function ComposeForm({
 
     return (
         <div style={row}>
-            <Avatar name={mine} size={36} />
+            <Avatar name={mine} src={face} size={36} />
             <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={box}>
                     <textarea

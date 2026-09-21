@@ -32,10 +32,12 @@ const plate: React.CSSProperties = {
 export default function RestrictionPlate({ until, children }: Props) {
     const { session } = useReaderSession()
     const mine = session?.authenticated ? session.displayName : null
+    // his own photo: others are not shown it while he is restricted, he still is
+    const face = session?.authenticated ? session.avatarUrl : null
 
     return (
         <div style={row}>
-            <Avatar name={mine} size={36} />
+            <Avatar name={mine} src={face} size={36} />
             <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={plate}>
                     {until

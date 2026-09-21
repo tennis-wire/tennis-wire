@@ -7,7 +7,8 @@ import { authorCard } from './discussion/endpoints'
 import { readQueue } from './discussion/queue'
 import type { AuthorCard } from './discussion/types'
 
-export type Reader = AuthorCard & { createdAt: string }
+// The large photo comes from user-service too: the card carries only the small one
+export type Reader = AuthorCard & { createdAt: string; avatarLargeUrl: string | null }
 
 const absent = (error: unknown) => error instanceof DiscussionError && error.status === 404
 
@@ -16,9 +17,17 @@ export async function fetchReader(id: string): Promise<Reader | null> {
     try {
         const [card, profile] = await Promise.all([
             authorCard(id),
-            readQueue(() => read<{ createdAt: string }>(`/api/users/${encodeURIComponent(id)}`)),
+            readQueue(() =>
+                read<{ createdAt: string; avatarLargeUrl?: string | null }>(
+                    `/api/users/${encodeURIComponent(id)}`
+                )
+            ),
         ])
-        return { ...card, createdAt: profile.createdAt }
+        return {
+            ...card,
+            createdAt: profile.createdAt,
+            avatarLargeUrl: profile.avatarLargeUrl ?? null,
+        }
     } catch (error) {
         if (absent(error)) return null
         throw error

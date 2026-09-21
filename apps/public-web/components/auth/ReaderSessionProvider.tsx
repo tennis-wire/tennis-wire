@@ -12,6 +12,9 @@ export type ReaderSession =
           displayNameChosen: boolean
           // when the profile was made; null on the same terms as the name
           createdAt: string | null
+          // 96 px for the header and the comments, 288 px for the cabinet; null without a photo
+          avatarUrl: string | null
+          avatarLargeUrl: string | null
       }
 
 type Store = {

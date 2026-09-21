@@ -36,7 +36,24 @@ describe('fetchReader', () => {
         await expect(fetchReader('r1')).resolves.toEqual({
             ...card,
             createdAt: '2026-05-03T10:00:00Z',
+            avatarLargeUrl: null,
         })
+    })
+
+    it('takes the large photo from user-service', async () => {
+        answer(
+            json(200, { ...card, avatarUrl: 'http://media/96/k.jpg' }),
+            json(200, {
+                id: 'r1',
+                createdAt: '2026-05-03T10:00:00Z',
+                avatarLargeUrl: 'http://media/288/k.jpg',
+            })
+        )
+
+        const reader = await fetchReader('r1')
+
+        expect(reader?.avatarUrl).toBe('http://media/96/k.jpg')
+        expect(reader?.avatarLargeUrl).toBe('http://media/288/k.jpg')
     })
 
     it('has no page for someone the card does not know or will not show', async () => {
