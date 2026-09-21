@@ -9,7 +9,10 @@ import AuthorComments from '@/components/discussion/AuthorComments'
 import { strings } from '@/components/discussion/strings'
 import { linkButton, muted } from '@/components/discussion/styles'
 import { NetworkError } from '@/lib/discussion/api'
+import type { BlockMode } from '@/lib/discussion/modes'
 import { fetchReader, type Reader } from '@/lib/readers'
+
+import ReaderIgnore from './ReaderIgnore'
 
 type State =
     | { kind: 'loading' }
@@ -26,6 +29,8 @@ export default function ReaderPage({ id }: { id: string }) {
     const own = session?.authenticated === true && session.userId === id
     const [state, setState] = useState<State>({ kind: 'loading' })
     const [attempt, setAttempt] = useState(0)
+    // undefined until known, and for someone signed out
+    const [mode, setMode] = useState<BlockMode | null | undefined>(undefined)
 
     // one's own page is the cabinet
     useEffect(() => {
@@ -96,7 +101,14 @@ export default function ReaderPage({ id }: { id: string }) {
                     </p>
                 </div>
             </header>
-            <AuthorComments authorId={reader.id} empty={strings.readerEmpty} />
+            <ReaderIgnore readerId={reader.id} onMode={setMode} />
+            <AuthorComments
+                key={mode ?? 'none'}
+                authorId={reader.id}
+                empty={
+                    mode === 'subtree_removal' ? strings.readerRemovedByIgnore : strings.readerEmpty
+                }
+            />
         </>
     )
 }

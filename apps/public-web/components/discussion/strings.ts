@@ -157,4 +157,5 @@ export const strings = {
     readerSince: (day: string) => `На сайте с ${day}`,
     commentTally: (count: number) => `Комментариев: ${count}`,
     readerEmpty: 'Комментариев пока нет',
+    readerRemovedByIgnore: 'Вы убрали этого читателя с ветками: его комментарии здесь не видны',
 }
