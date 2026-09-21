@@ -33,6 +33,8 @@ public class SecurityConfig {
                         .hasRole(Roles.SERVICE)
                         .requestMatchers(HttpMethod.GET, "/api/discussion/comments/**")
                         .permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/discussion/authors/*")
+                        .permitAll()
                         .requestMatchers("/api/discussion/moderation/restrictions/**")
                         .hasRole(Roles.MODERATOR)
                         // Filing is the classifier's job and reading the queue is a person's;

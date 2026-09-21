@@ -43,6 +43,7 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
 | GET | `/comments/{id}/ancestry` | аноним | `{chain: [корень … id], viewer?}` без вложенных ответов |
 | GET | `/comments?authorId=&limit=&cursor=` | аноним | комментарии одного автора, новые сверху, плоско: `{items, nextCursor}`. Лимиты и курсор как у листинга по subject, но курсор общий с `/replies` и сортировка одна. Ни одного из `subjectType` и `authorId` или оба сразу — 400, без конверта ошибки |
 | GET | `/comments/count?authorId=` | аноним | `{count}` — сколько комментариев автора стоит. Игнор зрителя не применяется |
+| GET | `/authors/{id}` | аноним | карточка для публичной страницы читателя: `{id, displayName, avatarUrl, commentCount}`. Под запретом комментировать — 404 `NOT_FOUND`, как и для id, которого нет: в ветке такого автора не называют, и страницы у него нет. user-service не ответил — 503 |
 
 `branch`, `replies` и `ancestry` отвечают 404 `NOT_FOUND`, если комментария нет или это заглушка,
 которую не видит никто. 404 `HIDDEN_BY_BLOCK` — если сам комментарий или комментарий выше по цепочке

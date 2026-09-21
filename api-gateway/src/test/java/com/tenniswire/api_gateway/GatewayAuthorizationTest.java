@@ -94,6 +94,15 @@ class GatewayAuthorizationTest {
     }
 
     @Test
+    void anAuthorCardPassesWithoutAToken() {
+        client.get()
+                .uri("/api/discussion/authors/" + UUID.randomUUID())
+                .exchange()
+                .expectStatus()
+                .value(code -> assertThat(code).isNotIn(401, 403));
+    }
+
+    @Test
     void ownProfileStillRejectsAnonymous() {
         client.get().uri("/api/users/me").exchange().expectStatus().isUnauthorized();
     }
