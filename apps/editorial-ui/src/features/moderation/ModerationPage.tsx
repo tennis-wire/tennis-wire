@@ -13,6 +13,7 @@ import {
 } from '@mui/material'
 
 import UserMenu from '../../auth/UserMenu'
+import ModerationNav from './ModerationNav'
 import { moderationApi, ModerationApiError } from './api/moderationApi'
 import { REASON_LABELS, type QueueEntry, type Resolution } from './types/moderation'
 
@@ -101,13 +102,14 @@ export default function ModerationPage() {
         <Container maxWidth="md" sx={{ py: 4 }}>
             <Stack
                 direction="row"
-                sx={{ mb: 3, alignItems: 'center', justifyContent: 'space-between' }}
+                sx={{ mb: 2, alignItems: 'center', justifyContent: 'space-between' }}
             >
                 <Typography variant="h4" component="h1">
                     Жалобы
                 </Typography>
                 <UserMenu />
             </Stack>
+            <ModerationNav />
 
             {error !== null && (
                 <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>

@@ -57,3 +57,17 @@ export const REASON_LABELS: Record<string, string> = {
     personal_data: 'Личные данные',
     other: 'Другое',
 }
+
+// The avatar queue as user-service sends it: changed since a moderator last looked, oldest first
+export interface AvatarQueueEntry {
+    userId: string
+    displayName: string
+    // Sent back with the decision, so a newer avatar is not decided on unseen
+    avatarKey: string
+    avatarLargeUrl: string
+    updatedAt: string
+}
+
+export interface AvatarQueue {
+    items: AvatarQueueEntry[]
+}

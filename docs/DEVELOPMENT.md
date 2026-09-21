@@ -446,7 +446,8 @@ built from `MEDIA_PUBLIC_BASE_URL`. Nothing of the upload but its pixels is
 kept, EXIF included. Without MinIO an upload answers 503 and the rest of the
 service works. Objects a profile no longer points at are deleted once the change
 has committed; if the bucket does not answer then, they stay behind. Moderators
-review new avatars in a queue of their own, `GET /api/users/moderation/avatars`,
+review new avatars in a queue of their own, `GET /api/users/moderation/avatars`
+(in editorial-ui: `/moderation/avatars`),
 and pass or take one down; taking one down is not counted against the reader.
 
 Deleting an account finishes out of band: a job passes once a minute over the

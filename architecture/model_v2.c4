@@ -207,7 +207,7 @@ model {
       }
 
       webapp moderationApp 'Moderation Queue' {
-        description 'Очередь жалоб, /moderation за ролью moderator. Место временное, постоянное не выбрано — auth.md §11'
+        description 'Очередь жалоб и очередь аватаров на постмодерации, /moderation и /moderation/avatars за ролью moderator. Место временное, постоянное не выбрано — auth.md §11'
       }
     }
 
@@ -368,7 +368,7 @@ model {
   registeredUser -> tennisService.webApp 'Комментирует, ведёт кабинет'
   registeredUser -> tennisService.mobileApp 'Использует сервис (входа в приложении пока нет)'
   author -> tennisService.editorial 'Создаёт контент'
-  moderator -> tennisService.editorial.moderationApp 'Разбирает жалобы'
+  moderator -> tennisService.editorial.moderationApp 'Разбирает жалобы и новые аватары'
   admin -> tennisService.identity 'Заводит сотрудников, роли, отзыв доступа (admin-консоль)'
   admin -> tennisService.apiGateway 'DELETE /api/users/{id}: удаление аккаунта через поддержку, без интерфейса'
 
@@ -397,7 +397,8 @@ model {
   tennisService.editorial.editorApp -> tennisService.apiGateway 'Черновики, AI-чат, перевод, транскрипция'
   tennisService.editorial.curatorApp -> tennisService.editorial.editorApp 'В работу'
   tennisService.editorial.curatorApp -> tennisService.apiGateway 'Список спарсенных материалов'
-  tennisService.editorial.moderationApp -> tennisService.apiGateway 'Очередь жалоб и решения (/api/discussion/moderation/reports/**)'
+  tennisService.editorial.moderationApp -> tennisService.apiGateway 'Очередь жалоб и решения (/api/discussion/moderation/reports/**); очередь аватаров, «ок» и «снять» (/api/users/moderation/avatars, /api/users/{id}/avatar)'
+  tennisService.editorial.moderationApp -> tennisService.userService.avatarStorage 'Картинки из очереди, напрямую из бакета'
 
   // --- API Gateway -> Services ---
   tennisService.apiGateway -> tennisService.editorialBff.editorialBffApi '/api/ai/**, /api/translate/**'
