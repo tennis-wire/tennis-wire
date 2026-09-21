@@ -58,11 +58,12 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
     const signedIn = session?.authenticated === true
     const displayName = session?.authenticated ? session.displayName : null
     const createdAt = session?.authenticated ? session.createdAt : null
+    const photo = session?.authenticated ? session.avatarLargeUrl : null
 
     return (
         <div style={card}>
             <div style={strip}>
-                <Avatar name={displayName} size={56} />
+                <Avatar name={displayName} src={photo} size={56} />
                 <div style={{ minWidth: 0 }}>
                     <div
                         style={{

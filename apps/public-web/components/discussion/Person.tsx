@@ -9,7 +9,7 @@ import { strings } from './strings'
 
 export function PersonFace({ user }: { user?: Author }) {
     if (!user || 'restricted' in user) return <Avatar size={36} />
-    return <Avatar name={user.displayName} size={36} />
+    return <Avatar name={user.displayName} src={user.avatarUrl} size={36} />
 }
 
 export function PersonName({ user }: { user?: Author }) {

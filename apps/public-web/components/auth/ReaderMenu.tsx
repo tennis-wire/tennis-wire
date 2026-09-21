@@ -91,6 +91,7 @@ export default function ReaderMenu() {
 
     const signedIn = session?.authenticated === true
     const displayName = session?.authenticated ? session.displayName : null
+    const avatarUrl = session?.authenticated ? session.avatarUrl : null
     // The cabinet is where a name is chosen now, so the icon is what says it is worth opening
     const unnamed = session?.authenticated === true && !session.displayNameChosen
 
@@ -104,7 +105,7 @@ export default function ReaderMenu() {
                 aria-label={signedIn ? (displayName ?? 'Личный кабинет') : 'Войти'}
                 style={trigger}
             >
-                <Avatar name={displayName} size={36} />
+                <Avatar name={displayName} src={avatarUrl} size={36} />
                 {unnamed && <span aria-hidden style={dot} />}
             </button>
 
@@ -121,6 +122,7 @@ export default function ReaderMenu() {
                             (signedIn ? (
                                 <Account
                                     displayName={displayName}
+                                    avatarUrl={avatarUrl}
                                     userId={session.authenticated ? session.userId : null}
                                     onNavigate={() => setOpen(false)}
                                 />
@@ -151,17 +153,19 @@ function Anonymous({ onNavigate }: { onNavigate: () => void }) {
 
 function Account({
     displayName,
+    avatarUrl,
     userId,
     onNavigate,
 }: {
     displayName: string | null
+    avatarUrl: string | null
     userId: string | null
     onNavigate: () => void
 }) {
     return (
         <>
             <div style={{ ...item, cursor: 'default', gap: 10 }}>
-                <Avatar name={displayName} size={28} />
+                <Avatar name={displayName} src={avatarUrl} size={28} />
                 <span
                     style={{
                         fontWeight: 600,

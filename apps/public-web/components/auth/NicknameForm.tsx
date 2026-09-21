@@ -89,6 +89,8 @@ export default function NicknameForm({
             displayName: profile.displayName,
             displayNameChosen: true,
             createdAt: profile.createdAt ?? null,
+            avatarUrl: profile.avatarUrl ?? null,
+            avatarLargeUrl: profile.avatarLargeUrl ?? null,
         })
         setValue('')
         setSaved(true)

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
+import Avatar from '@/components/Avatar'
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
 import { countByAuthor } from '@/lib/discussion/endpoints'
 
@@ -72,11 +73,15 @@ export default function ProfilePage() {
             </div>
             <div style={row}>
                 <span style={muted}>Фото</span>
-                <span style={muted}>пока не загружается</span>
+                {session.avatarUrl ? (
+                    <Avatar name={session.displayName} src={session.avatarUrl} size={36} />
+                ) : (
+                    <span>нет</span>
+                )}
             </div>
 
             <p style={{ ...muted, marginTop: 24 }}>
-                Сменить имя и удалить аккаунт можно в{' '}
+                Сменить фото и имя или удалить аккаунт можно в{' '}
                 <Link href="/me/settings/actions" style={{ color: 'var(--tw-primary)' }}>
                     настройках
                 </Link>

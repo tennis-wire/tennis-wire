@@ -83,7 +83,11 @@ export default function ReaderPage({ id }: { id: string }) {
             <header
                 style={{ display: 'flex', gap: 16, alignItems: 'center', margin: '8px 0 20px' }}
             >
-                <Avatar name={reader.displayName} size={64} />
+                <Avatar
+                    name={reader.displayName}
+                    src={reader.avatarLargeUrl ?? reader.avatarUrl}
+                    size={64}
+                />
                 <div style={{ minWidth: 0 }}>
                     <h1
                         style={{
