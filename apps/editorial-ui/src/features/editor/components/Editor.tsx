@@ -159,6 +159,7 @@ export default function Editor() {
                     <MetadataPanel
                         metadata={metadata}
                         onChange={setMetadata}
+                        onError={(message) => showSnackbar(message, 'error')}
                         readingTime={metadata.type === 'article' ? readingTime : undefined}
                     />
 
@@ -217,6 +218,7 @@ export default function Editor() {
                                 <>
                                     <Toolbar
                                         editor={editor}
+                                        onError={(message) => showSnackbar(message, 'error')}
                                         onTranslateClick={() => {
                                             setTranslateSession((s) => s + 1)
                                             setTranslateDialogOpen(true)

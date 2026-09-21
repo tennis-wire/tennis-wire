@@ -12,22 +12,26 @@ import {
     Paper,
     IconButton,
     Autocomplete,
+    CircularProgress,
 } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import { Upload, Delete } from '@mui/icons-material'
 import type { ContentMetadata, ContentType, Tag } from '../types/content.ts'
 import { TAG_TYPE_LABELS } from '../constants/tagTypes'
 import { useTagSearch } from '../hooks/useTagSearch'
+import { IMAGE_ACCEPT, uploadErrorMessage, uploadImage } from '../api/mediaApi'
 import { RADIUS, useAppTheme } from '../../../theme'
 
 interface Props {
     metadata: ContentMetadata
-    onChange: (metadata: ContentMetadata) => void
+    onChange: React.Dispatch<React.SetStateAction<ContentMetadata>>
+    onError: (message: string) => void
     readingTime?: number
 }
 
-export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, readingTime }) => {
+export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, onError, readingTime }) => {
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const [coverUploading, setCoverUploading] = React.useState(false)
     const [tagQuery, setTagQuery] = React.useState('')
     const [tagsOpen, setTagsOpen] = React.useState(false)
     const tagSearch = useTagSearch(tagQuery, tagsOpen)
@@ -82,21 +86,24 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, readingTime
         fileInputRef.current?.click()
     }
 
-    const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
-        if (!file || !file.type.startsWith('image/')) return
-
-        const reader = new FileReader()
-        reader.onload = (event) => {
-            if (isArticle) {
-                onChange({
-                    ...metadata,
-                    coverImage: event.target?.result as string,
-                })
-            }
-        }
-        reader.readAsDataURL(file)
         e.target.value = ''
+        if (!file) return
+
+        setCoverUploading(true)
+        try {
+            const { url } = await uploadImage(file)
+            // The form stays editable while the file travels, so the cover goes into
+            // whatever the metadata is by then, not into what it was at the click.
+            onChange((current) =>
+                current.type === 'article' ? { ...current, coverImage: url } : current
+            )
+        } catch (error) {
+            onError(uploadErrorMessage(error))
+        } finally {
+            setCoverUploading(false)
+        }
     }
 
     const handleCoverRemove = () => {
@@ -207,7 +214,7 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, readingTime
                         type="file"
                         ref={fileInputRef}
                         style={{ display: 'none' }}
-                        accept="image/*"
+                        accept={IMAGE_ACCEPT}
                         onChange={handleCoverChange}
                     />
 
@@ -240,7 +247,8 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, readingTime
                     ) : (
                         <Button
                             variant="outlined"
-                            startIcon={<Upload />}
+                            startIcon={coverUploading ? <CircularProgress size={16} /> : <Upload />}
+                            disabled={coverUploading}
                             onClick={handleCoverUpload}
                             sx={{
                                 borderStyle: 'dashed',
@@ -252,7 +260,7 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, readingTime
                                 },
                             }}
                         >
-                            Загрузить обложку
+                            {coverUploading ? 'Загрузка' : 'Загрузить обложку'}
                         </Button>
                     )}
                 </Box>
