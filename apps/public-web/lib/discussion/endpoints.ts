@@ -7,6 +7,7 @@ import type {
     Block,
     BlockPage,
     Branch,
+    CommentCount,
     CommentCreated,
     CommentPage,
     Edited,
@@ -36,6 +37,17 @@ export function listTopLevel(
 ) {
     const query = new URLSearchParams({ subjectType, subjectId, sort })
     return readQueue(() => read<CommentPage>(`${COMMENTS}?${query}&${page(cursor)}`))
+}
+
+// One author's comments, newest first and flat: no order to choose, no replies under them
+export function listByAuthor(authorId: string, cursor?: string | null) {
+    const query = new URLSearchParams({ authorId })
+    return readQueue(() => read<CommentPage>(`${COMMENTS}?${query}&${page(cursor)}`))
+}
+
+export function countByAuthor(authorId: string) {
+    const query = new URLSearchParams({ authorId })
+    return readQueue(() => read<CommentCount>(`${COMMENTS}/count?${query}`))
 }
 
 export function branch(id: string) {

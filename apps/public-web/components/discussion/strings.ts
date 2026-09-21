@@ -143,4 +143,12 @@ export const strings = {
     notIgnoring: 'Больше не игнорируете',
     restore: 'Вернуть',
     restoreFailed: 'Не удалось вернуть',
+
+    // the reader's own comments in the cabinet
+    authored: 'Комментарии',
+    authoredAbout: 'Новые сверху. Удалённые и снятые модерацией сюда не попадают.',
+    authoredEmpty:
+        'Вы ещё не писали комментариев. Обсуждение есть под каждой новостью и материалом.',
+    articleGone: 'Материал недоступен',
+    replyTally: (count: number) => `Ответов: ${count}`,
 }
