@@ -26,6 +26,12 @@ dependencies {
     // WebP is not in the JDK; the JPEG reader also takes CMYK and embedded ICC profiles
     implementation(libs.twelvemonkeys.imageio.jpeg)
     implementation(libs.twelvemonkeys.imageio.webp)
+    implementation(libs.aws.s3) {
+        // Blocking calls over the JDK's own HTTP client: neither Apache nor Netty is needed
+        exclude(group = "software.amazon.awssdk", module = "apache-client")
+        exclude(group = "software.amazon.awssdk", module = "netty-nio-client")
+    }
+    implementation(libs.aws.url.connection.client)
 
     runtimeOnly("org.postgresql:postgresql")
 
@@ -50,4 +56,14 @@ sourceSets {
 // test-only settings live and no test class has to remember to ask for it.
 tasks.test {
     systemProperty("spring.profiles.active", "test")
+}
+
+dependencyManagement {
+    imports {
+        mavenBom(
+            libs.aws.sdk.bom
+                .get()
+                .toString(),
+        )
+    }
 }
