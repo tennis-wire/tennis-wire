@@ -58,6 +58,13 @@ export type Viewer = { restriction: Restriction | null }
 export type CommentPage = { items: Comment[]; nextCursor: string | null; viewer?: Viewer }
 // How many comments an author has standing, whoever is asking
 export type CommentCount = { count: number }
+// What a reader's page shows about him; there is none for someone under a restriction
+export type AuthorCard = {
+    id: string
+    displayName: string
+    avatarUrl: string | null
+    commentCount: number
+}
 export type Branch = { root: Comment }
 export type Ancestry = { chain: Comment[]; viewer?: Viewer }
 

@@ -1,10 +1,14 @@
+'use client'
+
+import { useState } from 'react'
+
 import { articleHref, type ArticleRef } from '@/lib/content/refs'
 import type { Comment } from '@/lib/discussion/types'
 
 import CommentBody, { placeholder } from './CommentBody'
 import { formatWhen } from './format'
 import { strings } from './strings'
-import { muted } from './styles'
+import { action, muted } from './styles'
 import { hashFor } from './useDiscussion'
 
 const item: React.CSSProperties = {
@@ -34,6 +38,9 @@ type Props = {
 
 // A comment away from its thread. The article's title leads back to it, re-rooted on this comment.
 export default function ProfileComment({ comment, article }: Props) {
+    const [revealed, setRevealed] = useState(false)
+    const collapsed = comment.visibility === 'soft_hidden' && !revealed
+
     return (
         <li style={item}>
             {article ? (
@@ -45,7 +52,14 @@ export default function ProfileComment({ comment, article }: Props) {
                 <span style={muted}>{strings.articleGone}</span>
             ) : null}
 
-            {comment.body === undefined ? (
+            {collapsed ? (
+                <p style={{ ...muted, margin: '6px 0 0', fontSize: 14 }}>
+                    {strings.ignoring} ·{' '}
+                    <button type="button" style={action} onClick={() => setRevealed(true)}>
+                        {strings.reveal}
+                    </button>
+                </p>
+            ) : comment.body === undefined ? (
                 <p style={placeholder}>{strings.hidden}</p>
             ) : (
                 <CommentBody body={comment.body} />

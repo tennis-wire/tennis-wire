@@ -7,6 +7,7 @@ import type {
     Block,
     BlockPage,
     Branch,
+    AuthorCard,
     CommentCount,
     CommentCreated,
     CommentPage,
@@ -48,6 +49,10 @@ export function listByAuthor(authorId: string, cursor?: string | null) {
 export function countByAuthor(authorId: string) {
     const query = new URLSearchParams({ authorId })
     return readQueue(() => read<CommentCount>(`${COMMENTS}/count?${query}`))
+}
+
+export function authorCard(id: string) {
+    return readQueue(() => read<AuthorCard>(`/api/discussion/authors/${encodeURIComponent(id)}`))
 }
 
 export function branch(id: string) {
