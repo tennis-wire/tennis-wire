@@ -23,6 +23,12 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
 
+  servlet:
+    multipart:
+      # The avatar is the only upload. A cropped square is a small fraction of this.
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   security:
     oauth2:
       resourceserver:
