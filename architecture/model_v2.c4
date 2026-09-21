@@ -461,7 +461,8 @@ model {
   // --- Client Apps -> API Gateway ---
   // Браузер в gateway не ходит: только в свой origin, дальше запрос собирает сервер Next.js.
   tennisService.webApp.publicSite -> tennisService.webApp.webServer 'Страницы; вход, сессия, комментарии и игнор через /api/**'
-  tennisService.webApp.userCabinet -> tennisService.webApp.webServer 'Профиль, ник, игнор-лист, удаление аккаунта'
+  tennisService.webApp.publicSite -> tennisService.userService.avatarStorage 'Фото читателей, напрямую из бакета'
+  tennisService.webApp.userCabinet -> tennisService.webApp.webServer 'Профиль, фото, ник, игнор-лист, удаление аккаунта'
   tennisService.webApp.webServer -> tennisService.apiGateway 'Прокси /api/discussion/**, /api/users/** с токеном из куки; статья — /api/public/articles/{slug} при рендере. Остальной контент — моки'
   tennisService.mobileApp.iosApp -> tennisService.apiGateway 'Контент (пока не подключено: работает на моках)'
   tennisService.mobileApp.androidApp -> tennisService.apiGateway 'Контент (пока не подключено: работает на моках)'
