@@ -4,6 +4,7 @@ import com.tenniswire.user_service.client.KeycloakAdmin;
 import com.tenniswire.user_service.client.ReaderTraceClient;
 import com.tenniswire.user_service.config.ErasureProperties;
 import com.tenniswire.user_service.entity.PendingIdentityDelete;
+import com.tenniswire.user_service.entity.Profile;
 import com.tenniswire.user_service.repository.DisplayNameReservationRepository;
 import com.tenniswire.user_service.repository.PendingIdentityDeleteRepository;
 import com.tenniswire.user_service.repository.ProfileRepository;
@@ -12,6 +13,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +39,7 @@ public class AccountErasure {
     private final ReaderTraceClient traces;
     private final KeycloakAdmin keycloak;
     private final ErasureProperties properties;
+    private final ApplicationEventPublisher events;
 
     public AccountErasure(
             PendingIdentityDeleteRepository pending,
@@ -44,13 +47,15 @@ public class AccountErasure {
             DisplayNameReservationRepository names,
             ReaderTraceClient traces,
             KeycloakAdmin keycloak,
-            ErasureProperties properties) {
+            ErasureProperties properties,
+            ApplicationEventPublisher events) {
         this.pending = pending;
         this.profiles = profiles;
         this.names = names;
         this.traces = traces;
         this.keycloak = keycloak;
         this.properties = properties;
+        this.events = events;
     }
 
     /** Accounts due this pass, the longest overdue first. */
@@ -121,6 +126,7 @@ public class AccountErasure {
         // Only now, and not before: resolving a subject creates a profile, so a token still good
         // would have made him a new one, with a new name, and undone the deletion by itself.
         holdTheName(record.userId());
+        discardTheAvatar(record.userId());
         profiles.deleteById(record.userId());
 
         if (erased.banned()) {
@@ -140,6 +146,13 @@ public class AccountErasure {
         profiles.findById(userId)
                 .ifPresent(profile ->
                         names.hold(profile.displayName(), Instant.now().plus(properties.nameHeld())));
+    }
+
+    // The objects go once the row is gone, which is after this transaction commits
+    private void discardTheAvatar(UUID userId) {
+        profiles.findById(userId)
+                .map(Profile::avatarKey)
+                .ifPresent(avatarKey -> events.publishEvent(new AvatarDiscarded(avatarKey)));
     }
 
     // Names whose month is up. Swept from here because this is the only clock the service has
