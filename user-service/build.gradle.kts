@@ -23,6 +23,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-liquibase")
     implementation(libs.springdoc.openapi.webmvc.ui)
+    // WebP is not in the JDK; the JPEG reader also takes CMYK and embedded ICC profiles
+    implementation(libs.twelvemonkeys.imageio.jpeg)
+    implementation(libs.twelvemonkeys.imageio.webp)
 
     runtimeOnly("org.postgresql:postgresql")
 

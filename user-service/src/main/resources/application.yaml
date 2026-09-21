@@ -67,6 +67,16 @@ user:
     # handed off to another one rather than kept on his.
     read-timeout: 15s
 
+  avatar:
+    # Read from the header before anything is decoded. Clients send a crop a few hundred pixels
+    # across; this is for a small file that would inflate into a huge bitmap.
+    max-pixels: 25000000
+    min-side: 96
+    quality: 0.85
+    # Each decode holds up to max-pixels * 4 bytes of heap. An upload that waits longer is 503.
+    parallel: 2
+    queue-wait: 5s
+
   deletion:
     # How old the login behind DELETE /api/users/me may be. The site sends the reader through a login
     # right before the last button, so this only has to cover the way back to it.

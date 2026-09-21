@@ -6,6 +6,7 @@ spotbugs-plugin = "6.5.11"
 spotbugs = "4.10.4"
 spotless = "8.10.2"
 testcontainers-keycloak = "4.3.1"
+twelvemonkeys = "3.15.0"
 wiremock = "3.13.2"
 
 [libraries]
@@ -16,6 +17,8 @@ spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", ve
 spring-cloud-bom = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "spring-cloud" }
 findsecbugs = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version = "1.14.0" }
 testcontainers-keycloak = { module = "com.github.dasniko:testcontainers-keycloak", version.ref = "testcontainers-keycloak" }
+twelvemonkeys-imageio-jpeg = { module = "com.twelvemonkeys.imageio:imageio-jpeg", version.ref = "twelvemonkeys" }
+twelvemonkeys-imageio-webp = { module = "com.twelvemonkeys.imageio:imageio-webp", version.ref = "twelvemonkeys" }
 wiremock-standalone = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
 
 [plugins]
