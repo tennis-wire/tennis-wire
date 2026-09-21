@@ -35,6 +35,17 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/discussion/authors/*")
                         .permitAll()
+                        // A poll is read by whoever reads the article, made by whoever writes it
+                        .requestMatchers(HttpMethod.GET, "/api/discussion/polls/*")
+                        .permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/discussion/polls")
+                        .hasRole(Roles.AUTHOR)
+                        .requestMatchers(HttpMethod.PATCH, "/api/discussion/polls/*")
+                        .hasRole(Roles.AUTHOR)
+                        .requestMatchers(HttpMethod.PUT, "/api/discussion/polls/*/closing")
+                        .hasRole(Roles.AUTHOR)
+                        .requestMatchers("/api/discussion/polls/*/vote")
+                        .hasRole(Roles.USER)
                         .requestMatchers("/api/discussion/moderation/restrictions/**")
                         .hasRole(Roles.MODERATOR)
                         // Filing is the classifier's job and reading the queue is a person's;

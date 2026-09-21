@@ -60,6 +60,11 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("COMMENT_ALREADY_REMOVED", ex.getMessage()));
     }
 
+    @ExceptionHandler(PollClosedException.class)
+    public ResponseEntity<ErrorResponse> handlePollClosed(PollClosedException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of("POLL_CLOSED", ex.getMessage()));
+    }
+
     @ExceptionHandler(UnknownReactionException.class)
     public ResponseEntity<ErrorResponse> handleUnknownReaction(UnknownReactionException ex) {
         return ResponseEntity.badRequest().body(ErrorResponse.of("UNKNOWN_REACTION", ex.getMessage()));

@@ -335,3 +335,43 @@ CREATE TABLE author_reaction_total (
 -- comment: down. The two indexes on author_id above are cut for the moderation counters.
 CREATE INDEX idx_comment_author ON comment (author_id, created_at, id)
     WHERE deleted_at IS NULL;
+
+-- changeset andrei:22
+-- comment: A poll the editor drops into an article. The article holds only the id; the question,
+-- comment: the options and the counts live here, next to the votes that make the counts. Who made
+-- comment: it is the token's subject, not a reader id: an author need not have a reader profile.
+-- comment: closes_at in the past is a closed poll; NULL is one that stays open.
+CREATE TABLE poll (
+    id UUID PRIMARY KEY DEFAULT uuidv7(),
+    question TEXT NOT NULL,
+    created_by UUID NOT NULL,
+    closes_at TIMESTAMPTZ,
+    vote_count INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_poll_vote_count CHECK (vote_count >= 0)
+);
+
+CREATE TABLE poll_option (
+    id UUID PRIMARY KEY DEFAULT uuidv7(),
+    poll_id UUID NOT NULL REFERENCES poll(id) ON DELETE CASCADE,
+    position SMALLINT NOT NULL,
+    text TEXT NOT NULL,
+    vote_count INTEGER NOT NULL DEFAULT 0,
+    CONSTRAINT uq_poll_option_position UNIQUE (poll_id, position),
+    CONSTRAINT chk_poll_option_vote_count CHECK (vote_count >= 0)
+);
+
+-- changeset andrei:23
+-- comment: One vote per person per poll, replaceable and removable, as a reaction is. Read back only
+-- comment: to mark the viewer's own choice and to take it off the counts when his account goes; the
+-- comment: numbers people see are the counts on the poll and its options.
+CREATE TABLE poll_vote (
+    poll_id UUID NOT NULL REFERENCES poll(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL,
+    option_id UUID NOT NULL REFERENCES poll_option(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (poll_id, user_id)
+);
+
+CREATE INDEX idx_poll_vote_user ON poll_vote (user_id);

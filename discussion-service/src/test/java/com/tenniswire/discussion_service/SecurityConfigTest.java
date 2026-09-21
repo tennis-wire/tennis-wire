@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -55,6 +56,37 @@ class SecurityConfigTest {
         mvc = MockMvcBuilders.webAppContextSetup(context)
                 .apply(springSecurity())
                 .build();
+    }
+
+    @Test
+    void aPollIsReadByAnyoneMadeByAnAuthorAndVotedOnByAReader() throws Exception {
+        var poll = "/api/discussion/polls/" + UUID.randomUUID();
+        var vote = "{\"optionId\":\"" + UUID.randomUUID() + "\"}";
+
+        // 404 and not 401: the rule let the request through to a poll that is not there
+        mvc.perform(get(poll)).andExpect(status().isNotFound());
+        mvc.perform(put(poll + "/vote").contentType(MediaType.APPLICATION_JSON).content(vote))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(put(poll + "/vote")
+                        .with(tokenWith("ROLE_author"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(vote))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/discussion/polls")
+                        .with(tokenWith("ROLE_user"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(patch(poll)
+                        .with(tokenWith("ROLE_user"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(put(poll + "/closing")
+                        .with(tokenWith("ROLE_user"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
