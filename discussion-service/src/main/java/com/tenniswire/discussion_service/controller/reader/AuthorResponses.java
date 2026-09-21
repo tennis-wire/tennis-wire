@@ -3,6 +3,7 @@ package com.tenniswire.discussion_service.controller.reader;
 import com.tenniswire.discussion_service.client.AuthorProfile;
 import com.tenniswire.discussion_service.client.AuthorProfileClient;
 import com.tenniswire.discussion_service.dto.reader.AuthorResponse;
+import com.tenniswire.discussion_service.dto.reader.AuthorResponse.Named;
 import com.tenniswire.discussion_service.entity.UserRestriction;
 import com.tenniswire.discussion_service.repository.UserRestrictionRepository;
 import java.time.Instant;
@@ -56,6 +57,18 @@ public class AuthorResponses {
             }
         }
         return people;
+    }
+
+    // One person for his own page: null under a restriction and for an id nobody has alike. No
+    // warning for the second, unlike a batch of authors: here anyone can ask about any id.
+    public @Nullable Named named(UUID id) {
+        var restricted =
+                restrictions.findRestrictedAmong(Set.of(id), UserRestriction.CAPABILITY_COMMENT, Instant.now());
+        if (restricted.contains(id)) {
+            return null;
+        }
+        var profile = profiles.profiles(List.of(id)).get(id);
+        return profile == null ? null : new Named(profile.id(), profile.displayName(), profile.avatarUrl());
     }
 
     // A profile already in hand from before a write. The restriction is still looked up, but that

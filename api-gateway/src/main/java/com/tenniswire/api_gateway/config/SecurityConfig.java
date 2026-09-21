@@ -43,6 +43,8 @@ public class SecurityConfig {
                         // needs a moderator or the bot. The service repeats and refines these.
                         .pathMatchers(HttpMethod.GET, "/api/discussion/comments/**")
                         .permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/discussion/authors/*")
+                        .permitAll()
                         .pathMatchers("/api/discussion/moderation/**")
                         .hasAnyRole(Roles.MODERATOR, Roles.MODERATOR_BOT)
                         .pathMatchers("/api/discussion/**")
