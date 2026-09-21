@@ -1,5 +1,6 @@
 'use client'
 
+import AvatarForm from '@/components/auth/AvatarForm'
 import DeleteAccount from '@/components/auth/DeleteAccount'
 import NicknameForm from '@/components/auth/NicknameForm'
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
@@ -61,6 +62,7 @@ function Body({ session }: { session: ReturnType<typeof useReaderSession>['sessi
 
     return (
         <>
+            <AvatarForm displayName={session.displayName} avatarLargeUrl={session.avatarLargeUrl} />
             <NicknameForm displayName={session.displayName} chosen={session.displayNameChosen} />
             <DeleteAccount userId={session.userId} />
         </>
