@@ -10,6 +10,7 @@ import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
 // too, with one tab in it.
 const TABS = [
     { href: '/me', label: 'Профиль', account: true },
+    { href: '/me/comments', label: 'Комментарии', account: true },
     { href: '/me/settings', label: 'Настройки', account: false },
 ]
 
@@ -104,17 +105,6 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
                         </Link>
                     )
                 })}
-                {/* A tab with nothing behind it yet: discussion-service has no listing by author,
-                    and the rules have not settled what a profile shows. Not a link until it does. */}
-                {signedIn && (
-                    <span
-                        aria-disabled
-                        style={{ ...tab, color: 'var(--tw-text-muted)', cursor: 'default' }}
-                    >
-                        Комментарии{' '}
-                        <span style={{ fontSize: 12, color: 'var(--tw-text-muted)' }}>· скоро</span>
-                    </span>
-                )}
             </div>
 
             {children}

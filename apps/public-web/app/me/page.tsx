@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
+import { countByAuthor } from '@/lib/discussion/endpoints'
 
 const muted: React.CSSProperties = { color: 'var(--tw-text-muted)', fontSize: 14 }
 
@@ -21,6 +23,22 @@ const row: React.CSSProperties = {
 // the name live one tab over, and the reader is told where.
 export default function ProfilePage() {
     const { session } = useReaderSession()
+    const authorId = session?.authenticated ? session.userId : null
+    const [count, setCount] = useState<number | null>(null)
+
+    useEffect(() => {
+        if (!authorId) return
+        let live = true
+        countByAuthor(authorId)
+            .then((answer) => {
+                if (live) setCount(answer.count)
+            })
+            // a count that did not come leaves the dash in place
+            .catch(() => undefined)
+        return () => {
+            live = false
+        }
+    }, [authorId])
 
     if (session === null) return <p style={{ ...muted, padding: '24px 28px' }}>Загрузка…</p>
     if (!session.authenticated) return null
@@ -41,6 +59,16 @@ export default function ProfilePage() {
                 <span>
                     {session.createdAt ? `с ${full.format(new Date(session.createdAt))}` : '—'}
                 </span>
+            </div>
+            <div style={row}>
+                <span style={muted}>Комментарии</span>
+                {count === null ? (
+                    <span>—</span>
+                ) : (
+                    <Link href="/me/comments" style={{ color: 'var(--tw-primary)' }}>
+                        {count}
+                    </Link>
+                )}
             </div>
             <div style={row}>
                 <span style={muted}>Фото</span>
