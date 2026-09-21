@@ -10,6 +10,7 @@ import com.tenniswire.content_service.dto.ArticleSummaryResponse;
 import com.tenniswire.content_service.dto.editorial.CreateArticleRequest;
 import com.tenniswire.content_service.dto.editorial.PublishResponse;
 import com.tenniswire.content_service.dto.editorial.UpdateArticleRequest;
+import com.tenniswire.content_service.dto.pub.ArticleRefResponse;
 import com.tenniswire.content_service.entity.Article;
 import com.tenniswire.content_service.entity.ArticleStatus;
 import com.tenniswire.content_service.entity.ArticleType;
@@ -20,7 +21,9 @@ import com.tenniswire.content_service.repository.ArticleRepository;
 import com.tenniswire.content_service.repository.TagRepository;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +34,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class ArticleService {
+
+    // Held well under the request line the gateway accepts: every id spends 37 bytes of it.
+    public static final int MAX_REF_IDS = 100;
 
     private final ArticleRepository articleRepository;
     private final TagRepository tagRepository;
@@ -185,6 +191,18 @@ public class ArticleService {
                 .and(hasType(type));
 
         return articleRepository.findAll(spec, pageable).map(ArticleSummaryResponse::from);
+    }
+
+    // Ids the caller already holds, resolved to enough to name and link each article. Published
+    // only: one pulled back from the site is gone for the reader who linked to it.
+    @Transactional(readOnly = true)
+    public List<ArticleRefResponse> findPublishedByIds(Collection<UUID> ids) {
+        if (ids.size() > MAX_REF_IDS) {
+            throw new IllegalArgumentException("at most %d ids per lookup, got %d".formatted(MAX_REF_IDS, ids.size()));
+        }
+        return articleRepository.findByIdInAndStatus(ids, ArticleStatus.PUBLISHED).stream()
+                .map(ArticleRefResponse::from)
+                .toList();
     }
 
     @Transactional(readOnly = true)
