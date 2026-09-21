@@ -47,6 +47,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ErrorResponse.of("BAD_REQUEST", ex.getMessage()));
     }
 
+    @ExceptionHandler(AvatarChangedException.class)
+    public ResponseEntity<ErrorResponse> handleAvatarChanged(AvatarChangedException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of("AVATAR_CHANGED", ex.getMessage()));
+    }
+
     @ExceptionHandler(UnacceptableImageException.class)
     public ResponseEntity<ErrorResponse> handleImage(UnacceptableImageException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)

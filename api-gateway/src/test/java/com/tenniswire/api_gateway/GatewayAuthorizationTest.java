@@ -103,6 +103,48 @@ class GatewayAuthorizationTest {
     }
 
     @Test
+    void avatarReviewIsAModeratorsAlone() {
+        var reader = mockJwt().authorities(new SimpleGrantedAuthority("ROLE_user"));
+        var moderator = mockJwt().authorities(new SimpleGrantedAuthority("ROLE_moderator"));
+        var someone = "/api/users/" + UUID.randomUUID();
+
+        client.mutateWith(reader)
+                .get()
+                .uri("/api/users/moderation/avatars")
+                .exchange()
+                .expectStatus()
+                .isForbidden();
+        client.mutateWith(reader)
+                .delete()
+                .uri(someone + "/avatar")
+                .exchange()
+                .expectStatus()
+                .isForbidden();
+        client.mutateWith(reader)
+                .put()
+                .uri(someone + "/avatar/review")
+                .exchange()
+                .expectStatus()
+                .isForbidden();
+        client.mutateWith(moderator)
+                .get()
+                .uri("/api/users/moderation/avatars")
+                .exchange()
+                .expectStatus()
+                .value(code -> assertThat(code).isNotIn(401, 403));
+    }
+
+    @Test
+    void aReaderStillReachesHisOwnAvatar() {
+        client.mutateWith(mockJwt().authorities(new SimpleGrantedAuthority("ROLE_user")))
+                .delete()
+                .uri("/api/users/me/avatar")
+                .exchange()
+                .expectStatus()
+                .value(code -> assertThat(code).isNotIn(401, 403));
+    }
+
+    @Test
     void ownProfileStillRejectsAnonymous() {
         client.get().uri("/api/users/me").exchange().expectStatus().isUnauthorized();
     }

@@ -1,11 +1,14 @@
 package com.tenniswire.user_service.service;
 
 import com.tenniswire.user_service.client.AvatarStorage;
+import com.tenniswire.user_service.entity.Profile;
+import com.tenniswire.user_service.exception.AvatarChangedException;
 import com.tenniswire.user_service.exception.ResourceNotFoundException;
 import com.tenniswire.user_service.exception.StorageUnavailableException;
 import com.tenniswire.user_service.repository.ProfileRepository;
 import java.security.SecureRandom;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
@@ -48,7 +51,7 @@ public class AvatarService {
         var avatarKey = newKey(userId);
         store(avatarKey, rendered);
         try {
-            transactions.executeWithoutResult(status -> replace(userId, avatarKey));
+            transactions.executeWithoutResult(status -> replace(userId, avatarKey, null));
         } catch (RuntimeException e) {
             janitor.remove(avatarKey);
             throw e;
@@ -56,14 +59,37 @@ public class AvatarService {
     }
 
     public void remove(UUID userId) {
-        transactions.executeWithoutResult(status -> replace(userId, null));
+        transactions.executeWithoutResult(status -> replace(userId, null, null));
+    }
+
+    // seen: the key the moderator was looking at. A different avatar in its place is not his to
+    // take down; none at all is already what he wanted.
+    public void takeDown(UUID userId, @Nullable String seen) {
+        transactions.executeWithoutResult(status -> replace(userId, null, seen));
+    }
+
+    public List<Profile> queue(int size) {
+        return profiles.avatarsToReview(size);
+    }
+
+    public void review(UUID userId, String seen) {
+        var marked = transactions.execute(status -> profiles.markAvatarReviewed(userId, seen));
+        if (marked == null || marked == 0) {
+            if (!profiles.existsById(userId)) {
+                throw new ResourceNotFoundException("profile", userId);
+            }
+            throw new AvatarChangedException();
+        }
     }
 
     // Under the row lock: two uploads at once each discard exactly the key the other one replaced
-    private void replace(UUID userId, @Nullable String avatarKey) {
+    private void replace(UUID userId, @Nullable String avatarKey, @Nullable String seen) {
         var previous = profiles.lock(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("profile", userId))
                 .avatarKey();
+        if (seen != null && previous != null && !seen.equals(previous)) {
+            throw new AvatarChangedException();
+        }
         if (previous == null && avatarKey == null) {
             return;
         }

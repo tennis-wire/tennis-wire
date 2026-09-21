@@ -148,3 +148,10 @@ ALTER TABLE profile
     ADD COLUMN avatar_key         TEXT,
     ADD COLUMN avatar_updated_at  TIMESTAMPTZ,
     ADD COLUMN avatar_reviewed_at TIMESTAMPTZ;
+
+-- changeset andrei:11
+-- comment: The avatar review queue, oldest change first. The queue query repeats this predicate
+-- comment: as written, which is what lets the planner use the index at all.
+CREATE INDEX idx_profile_avatar_unreviewed ON profile (avatar_updated_at, user_id)
+    WHERE avatar_key IS NOT NULL
+      AND (avatar_reviewed_at IS NULL OR avatar_reviewed_at < avatar_updated_at);

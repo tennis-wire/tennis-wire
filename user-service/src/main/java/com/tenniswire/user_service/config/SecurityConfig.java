@@ -35,6 +35,13 @@ public class SecurityConfig {
                         .hasRole(Roles.SERVICE)
                         .requestMatchers("/api/users/me/**")
                         .hasRole(Roles.USER)
+                        // After the /me rule, which keeps /me/avatar the reader's own
+                        .requestMatchers(HttpMethod.GET, "/api/users/moderation/avatars")
+                        .hasRole(Roles.MODERATOR)
+                        .requestMatchers(HttpMethod.PUT, "/api/users/*/avatar/review")
+                        .hasRole(Roles.MODERATOR)
+                        .requestMatchers(HttpMethod.DELETE, "/api/users/*/avatar")
+                        .hasRole(Roles.MODERATOR)
                         // After the /me rule: reading one's own profile keeps needing a token,
                         // while anyone's profile by id is as open as the comments he wrote.
                         .requestMatchers(HttpMethod.GET, "/api/users/*")

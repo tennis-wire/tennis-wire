@@ -54,13 +54,20 @@ public class SecurityConfig {
                         // admin-only, has to declare itself rather than inherit this rule.
                         .pathMatchers("/api/users/me/**")
                         .hasRole(Roles.USER)
+                        // Avatar review. After the /me rule, which keeps /me/avatar the reader's own
+                        .pathMatchers(HttpMethod.GET, "/api/users/moderation/avatars")
+                        .hasRole(Roles.MODERATOR)
+                        .pathMatchers(HttpMethod.PUT, "/api/users/*/avatar/review")
+                        .hasRole(Roles.MODERATOR)
+                        .pathMatchers(HttpMethod.DELETE, "/api/users/*/avatar")
+                        .hasRole(Roles.MODERATOR)
                         // A reader's profile by id, for the page his name under a comment leads
                         // to: open to whoever can read the comment itself.
                         .pathMatchers(HttpMethod.GET, "/api/users/*")
                         .permitAll()
                         // Declaring itself, as that comment says it must: support deletes an
                         // account on a reader's behalf, which is the only way out for someone
-                        // banned for good. Nothing else under /api/users/** is reachable.
+                        // banned for good.
                         .pathMatchers(HttpMethod.DELETE, "/api/users/*")
                         .hasRole(Roles.ADMIN)
                         // Fail closed: a route without a rule is unreachable, not merely

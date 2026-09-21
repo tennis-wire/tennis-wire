@@ -2,6 +2,7 @@ package com.tenniswire.user_service.repository;
 
 import com.tenniswire.user_service.entity.Profile;
 import jakarta.persistence.LockModeType;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
@@ -24,4 +25,23 @@ public interface ProfileRepository extends JpaRepository<Profile, UUID> {
             where p.userId = :userId
             """)
     int setAvatar(@Param("userId") UUID userId, @Param("avatarKey") @Nullable String avatarKey);
+
+    // The predicate is the partial index's, word for word
+    @Query(value = """
+            select * from profile
+            where avatar_key is not null
+              and (avatar_reviewed_at is null or avatar_reviewed_at < avatar_updated_at)
+            order by avatar_updated_at, user_id
+            limit :size
+            """, nativeQuery = true)
+    List<Profile> avatarsToReview(@Param("size") int size);
+
+    // Only the avatar the moderator saw: one uploaded since is not passed along with it
+    @Modifying
+    @Query("""
+            update Profile p
+            set p.avatarReviewedAt = current_timestamp
+            where p.userId = :userId and p.avatarKey = :avatarKey
+            """)
+    int markAvatarReviewed(@Param("userId") UUID userId, @Param("avatarKey") String avatarKey);
 }
