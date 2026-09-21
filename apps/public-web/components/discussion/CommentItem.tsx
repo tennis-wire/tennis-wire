@@ -1,6 +1,9 @@
 'use client'
 
+import Link from 'next/link'
+
 import Avatar from '@/components/Avatar'
+import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
 import { loginHere } from '@/lib/auth/loginHref'
 import { canEdit } from '@/lib/discussion/edit'
 import type { BlockMode } from '@/lib/discussion/modes'
@@ -136,12 +139,20 @@ const name: React.CSSProperties = {
     color: 'var(--tw-text)',
 }
 
+// The name leads to the reader's page, one's own to the cabinet. No link for a restricted author:
+// he has no page, and none for someone user-service does not know.
 export function AuthorName({ author }: { author?: Author }) {
+    const { session } = useReaderSession()
     if (!author) return <span style={name}>{strings.nobody}</span>
     // the label stands instead of the name, and the server sends no name at all
     if ('restricted' in author)
         return <span style={{ ...name, color: 'var(--tw-text-muted)' }}>{strings.restricted}</span>
-    return <span style={name}>{author.displayName}</span>
+    const own = session?.authenticated === true && session.userId === author.id
+    return (
+        <Link href={own ? '/me' : `/u/${author.id}`} style={{ ...name, textDecoration: 'none' }}>
+            {author.displayName}
+        </Link>
+    )
 }
 
 // The same circle the header draws, and the same emptiness where there is no author

@@ -151,4 +151,11 @@ export const strings = {
         'Вы ещё не писали комментариев. Обсуждение есть под каждой новостью и материалом.',
     articleGone: 'Материал недоступен',
     replyTally: (count: number) => `Ответов: ${count}`,
+
+    // someone else's page
+    readerMissing: 'Такой страницы нет',
+    readerSince: (day: string) => `На сайте с ${day}`,
+    commentTally: (count: number) => `Комментариев: ${count}`,
+    readerEmpty: 'Комментариев пока нет',
+    readerRemovedByIgnore: 'Вы убрали этого читателя с ветками: его комментарии здесь не видны',
 }
