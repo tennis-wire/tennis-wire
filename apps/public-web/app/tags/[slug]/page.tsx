@@ -1,10 +1,24 @@
-export default function TagPage({ params: _params }: { params: Promise<{ slug: string }> }) {
+import type { Metadata } from 'next'
+
+import TagFeed, { type FeedQuery } from '@/components/content/TagFeed'
+import { fetchTagPage } from '@/lib/content/tags'
+
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<FeedQuery> }
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+    const { slug } = await params
+    const result = await fetchTagPage(slug, null, 0)
+    return { title: result ? `${result.tag.name} — Tennis Wire` : 'Tennis Wire' }
+}
+
+export default async function Page({ params, searchParams }: Props) {
+    const [{ slug }, query] = await Promise.all([params, searchParams])
     return (
-        <div>
-            <h1 style={{ fontFamily: 'var(--tw-font-display)', fontSize: 28 }}>Тег</h1>
-            <p style={{ color: 'var(--tw-text-muted)', fontSize: 14 }}>
-                Новости и материалы по тегу
-            </p>
-        </div>
+        <TagFeed
+            slug={slug}
+            base={`/tags/${encodeURIComponent(slug)}`}
+            section={false}
+            query={query}
+        />
     )
 }

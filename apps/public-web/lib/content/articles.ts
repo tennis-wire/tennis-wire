@@ -21,6 +21,12 @@ export type Article = {
     publishedAt: string
 }
 
+// What a list shows of an article: content-service's ArticleSummaryResponse, less what no list draws
+export type ArticleSummary = Pick<
+    Article,
+    'id' | 'type' | 'slug' | 'title' | 'subtitle' | 'coverImageUrl' | 'readingTime' | 'publishedAt'
+>
+
 export function articleHref(article: Pick<Article, 'type' | 'slug'>): string {
     const slug = encodeURIComponent(article.slug)
     return article.type === 'news' ? `/news/${slug}` : `/materials/${slug}`
