@@ -28,6 +28,7 @@ import {
     Upload,
     YouTube,
     Telegram,
+    Poll as PollIcon,
     OndemandVideo,
     Mic,
 } from '@mui/icons-material'
@@ -38,6 +39,7 @@ import { IMAGE_ACCEPT, uploadErrorMessage, uploadImage } from '../api/mediaApi'
 interface Props {
     editor: Editor | null
     onError: (message: string) => void
+    onPollClick: () => void
     onTranslateClick?: () => void
     onTranscribeClick?: () => void
 }
@@ -45,6 +47,7 @@ interface Props {
 export const Toolbar: React.FC<Props> = ({
     editor,
     onError,
+    onPollClick,
     onTranslateClick,
     onTranscribeClick,
 }) => {
@@ -462,6 +465,12 @@ export const Toolbar: React.FC<Props> = ({
             <Tooltip title="Вставить видео по ссылке (.mp4)">
                 <IconButton size="small" onClick={handleVideoInsert}>
                     <OndemandVideo fontSize="small" />
+                </IconButton>
+            </Tooltip>
+
+            <Tooltip title="Вставить опрос">
+                <IconButton size="small" onClick={onPollClick}>
+                    <PollIcon fontSize="small" />
                 </IconButton>
             </Tooltip>
 

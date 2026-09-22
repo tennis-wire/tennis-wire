@@ -8,6 +8,7 @@ import { MetadataPanel } from './MetadataPanel.tsx'
 import { AIChatPanel } from './AIChatPanel.tsx'
 import { TranslateDialog } from './TranslateDialog.tsx'
 import { TranscribeDialog } from './TranscribeDialog.tsx'
+import { PollDialog } from './PollDialog.tsx'
 import { EditorContentArea } from './EditorContentArea.tsx'
 import { EditorStatusBar } from './EditorStatusBar.tsx'
 
@@ -26,6 +27,7 @@ export default function Editor() {
     const [translateDialogOpen, setTranslateDialogOpen] = useState(false)
     const [translateSession, setTranslateSession] = useState(0)
     const [transcribeDialogOpen, setTranscribeDialogOpen] = useState(false)
+    const [pollDialogOpen, setPollDialogOpen] = useState(false)
     const [articleId, setArticleId] = useState<string | null>(null)
 
     const { colors } = useAppTheme()
@@ -223,6 +225,7 @@ export default function Editor() {
                                             setTranslateSession((s) => s + 1)
                                             setTranslateDialogOpen(true)
                                         }}
+                                        onPollClick={() => setPollDialogOpen(true)}
                                         onTranscribeClick={() => setTranscribeDialogOpen(true)}
                                     />
                                     <EditorContentArea
@@ -301,6 +304,21 @@ export default function Editor() {
                 selectedText={getSelectedText()}
                 fullText={editor.getText()}
                 onInsert={insertBelow}
+            />
+            <PollDialog
+                open={pollDialogOpen}
+                onClose={() => setPollDialogOpen(false)}
+                onInsert={(poll) =>
+                    editor
+                        ?.chain()
+                        .focus()
+                        .setPoll({
+                            pollId: poll.id,
+                            question: poll.question,
+                            options: poll.options.map((o) => o.text),
+                        })
+                        .run()
+                }
             />
             <TranscribeDialog
                 open={transcribeDialogOpen}

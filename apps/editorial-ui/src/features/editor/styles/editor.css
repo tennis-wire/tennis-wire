@@ -211,3 +211,27 @@
     outline: 3px solid var(--tw-primary);
     outline-offset: 2px;
 }
+
+/* Poll: a block the author sees whole and moves as one; the votes happen on the site */
+.ProseMirror .poll-embed {
+    margin: 16px 0;
+    padding: 14px 18px;
+    border: 1px solid var(--tw-border);
+    border-left: 3px solid var(--tw-primary);
+    border-radius: 8px;
+    background: var(--tw-bg-alt);
+}
+
+.ProseMirror .poll-embed .poll-question {
+    margin: 0 0 8px;
+    font-weight: 600;
+}
+
+.ProseMirror .poll-embed .poll-options {
+    margin: 0;
+    padding-left: 22px;
+}
+
+.ProseMirror .poll-embed.ProseMirror-selectednode {
+    outline: 2px solid var(--tw-primary);
+}

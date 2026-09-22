@@ -5,7 +5,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
 import Youtube from '@tiptap/extension-youtube'
-import { Telegram, Video } from '../extensions'
+import { Poll, Telegram, Video } from '../extensions'
 import type { ContentMetadata } from '../types/content'
 import { defaultNewsMetadata } from '../types/content'
 
@@ -54,6 +54,7 @@ export function useEditorWithPersist() {
             Youtube.configure({ controls: true, nocookie: true, modestBranding: true }),
             Telegram,
             Video,
+            Poll,
             Placeholder.configure({ placeholder: 'Начните писать...' }),
         ],
         content: '',
