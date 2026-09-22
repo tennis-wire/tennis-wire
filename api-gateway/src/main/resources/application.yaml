@@ -99,6 +99,20 @@ spring:
                     rate-limiter: "#{@reactionRateLimiter}"
                     deny-empty-key: false
 
+            # A poll vote is a reaction in every way that matters here
+            - id: discussion-poll-votes
+              uri: http://localhost:8093
+              order: -1
+              predicates:
+                - Path=/api/discussion/polls/*/vote
+                - Method=PUT,DELETE
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@readerOrAddressKeyResolver}"
+                    rate-limiter: "#{@reactionRateLimiter}"
+                    deny-empty-key: false
+
             - id: discussion-writes
               uri: http://localhost:8093
               predicates:

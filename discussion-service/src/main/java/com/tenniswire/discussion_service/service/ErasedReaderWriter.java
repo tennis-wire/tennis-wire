@@ -24,6 +24,7 @@ class ErasedReaderWriter {
     private final BlockRepository blocks;
     private final UserRestrictionRepository restrictions;
     private final ReactionService reactions;
+    private final PollService pollVotes;
     private final AuthorReactionTotalRepository totals;
 
     ErasedReaderWriter(
@@ -34,6 +35,7 @@ class ErasedReaderWriter {
             BlockRepository blocks,
             UserRestrictionRepository restrictions,
             ReactionService reactions,
+            PollService pollVotes,
             AuthorReactionTotalRepository totals) {
         this.comments = comments;
         this.collapse = collapse;
@@ -42,6 +44,7 @@ class ErasedReaderWriter {
         this.blocks = blocks;
         this.restrictions = restrictions;
         this.reactions = reactions;
+        this.pollVotes = pollVotes;
         this.totals = totals;
     }
 
@@ -76,6 +79,7 @@ class ErasedReaderWriter {
         // own goes with him. A count a removal already swept into someone's total stays: the
         // comment it was collected on is not there to take it off.
         reactions.clearAllBy(readerId);
+        pollVotes.clearAllBy(readerId);
         totals.deleteFor(List.of(readerId));
     }
 }
