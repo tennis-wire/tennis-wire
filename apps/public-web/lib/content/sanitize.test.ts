@@ -36,6 +36,15 @@ describe('sanitizeArticle', () => {
         expect(sanitizeArticle(foreign)).toBe('')
     })
 
+    it('keeps the poll block with its id, so the page can find it', () => {
+        const poll =
+            '<div data-poll="p1" class="poll-embed"><p class="poll-question">Who?</p>' +
+            '<ol class="poll-options"><li>A</li><li>B</li></ol></div>'
+        expect(sanitizeArticle(poll)).toBe(
+            '<div data-poll="p1" class="poll-embed"><p>Who?</p><ol><li>A</li><li>B</li></ol></div>'
+        )
+    })
+
     it('drops a picture that was never uploaded', () => {
         const inline = '<p>a</p><img src="data:image/png;base64,AAAA"><p>b</p>'
         expect(sanitizeArticle(inline)).toBe('<p>a</p><p>b</p>')
