@@ -211,3 +211,46 @@
     outline: 3px solid var(--tw-primary);
     outline-offset: 2px;
 }
+
+/* Poll: a block the author sees whole and moves as one; the votes happen on the site */
+.ProseMirror .poll-embed {
+    position: relative;
+    margin: 16px 0;
+    padding: 12px 18px 10px;
+    border: 1px solid var(--tw-border);
+    border-left: 3px solid var(--tw-primary);
+    border-radius: 8px;
+    background: var(--tw-bg-alt);
+}
+
+/* "Opros", so that a poll is told from a list at a glance */
+.ProseMirror .poll-embed::before {
+    content: '\041E\043F\0440\043E\0441';
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--tw-primary);
+}
+
+.ProseMirror .poll-embed .poll-question {
+    margin: 0 0 6px;
+    padding-right: 60px;
+    font-weight: 600;
+}
+
+.ProseMirror .poll-embed .poll-options {
+    margin: 0;
+    padding-left: 22px;
+}
+
+.ProseMirror .poll-embed li {
+    margin-bottom: 2px;
+}
+
+.ProseMirror .poll-embed.ProseMirror-selectednode {
+    outline: 2px solid var(--tw-primary);
+}
