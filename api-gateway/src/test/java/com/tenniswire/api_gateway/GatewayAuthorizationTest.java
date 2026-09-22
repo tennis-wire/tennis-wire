@@ -103,6 +103,48 @@ class GatewayAuthorizationTest {
     }
 
     @Test
+    void aPollIsReadByAnyoneMadeByAnAuthorAndVotedOnByAReader() {
+        var reader = mockJwt().authorities(new SimpleGrantedAuthority("ROLE_user"));
+        var author = mockJwt().authorities(new SimpleGrantedAuthority("ROLE_author"));
+        var poll = "/api/discussion/polls/" + UUID.randomUUID();
+
+        client.get().uri(poll).exchange().expectStatus().value(code -> assertThat(code)
+                .isNotIn(401, 403));
+        client.put().uri(poll + "/vote").exchange().expectStatus().isUnauthorized();
+        client.mutateWith(author)
+                .put()
+                .uri(poll + "/vote")
+                .exchange()
+                .expectStatus()
+                .isForbidden();
+        client.mutateWith(reader)
+                .put()
+                .uri(poll + "/vote")
+                .exchange()
+                .expectStatus()
+                .value(code -> assertThat(code).isNotIn(401, 403));
+        client.mutateWith(reader)
+                .post()
+                .uri("/api/discussion/polls")
+                .exchange()
+                .expectStatus()
+                .isForbidden();
+        client.mutateWith(reader).patch().uri(poll).exchange().expectStatus().isForbidden();
+        client.mutateWith(reader)
+                .put()
+                .uri(poll + "/closing")
+                .exchange()
+                .expectStatus()
+                .isForbidden();
+        client.mutateWith(author)
+                .post()
+                .uri("/api/discussion/polls")
+                .exchange()
+                .expectStatus()
+                .value(code -> assertThat(code).isNotIn(401, 403));
+    }
+
+    @Test
     void avatarReviewIsAModeratorsAlone() {
         var reader = mockJwt().authorities(new SimpleGrantedAuthority("ROLE_user"));
         var moderator = mockJwt().authorities(new SimpleGrantedAuthority("ROLE_moderator"));
