@@ -8,6 +8,7 @@ import {
     DialogContent,
     DialogTitle,
     IconButton,
+    InputAdornment,
     TextField,
     Typography,
 } from '@mui/material'
@@ -131,7 +132,23 @@ export const PollDialog: React.FC<Props> = ({ open, onClose, onInsert }) => {
                     fullWidth
                     margin="normal"
                     helperText="Пусто: голосование без срока. Закрыть можно и позже."
-                    slotProps={{ inputLabel: { shrink: true } }}
+                    slotProps={{
+                        inputLabel: { shrink: true },
+                        input: {
+                            // the browser's own picker has no way to empty the field
+                            endAdornment: closesAt ? (
+                                <InputAdornment position="end">
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => setClosesAt('')}
+                                        aria-label="Без срока"
+                                    >
+                                        <Close fontSize="small" />
+                                    </IconButton>
+                                </InputAdornment>
+                            ) : undefined,
+                        },
+                    }}
                 />
                 {error && (
                     <Alert severity="error" sx={{ mt: 1 }}>
