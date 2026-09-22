@@ -38,12 +38,12 @@ const OPTIONS: sanitizeHtml.IOptions = {
         // no target: links open where they are, and there is no rel to get wrong
         a: ['href'],
         img: ['src', 'alt', 'width', 'height'],
-        div: ['data-video', 'data-telegram-post', 'data-youtube-video'],
+        div: ['data-video', 'data-telegram-post', 'data-youtube-video', 'data-poll'],
         iframe: ['src', 'width', 'height', 'allow', 'allowfullscreen', 'frameborder'],
         video: ['src', 'controls', 'width', 'height', 'poster'],
     },
     allowedClasses: {
-        div: ['telegram-embed', 'video-embed'],
+        div: ['telegram-embed', 'video-embed', 'poll-embed'],
     },
     allowedSchemes: ['http', 'https', 'mailto'],
     allowedIframeHostnames: ['www.youtube.com', 'www.youtube-nocookie.com', 't.me'],
