@@ -1,0 +1,266 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Read-only unless a job asks for more. The code a pull request brings runs in these jobs, and a
+# token that can push is the first thing that code would reach for.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Actions are pinned to a commit: a tag can be moved to other code after the fact, a commit cannot.
+# Renovate keeps the pins and the version comments current.
+jobs:
+  # Which areas the change touches. A job below that is skipped by its `if:` reports success, so it
+  # still satisfies its required check; a workflow skipped by a `paths` filter would report nothing
+  # and hold the pull request forever.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      java: ${{ steps.areas.outputs.java }}
+      python: ${{ steps.areas.outputs.python }}
+      editorial_ui: ${{ steps.areas.outputs.editorial_ui }}
+      public_web: ${{ steps.areas.outputs.public_web }}
+      mobile: ${{ steps.areas.outputs.mobile }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # the pull request's merge commit and its first parent, the base branch as it stands
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Areas touched
+        id: areas
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          # main checks everything: nothing waits on it, and it keeps the caches warm
+          if [ "$EVENT" = pull_request ]; then
+            changed=$(git diff --name-only HEAD^1 HEAD)
+          else
+            changed=.github/workflows/ci.yml
+          fi
+          printf '%s\n' "$changed"
+
+          touched() {
+            if grep -qE "$1" <<< "$changed"; then echo true; else echo false; fi
+          }
+          all='^\.github/workflows/ci\.yml$'
+          frontend='^(\.nvmrc|\.prettierrc|\.editorconfig)$'
+          # docker/keycloak: the realm file is a test resource of api-gateway and user-service
+          java='^(build|settings)\.gradle\.kts$|^gradle(\.properties|w|w\.bat)?$|^gradle/|^(lombok\.config|pmd\.xml|spotbugs-excludes\.xml)$|^(auth-support|editorial-bff|api-gateway|content-service|discussion-service|user-service|docker/keycloak)/'
+          {
+            echo "java=$(touched "$all|$java")"
+            echo "python=$(touched "$all|^transcription-service/")"
+            echo "editorial_ui=$(touched "$all|$frontend|^apps/editorial-ui/")"
+            echo "public_web=$(touched "$all|$frontend|^apps/public-web/")"
+            echo "mobile=$(touched "$all|$frontend|^apps/mobile/")"
+          } >> "$GITHUB_OUTPUT"
+
+  # Each job below also runs when `changes` itself failed and left no answer: a wasted run is better
+  # than a green check nothing earned.
+
+  java:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.java != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # nothing here pushes, so the token is not left in .git/config for the build to read
+          persist-credentials: false
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - run: ./gradlew build
+
+  transcription-service:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.python != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: transcription-service
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+          cache-dependency-glob: transcription-service/uv.lock
+
+      - name: Install Python
+        run: uv python install
+
+      # dev group only: linters + tests run without the GPU/ML worker stack
+      - name: Install dependencies
+        run: uv sync --frozen --no-default-groups --group dev
+
+      - name: Lint
+        run: uv run --no-sync ruff check .
+
+      - name: Format check
+        run: uv run --no-sync ruff format --check .
+
+      - name: Type check
+        run: uv run --no-sync mypy src
+
+      - name: Tests
+        run: uv run --no-sync pytest
+
+  editorial-ui:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.editorial_ui != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/editorial-ui
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/editorial-ui/package-lock.json
+
+      - run: npm ci
+
+      - name: Format check
+        run: npx prettier . --check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc -b
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  public-web:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.public_web != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/public-web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/public-web/package-lock.json
+
+      - run: npm ci
+
+      - name: Format check
+        run: npx prettier . --check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      # type check happens inside `next build`
+      - name: Build
+        run: npm run build
+
+  mobile:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.mobile != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - run: npm ci
+
+      - name: Format check
+        run: npx prettier . --check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test
+
+  # A dependency with a known high or critical advisory stops the pull request that brings it in.
+  # Only what the change adds is judged, not what is already there: that is Dependabot's list.
+  # GitHub reads the npm and Python lock files itself; Gradle it knows only from the job below,
+  # which runs on main, so a Java dependency added in a pull request is not judged here.
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+
+  # The resolved Java dependencies, handed to GitHub's dependency graph so that Dependabot alerts
+  # cover them. GitHub does not read a Gradle build on its own.
+  java-dependency-graph:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      # the one job that writes: submitting the graph is a write to the repository
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - uses: gradle/actions/dependency-submission@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
