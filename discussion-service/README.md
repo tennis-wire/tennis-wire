@@ -41,8 +41,8 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
 | GET | `/comments/{id}/branch` | аноним | `{root}`: комментарий и ответы под ним на 5 уровней, до 20 прямых ответов у узла и до 500 строк на ответ |
 | GET | `/comments/{id}/replies?limit=&cursor=` | аноним | прямые ответы страницами, `{items, nextCursor}`, лимиты как у верхнего уровня |
 | GET | `/comments/{id}/ancestry` | аноним | `{chain: [корень … id], viewer?}` без вложенных ответов |
-| GET | `/comments?authorId=&limit=&cursor=` | аноним | комментарии одного автора, новые сверху, плоско: `{items, nextCursor}`. Лимиты и курсор как у листинга по subject, но курсор общий с `/replies` и сортировка одна. Ни одного из `subjectType` и `authorId` или оба сразу — 400, без конверта ошибки |
-| GET | `/comments/count?authorId=` | аноним | `{count}` — сколько комментариев автора стоит. Игнор зрителя не применяется |
+| GET | `/comments?authorId=&limit=&cursor=` | аноним | комментарии одного автора, новые сверху, плоско: `{items, nextCursor}`. Лимиты и курсор как у листинга по subject, но курсор общий с `/replies` и сортировка одна. Ни одного из `subjectType` и `authorId` или оба сразу — 400, без конверта ошибки. Автор под запретом комментировать — 404 `NOT_FOUND` всем, кроме него самого: страницы у него нет, а свой кабинет он видит |
+| GET | `/comments/count?authorId=` | аноним | `{count}` — сколько комментариев автора стоит. Игнор зрителя не применяется. Автор под запретом — 404, как у листинга |
 | GET | `/authors/{id}` | аноним | карточка для публичной страницы читателя: `{id, displayName, avatarUrl, commentCount}`. Под запретом комментировать — 404 `NOT_FOUND`, как и для id, которого нет: в ветке такого автора не называют, и страницы у него нет. user-service не ответил — 503 |
 
 `branch`, `replies` и `ancestry` отвечают 404 `NOT_FOUND`, если комментария нет или это заглушка,
@@ -68,7 +68,7 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
 
 | Метод | Путь | Роль | Что |
 |---|---|---|---|
-| POST | `/comments` `{subjectType, subjectId, body}` | `user` | 201 `{comment, mutedByRecipient: false}`. `body` до 2000. Профиль автора запрашивается до записи, поэтому 503 не оставляет комментарий. Необязательный `Idempotency-Key` (UUID) — ниже |
+| POST | `/comments` `{subjectType, subjectId, body}` | `user` | 201 `{comment, mutedByRecipient: false}`. `body` до 2000 — после того как из него вырезаны невидимые символы (ниже). Профиль автора запрашивается до записи, поэтому 503 не оставляет комментарий. Необязательный `Idempotency-Key` (UUID) — ниже |
 | POST | `/comments/{id}/replies` `{body}` | `user` | 201 `{comment, mutedByRecipient}`: `true`, если автор родителя игнорирует пишущего. Subject наследуется от родителя; родитель удалён — 409 `PARENT_DELETED`, ушёл целиком — 404 `NOT_FOUND`. Необязательный `Idempotency-Key` — ниже |
 | PATCH | `/comments/{id}` `{body}` | `user`, только автор | 200 `{id, body, updatedAt, edited}`. Требования к тексту те же, что при публикации. Окно правки задаёт `discussion.comment.edit-window`, счёт от `createdAt`; после него 403 `EDIT_WINDOW_CLOSED`. Удалён автором: 409 `COMMENT_DELETED`, снят модерацией: 409 `COMMENT_ALREADY_REMOVED`, чужой: 403 `FORBIDDEN`. Тот же текст ничего не меняет и не ставит `edited` |
 | DELETE | `/comments/{id}` | `user`, только автор | 204, идемпотентно |
@@ -110,9 +110,20 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
 | POST | `/moderation/reports` `{commentId, reason}` | `moderator-bot` | 204, жалоба классификатора; снят модерацией — 409, текста нет — 404, как у читательской |
 | GET | `/moderation/reports?status=open&page=&size=` | `moderator` | очередь, карточка на комментарий, `{items, page, size}`; `size` до 200. Карточку удалённого автором комментария сервис закрывает сам через 30 дней после удаления, вместе с текстом (`expired`) |
 | PATCH | `/moderation/reports/{commentId}` `{resolution}` | `moderator` | 204, закрывает карточку целиком: `hidden` \| `dismissed` \| `counted`. `counted` — только у удалённого автором и пока его текст хранится, иначе 409 `RESOLUTION_NOT_APPLICABLE`. `voided` и `expired` пишет только сам сервис — 400 |
-| POST | `/moderation/restrictions` `{userId, expiresAt?, reason?, clearReactions?}` | `moderator` | 201, ограничение на комментирование; без `expiresAt` бессрочное. `clearReactions` снимает всё, что он когда-либо поставил, и допустим только при бессрочном, иначе 400 `BAD_REQUEST`. Необратимо: снятие бана реакции не возвращает |
+| POST | `/moderation/restrictions` `{userId, expiresAt?, reason?, clearReactions?}` | `moderator` | 201, ограничение на комментирование; без `expiresAt` бессрочное. Действует одно: новое снимает текущее, снявшим записывается выдавший новое — так бан продлевают, сокращают и делают бессрочным. Себя — 400 `BAD_REQUEST`, id, которого нет в user-service, — 404 `USER_NOT_FOUND`. `clearReactions` снимает всё, что он когда-либо поставил, и допустим только при бессрочном, иначе 400 `BAD_REQUEST`. Необратимо: снятие бана реакции не возвращает |
 | GET | `/moderation/restrictions?userId=` | `moderator` | действующие ограничения |
-| DELETE | `/moderation/restrictions/{id}` | `moderator` | 204 |
+| DELETE | `/moderation/restrictions/{id}` | `moderator` | 204. Строка остаётся с `lifted_at` и `lifted_by`: снятые и истёкшие — история банов. Уже снятое или истёкшее — 404 `NOT_FOUND` |
+
+**Опросы**
+
+| Метод | Путь | Роль | Что |
+|---|---|---|---|
+| GET | `/polls/{id}` | аноним | опрос со счётчиками; вошедшему — его выбор |
+| POST | `/polls` | `author` | 201, `created_by` — `sub` токена |
+| PATCH | `/polls/{id}` | `author`, только создавший, или `chief-editor` | правка формулировок, чужой — 403 `FORBIDDEN` |
+| PUT | `/polls/{id}/closing` `{closesAt}` | как у PATCH | время закрытия, `null` — открыт |
+| PUT | `/polls/{id}/vote` `{optionId}` | `user` | 204, один голос на человека, меняется. Закрыт — 409 `POLL_CLOSED`, под баном — 403 `COMMENTING_RESTRICTED`: голос — та же реакция |
+| DELETE | `/polls/{id}/vote` | `user` | 204, идемпотентно. Работает и под баном |
 
 **Внутреннее**
 
@@ -183,6 +194,15 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
   аккаунта обнуляет `author_id`, и пара больше ничего не находит. Повтор ищется под
   `pg_advisory_xact_lock(1, …)` — пространство из двух int, с блокировкой дерева не пересекается;
   берётся до неё. Гейт бана на повторе не проверяется: первый запрос его прошёл.
+- Из текста комментария при публикации и правке вырезаются символы, которые ничего не рисуют и
+  двигают или прячут нарисованное: переключатели и метки направления (U+061C, U+200E–U+200F,
+  U+202A–U+202E, U+2066–U+2069), пробелы нулевой ширины и word joiner (U+200B, U+2060–U+2064),
+  BOM (U+FEFF). U+202E один превращает `txt.exe` в `exe.txt` на экране. ZWJ и ZWNJ остаются: из
+  них собраны эмодзи. Текст только из вырезанного — пустой, 400.
+- Бан — не проекция из другого сервиса, а сама история: снятая строка помечается `lifted_at` и
+  `lifted_by`, истёкшая остаётся как есть. Стирание аккаунта удаляет снятые и истёкшие и оставляет
+  действующий (правила §13.15). Выдача берёт `pg_advisory_xact_lock(3, …)` по читателю: иначе два
+  модератора, заменяющие один бан, оставили бы два действующих.
 - Ответ на удалённый комментарий не принимается: 409 `PARENT_DELETED`. Верхний уровень и ответы —
   от старых к новым.
 - Пути `/api/discussion/**`, а не `/api/comments/**`: `comments/{id}` и `comments/blocks` иначе
