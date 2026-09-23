@@ -1,11 +1,13 @@
 package com.tenniswire.discussion_service.controller.moderation;
 
+import com.tenniswire.discussion_service.controller.reader.AuthorResponses;
 import com.tenniswire.discussion_service.dto.moderation.BotReportRequest;
 import com.tenniswire.discussion_service.dto.moderation.CreateRestrictionRequest;
 import com.tenniswire.discussion_service.dto.moderation.ModerationQueueResponse;
 import com.tenniswire.discussion_service.dto.moderation.ResolveReportsRequest;
 import com.tenniswire.discussion_service.dto.moderation.RestrictionResponse;
 import com.tenniswire.discussion_service.entity.ReportResolution;
+import com.tenniswire.discussion_service.exception.UserNotFoundException;
 import com.tenniswire.discussion_service.security.CurrentUser;
 import com.tenniswire.discussion_service.service.CommentService;
 import com.tenniswire.discussion_service.service.ModerationQueueService;
@@ -39,6 +41,7 @@ public class ModerationController {
     private final ModerationQueueService queueService;
     private final ModerationQueueResponses queueResponses;
     private final ReportService reportService;
+    private final AuthorResponses authors;
     private final CurrentUser currentUser;
 
     public ModerationController(
@@ -47,12 +50,14 @@ public class ModerationController {
             ModerationQueueService queueService,
             ModerationQueueResponses queueResponses,
             ReportService reportService,
+            AuthorResponses authors,
             CurrentUser currentUser) {
         this.commentService = commentService;
         this.restrictionService = restrictionService;
         this.queueService = queueService;
         this.queueResponses = queueResponses;
         this.reportService = reportService;
+        this.authors = authors;
         this.currentUser = currentUser;
     }
 
@@ -107,9 +112,18 @@ public class ModerationController {
     @ResponseStatus(HttpStatus.CREATED)
     public RestrictionResponse restrict(
             @Valid @RequestBody CreateRestrictionRequest request, @AuthenticationPrincipal Jwt jwt) {
+        var moderatorId = currentUser.id(jwt);
+        if (request.userId().equals(moderatorId)) {
+            throw new IllegalArgumentException("A moderator cannot restrict himself");
+        }
+        // Asked before anything is written, as for an ignore: an id user-service does not know is
+        // nobody to restrict. Staff cannot be told from readers here, roles are Keycloak's.
+        if (authors.profile(request.userId()) == null) {
+            throw new UserNotFoundException(request.userId());
+        }
         var restriction = restrictionService.restrictCommenting(
                 request.userId(),
-                currentUser.id(jwt),
+                moderatorId,
                 request.expiresAt(),
                 request.reason(),
                 Boolean.TRUE.equals(request.clearReactions()));
