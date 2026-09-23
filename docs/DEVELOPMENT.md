@@ -174,10 +174,10 @@ Local principals:
 
 | Principal | Credentials | Roles |
 |---|---|---|
-| `dev` | `dev` / `dev` | `author`, `admin` (so also `chief-editor`, `moderator` and `user`) |
+| `dev` | `dev` / `dev` | `author`, `admin`, `offline_access` (so also `chief-editor`, `moderator` and `user`) |
 | `reader` | `reader` / `reader` | `user` |
 | `moderator` | `moderator` / `moderator` | `moderator`, `user` |
-| `author` | `author` / `author` | `author` |
+| `author` | `author` / `author` | `author`, `user`, `offline_access` |
 | `moderation-bot` | client secret `dev-moderation-bot-secret` | `moderator-bot` |
 | `user-service` | client secret `dev-user-service-secret` | `service`, plus `realm-management`: `manage-users`, `view-realm` |
 | `discussion-service` | client secret `dev-discussion-service-secret` | `service` |
@@ -192,7 +192,11 @@ on the fixture instead of assumed, per the rule under Readers below.
 `chief-editor` through `admin`, so it never hits the limits a plain author has:
 someone else's published article, unpublishing, resetting another person's
 pending edit. Ownership and the edit lock need two people with different
-rights, and `author` with `dev` are those two.
+rights, and `author` with `dev` are those two. Both also carry `offline_access`,
+and `author` carries `user`: that is what a staff account made in the console
+gets from the default roles and the `readers` group, and it is what signing in
+on the site needs: without `offline_access` there is no offline session (see
+the note on `reader` under Readers below).
 
 `dev-cli` is a password-grant client that exists only for `curl` and for the
 gateway integration test. ROPC is deprecated in OAuth 2.1; this client must
@@ -230,11 +234,12 @@ scope is dropped from the request and an ordinary refresh token comes back in
 place of an offline one. Whatever a fixture is meant to exercise has to be
 spelled out on the fixture.
 
-`editorial-ui` carries one more mapper of its own: realm roles into the **id**
-token. The built-in `roles` scope puts them in the access token, which is
+`editorial-ui` and `public-web` carry one more mapper of their own: realm roles
+into the **id** token. The built-in `roles` scope puts them in the access token, which is
 addressed to the services — a browser app reading it would be opening a token
 written for someone else. The id token is the one issued to the client, so that
-is where a screen decides whether to offer a moderator-only page. Composites are
+is where a screen decides whether to offer a moderator-only page, or the site
+whether to show staff a link to the editor. Composites are
 expanded on the way in, so `dev` arrives carrying `moderator`. Hiding a page is
 a convenience and never a control: the gateway and the service each check the
 role again, and neither trusts that the browser did.
