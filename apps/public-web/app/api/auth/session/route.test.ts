@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
+import { freshSession } from '@/lib/auth/refresh'
 import { GET } from './route'
 
 const session = {
@@ -30,7 +31,10 @@ vi.mock('@/lib/auth/session', () => ({
 }))
 
 vi.mock('@/lib/auth/refresh', () => ({
-    freshSession: vi.fn(async (current: typeof session) => current),
+    freshSession: vi.fn(async (current: typeof session) => ({
+        status: 'usable',
+        session: current,
+    })),
 }))
 
 const fetchProfile = vi.fn()
@@ -126,5 +130,24 @@ describe('GET /api/auth/session', () => {
         const body = await (await GET(request('staff'))).json()
 
         expect(body.editorialOrigin).toBeNull()
+    })
+
+    it('keeps the reader signed in, nameless, when Keycloak gives no answer', async () => {
+        vi.mocked(freshSession).mockResolvedValueOnce({ status: 'unavailable' })
+
+        const response = await GET(request('signed-in'))
+
+        expect((await response.json()).authenticated).toBe(true)
+        expect(response.headers.get('set-cookie')).toBeNull()
+        expect(fetchProfile).not.toHaveBeenCalled()
+    })
+
+    it('signs out a spent session and clears the cookie', async () => {
+        vi.mocked(freshSession).mockResolvedValueOnce({ status: 'signed-out' })
+
+        const response = await GET(request('signed-in'))
+
+        expect(await response.json()).toEqual({ authenticated: false })
+        expect(response.cookies.get('tw_session')?.value).toBe('')
     })
 })

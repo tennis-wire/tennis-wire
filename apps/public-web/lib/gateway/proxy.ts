@@ -42,12 +42,15 @@ export async function proxy(request: NextRequest, prefix: string): Promise<NextR
 
     if (session) {
         const fresh = await freshSession(session)
-        if (!fresh) {
+        // Neither signed in nor out as far as anyone can tell: the cookie stays as it is, and the
+        // request is not sent on as anonymous, which would show him a thread that ignores his ignore
+        if (fresh.status === 'unavailable') return json(503, 'AUTH_UNAVAILABLE')
+        if (fresh.status === 'signed-out') {
             session = null
             signedOut = true
-        } else if (fresh !== session) {
-            session = fresh
-            refreshed = fresh
+        } else if (fresh.session !== session) {
+            session = fresh.session
+            refreshed = fresh.session
         }
     }
 
