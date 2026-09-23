@@ -174,9 +174,10 @@ Local principals:
 
 | Principal | Credentials | Roles |
 |---|---|---|
-| `dev` | `dev` / `dev` | `author`, `admin` (so also `moderator` and `user`) |
+| `dev` | `dev` / `dev` | `author`, `admin` (so also `chief-editor`, `moderator` and `user`) |
 | `reader` | `reader` / `reader` | `user` |
 | `moderator` | `moderator` / `moderator` | `moderator`, `user` |
+| `author` | `author` / `author` | `author` |
 | `moderation-bot` | client secret `dev-moderation-bot-secret` | `moderator-bot` |
 | `user-service` | client secret `dev-user-service-secret` | `service`, plus `realm-management`: `manage-users`, `view-realm` |
 | `discussion-service` | client secret `dev-discussion-service-secret` | `service` |
@@ -186,6 +187,12 @@ has: `admin` is composite and hands it `author` and `user` as well, so a check
 a real moderator would fail passes on `dev`. Moderation records who acted, and
 that identity is a reader profile in `user-service` — hence `user` spelled out
 on the fixture instead of assumed, per the rule under Readers below.
+
+`author` exists for the same reason on the editorial side. `dev` carries
+`chief-editor` through `admin`, so it never hits the limits a plain author has:
+someone else's published article, unpublishing, resetting another person's
+pending edit. Ownership and the edit lock need two people with different
+rights, and `author` with `dev` are those two.
 
 `dev-cli` is a password-grant client that exists only for `curl` and for the
 gateway integration test. ROPC is deprecated in OAuth 2.1; this client must

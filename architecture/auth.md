@@ -18,12 +18,13 @@ Realm-роли (client-роли не используем — проще мап�
 |---|---|---|---|
 | `user` | Зарегистрированный читатель | Автоматически: default-группа `readers` (регистрация, вход через Google, учётка из консоли) | Комментарии, жалобы, игнор-лист, личный кабинет; позже фэнтези |
 | `author` | Сотрудник-автор | Вручную администратором | Редакторский контур: черновики, AI-чат, перевод, транскрипция |
+| `chief-editor` | Главный редактор | Вручную администратором; composite над `author` | Всё, что даёт `author`, плюс чужое опубликованное: правка, снятие с публикации, сброс чужой правки ([editorial.md](editorial.md) §2) |
 | `moderator` | Сотрудник-модератор | Вручную администратором | Модерация комментариев: скрытие, бан, разбор жалоб и сигналов бота |
 | `moderator-bot` | Service account бота | Назначается клиенту `moderation-bot` | Жалоба от классификатора (`POST /moderation/reports`) и снятие комментария; без ограничений и без чтения очереди |
 | `service` | Service account'ы `user-service` и `discussion-service` | Назначается сервисному аккаунту клиента | Вызовы `/internal/**` между сервисами (§6) |
-| `admin` | Администратор | Вручную; composite из `user`, `author`, `moderator` | Управление пользователями и системой |
+| `admin` | Администратор | Вручную; composite из `user`, `author`, `moderator`, `chief-editor` | Управление пользователями и системой |
 
-`author` и `moderator` независимы: у одного человека могут быть обе.
+`author` и `moderator` независимы: у одного человека могут быть обе. `chief-editor` включает `author`, выдавать их вместе не нужно.
 
 **Человеку-модератору нужна и роль `user`.** Модерация подписывает свои решения читательским `user_id` (`issued_by` у ограничения, `resolved_by` у жалобы, `hidden_by` у скрытия), а взять его можно только через resolve, который требует `user`. В проде это приезжает само: учётку заводит администратор через консоль, и default-группа `readers` выдаёт `user`. Учётки из realm-файла default-групп не получают — поэтому фикстура `moderator` выписывает `['moderator', 'user']` руками. Бот роли `user` не имеет и не должен: его действия записываются без подписи.
 
@@ -40,11 +41,11 @@ Realm-роли (client-роли не используем — проще мап�
 | `user-service` | `user-service` | confidential, service account | `client_credentials` | Spring Security OAuth2 Client; роль `service` и client-роли `realm-management` `manage-users`, `view-realm` — гашение и удаление учёток, чтение `accessTokenLifespan` |
 | `discussion-service` | `discussion-service` | confidential, service account | `client_credentials` | Spring Security OAuth2 Client; роль `service` |
 
-Путь к `author` / `moderator` — только через администратора.
+Путь к `author` / `chief-editor` / `moderator` — только через администратора.
 
 Саморегистрация в realm **включена** (B1): форма на странице логина, email как username, подтверждение адреса обязательно. До читателей она была выключена — роль `user` было некому потреблять.
 
-Локально в realm есть ещё клиенты `dev-cli` (public, password grant) и `no-audience` (без audience mapper, для теста §9), пользователи `dev`, `reader` и `moderator` — артефакты разработки для `curl` и тестов. В целевом realm их нет.
+Локально в realm есть ещё клиенты `dev-cli` (public, password grant) и `no-audience` (без audience mapper, для теста §9), пользователи `dev`, `reader`, `moderator` и `author` — артефакты разработки для `curl` и тестов. В целевом realm их нет.
 
 ## 4. Токены
 
@@ -132,7 +133,7 @@ Realm-роли (client-роли не используем — проще мап�
 | `/actuator/health`, `/actuator/info` | анонимно | `show-details: when-authorized`; K8s-пробам нужен именно анонимный health без деталей |
 | `/actuator/gateway` | `admin` | Экспонируется только профилем `local`; роль требуется и там. Профиль управляет экспозицией, security — доступом |
 | `/api/public/**` | анонимно | |
-| `/api/editorial/**`, `/api/ai/**`, `/api/translate/**`, `/api/transcribe/**` | `author` | |
+| `/api/editorial/**`, `/api/ai/**`, `/api/translate/**`, `/api/transcribe/**` | `author` | сервис сужает: чужое опубликованное, снятие с публикации и сброс чужой правки — только `chief-editor`; черновик — только владельцу ([editorial.md](editorial.md) §2) |
 | `/api/aggregator/**` | `author` | planned; правила в gateway пока нет, путь закрыт |
 | `/api/discussion/comments/**` GET | анонимно | токен, если есть, всё равно валидируется — по нему применяются блокировки зрителя |
 | `/api/discussion/**` (прочее) | `user` | запись комментариев и жалоб, игнор-лист; сервис пускает только `comments/**` и `blocks/**` |
@@ -193,7 +194,7 @@ CORS терминируется в gateway (сделано).
 ## 11. Отложено / открытые вопросы
 
 - **Социальный вход — остался Apple.** Google включён (`readers.md`, шаг B1.5): встроенный провайдер, `trustEmail`, конфигурация в realm-json. Apple — не «без кода», как было записано здесь раньше: встроенного провайдера в Keycloak нет, generic OIDC не подходит, нужен JAR расширения в образе — первый custom SPI, разбор в `readers.md` §1.1. Срок — запуск `mobile`: кнопка Google в iOS-приложении обязывает добавить Sign in with Apple по правилу App Store 4.8. Отступление от условия пересмотра записано в `ADR-0001`.
-- **MFA для сотрудников:** conditional OTP по роли `author` / `moderator` / `admin` — конфигурация flow, включается при росте команды.
+- **MFA для сотрудников:** conditional OTP по роли `author` / `chief-editor` / `moderator` / `admin` — конфигурация flow, включается при росте команды.
 - **Бот-модератор:** способ реализации (регулярки + LLM) и место в топологии не определены; изучить существующие подходы ближе к делу. В identity-модели у него уже есть место: клиент `moderation-bot` и роль `moderator-bot`; API тоже — `POST /moderation/reports` и снятие комментария.
 - **Интерфейс модератора:** временно — очередь жалоб и очередь аватаров в `editorial-ui` (`/moderation` и `/moderation/avatars`, за ролью `moderator`). Постоянное место — `editorial-ui` или раздел `public-web` — не выбрано; экранов для ограничений и снятия комментария нет.
 - **Кастомизация страниц логина** Keycloak под бренд — отдельная задача, не блокирует.
