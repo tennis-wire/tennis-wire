@@ -9,6 +9,7 @@ import type {
     SaveArticleRequest,
     Tag,
     ApiError,
+    WorkItem,
 } from '../types/content'
 
 // ===== Error handling =====
@@ -62,6 +63,37 @@ function sendJson(method: string, body: unknown): RequestInit {
 export const articlesApi = {
     async create(data: CreateArticleRequest): Promise<EditorialArticle> {
         const response = await apiFetch(ARTICLES, sendJson('POST', data))
+        return handleResponse<EditorialArticle>(response)
+    },
+
+    // The caller's own drafts, most recently saved first
+    async drafts(
+        params: { search?: string; page?: number; size?: number },
+        signal?: AbortSignal
+    ): Promise<PagedResponse<WorkItem>> {
+        const query = new URLSearchParams()
+        if (params.search) query.set('search', params.search)
+        if (params.page !== undefined) query.set('page', String(params.page))
+        if (params.size !== undefined) query.set('size', String(params.size))
+        const response = await apiFetch(`${ARTICLES}?${query}`, { signal })
+        return handleResponse<PagedResponse<WorkItem>>(response)
+    },
+
+    // The caller's pending edits of published articles
+    async edits(
+        params: { page?: number; size?: number },
+        signal?: AbortSignal
+    ): Promise<PagedResponse<WorkItem>> {
+        const query = new URLSearchParams()
+        if (params.page !== undefined) query.set('page', String(params.page))
+        if (params.size !== undefined) query.set('size', String(params.size))
+        const response = await apiFetch(`${ARTICLES}/edits?${query}`, { signal })
+        return handleResponse<PagedResponse<WorkItem>>(response)
+    },
+
+    // "Open by link": the address a published article has on the site
+    async getBySlug(slug: string): Promise<EditorialArticle> {
+        const response = await apiFetch(`${ARTICLES}/by-slug/${encodeURIComponent(slug)}`)
         return handleResponse<EditorialArticle>(response)
     },
 

@@ -49,6 +49,16 @@ export interface EditorialArticle {
     createdAt: string
 }
 
+// A row in the caller's own lists: his drafts, and his pending edits of published articles
+export interface WorkItem {
+    id: string
+    type: ContentType
+    title: string
+    // a draft that has been on the site once: its address is taken, it is not deleted
+    wasPublished: boolean
+    updatedAt: string
+}
+
 export interface CreateArticleRequest {
     type: ContentType
     title: string
