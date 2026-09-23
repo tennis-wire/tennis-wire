@@ -309,6 +309,7 @@ public class CommentService {
     @Transactional(readOnly = true)
     public CommentPage listByAuthor(
             UUID authorId, @Nullable UUID viewerId, @Nullable Integer limit, @Nullable String cursor) {
+        assertListedFor(authorId, viewerId);
         var size = limit == null ? DEFAULT_LIMIT : Math.clamp(limit, MIN_LIMIT, MAX_LIMIT);
         var after = CommentCursor.decode(cursor);
 
@@ -326,6 +327,25 @@ public class CommentService {
     @Transactional(readOnly = true)
     public long countByAuthor(UUID authorId) {
         return comments.countByAuthor(authorId);
+    }
+
+    @Transactional(readOnly = true)
+    public long countByAuthor(UUID authorId, @Nullable UUID viewerId) {
+        assertListedFor(authorId, viewerId);
+        return comments.countByAuthor(authorId);
+    }
+
+    // A restricted reader has no page for others to see, and his comments listed by author would be
+    // one. His own cabinet reads the same listing and still gets it.
+    private void assertListedFor(UUID authorId, @Nullable UUID viewerId) {
+        if (authorId.equals(viewerId)) {
+            return;
+        }
+        if (!restrictions
+                .findActive(authorId, UserRestriction.CAPABILITY_COMMENT, Instant.now())
+                .isEmpty()) {
+            throw new ResourceNotFoundException("Author", authorId);
+        }
     }
 
     // The comment with as much of its subtree as one response carries. NOT_FOUND when nobody is
