@@ -80,7 +80,11 @@ model {
   }
 
   actor author 'Автор' {
-    description 'Создаёт и публикует контент через редакторский интерфейс'
+    description 'Пишет и публикует своё, правит своё опубликованное. Черновики видит только свои'
+  }
+
+  actor chiefEditor 'Главный редактор' {
+    description 'Роль chief-editor поверх author: правит и снимает с публикации чужое, сбрасывает зависшие правки. Чужих черновиков не видит'
   }
 
   actor moderator 'Модератор' {
@@ -178,7 +182,7 @@ model {
 
       service aggregatorApi 'Aggregator API' {
         #planned
-        description 'API для Curator UI и внутренних сервисов'
+        description 'API для вкладки «Источники» в редакции и внутренних сервисов'
       }
 
       service deduplicator 'Deduplicator' {
@@ -195,15 +199,15 @@ model {
 
     // ----- EDITORIAL -----
     container editorial 'Editorial UI' {
-      description 'Редакторский SPA: курирование и создание контента, временно — очередь модерации. Все обращения к бэкенду идут через API Gateway'
+      description 'Редакторский SPA: редакция и редактор материалов, временно — очередь модерации. Все обращения к бэкенду идут через API Gateway'
       technology 'React, TypeScript, Vite, Tiptap, MUI'
 
-      webapp curatorApp 'Curator UI' {
-        description 'Интерфейс отбора спарсенных материалов. Сейчас заглушка: своего бэкенда нет, ждёт Aggregator'
+      webapp deskApp 'Редакция' {
+        description '/desk: свои черновики и незавершённые правки опубликованного, «Открыть по ссылке», новый материал. Вкладка «Источники» (/desk/sources) — заглушка, ждёт Aggregator. Бывший Curator UI'
       }
 
       webapp editorApp 'Editor UI' {
-        description 'Редактор контента: черновики, AI-чат, перевод, транскрипция'
+        description '/editor/:id: черновик владельца, правка опубликованного с блокировкой и сравнением с сайтом, публикация, снятие для chief-editor; AI-чат, перевод, транскрипция. Несохранённое держится в localStorage до сохранения'
       }
 
       webapp moderationApp 'Moderation Queue' {
@@ -249,15 +253,15 @@ model {
 
     // ----- CONTENT SERVICE -----
     container contentService 'Content Service' {
-      description 'Управление контентом: черновики, публикация, публичная выдача'
+      description 'Управление контентом: черновики, правки опубликованного, публикация, публичная выдача'
       technology 'Java, Spring Boot'
 
       service contentApi 'Content API' {
-        description 'CRUD статей и тегов (/api/editorial/**), публичная выдача (/api/public/**). Поиск сейчас — SQL по подстроке внутри сервиса'
+        description '/api/editorial/**: черновики владельца, отложенная правка опубликованного с блокировкой и версиями, публикация и снятие, теги. /api/public/**: публичная выдача. Поиск сейчас — SQL по подстроке внутри сервиса'
       }
 
       database contentDb 'Content DB' {
-        description 'Статьи, теги, разделы'
+        description 'Статьи, отложенные правки опубликованного, теги, разделы'
         technology 'PostgreSQL, Liquibase'
       }
     }
@@ -338,7 +342,7 @@ model {
       technology 'Next.js, TypeScript'
 
       webapp publicSite 'Public Site' {
-        description 'Новости, результаты, статьи. Настоящие — страница статьи и островок комментариев, остальное на моках'
+        description 'Новости, результаты, статьи. Настоящие — страница статьи и островок комментариев, остальное на моках. Сотрудникам над статьёй — ссылка «Редактировать»'
       }
 
       webapp userCabinet 'User Cabinet' {
@@ -367,7 +371,8 @@ model {
   reader -> tennisService.webApp.publicSite 'Читает контент'
   registeredUser -> tennisService.webApp 'Комментирует, ведёт кабинет'
   registeredUser -> tennisService.mobileApp 'Использует сервис (входа в приложении пока нет)'
-  author -> tennisService.editorial 'Создаёт контент'
+  author -> tennisService.editorial 'Пишет, публикует, правит своё'
+  chiefEditor -> tennisService.editorial 'Правит и снимает с публикации чужое'
   moderator -> tennisService.editorial.moderationApp 'Разбирает жалобы и новые аватары'
   admin -> tennisService.identity 'Заводит сотрудников, роли, отзыв доступа (admin-консоль)'
   admin -> tennisService.apiGateway 'DELETE /api/users/{id}: удаление аккаунта через поддержку, без интерфейса'
@@ -394,9 +399,9 @@ model {
 
   // --- Editorial ---
   // Весь редакторский трафик идёт через gateway: apiConfig.ts знает только GATEWAY_URL.
-  tennisService.editorial.editorApp -> tennisService.apiGateway 'Черновики, AI-чат, перевод, транскрипция'
-  tennisService.editorial.curatorApp -> tennisService.editorial.editorApp 'В работу'
-  tennisService.editorial.curatorApp -> tennisService.apiGateway 'Список спарсенных материалов'
+  tennisService.editorial.editorApp -> tennisService.apiGateway 'Черновики, правки, публикация и снятие; AI-чат, перевод, транскрипция'
+  tennisService.editorial.deskApp -> tennisService.editorial.editorApp 'Открыть материал, новый материал'
+  tennisService.editorial.deskApp -> tennisService.apiGateway 'Свои черновики и правки, материал по slug; позже — спарсенные материалы'
   tennisService.editorial.moderationApp -> tennisService.apiGateway 'Очередь жалоб и решения (/api/discussion/moderation/reports/**); очередь аватаров, «ок» и «снять» (/api/users/moderation/avatars, /api/users/{id}/avatar)'
   tennisService.editorial.moderationApp -> tennisService.userService.avatarStorage 'Картинки из очереди, напрямую из бакета'
 
@@ -439,7 +444,7 @@ model {
   // --- Auth: клиенты -> Identity Provider ---
   // Идентификаторы клиентов и роли — auth.md §2–§3
   tennisService.editorial -> tennisService.identity.identityOidc 'OIDC Authorization Code + PKCE (client editorial-ui)'
-  tennisService.webApp.webServer -> tennisService.identity.identityOidc 'OIDC Authorization Code + PKCE, confidential client public-web; обновление и отзыв offline-токена'
+  tennisService.webApp.webServer -> tennisService.identity.identityOidc 'OIDC Authorization Code + PKCE, confidential client public-web; обновление и отзыв offline-токена; роли из id-токена — флаг сотрудника'
   tennisService.mobileApp -> tennisService.identity.identityOidc 'OIDC Authorization Code + PKCE (client mobile; клиент в realm есть, в приложении не подключено)'
   tennisService.moderationBot -> tennisService.identity.identityOidc 'client_credentials (client moderation-bot, роль moderator-bot)'
 
@@ -463,6 +468,7 @@ model {
   // Браузер в gateway не ходит: только в свой origin, дальше запрос собирает сервер Next.js.
   tennisService.webApp.publicSite -> tennisService.webApp.webServer 'Страницы; вход, сессия, комментарии и игнор через /api/**'
   tennisService.webApp.publicSite -> tennisService.userService.avatarStorage 'Фото читателей, напрямую из бакета'
+  tennisService.webApp.publicSite -> tennisService.editorial.editorApp 'Ссылка «Редактировать» для сотрудников, в новой вкладке'
   tennisService.webApp.userCabinet -> tennisService.webApp.webServer 'Профиль, фото, ник, игнор-лист, удаление аккаунта'
   tennisService.webApp.webServer -> tennisService.apiGateway 'Прокси /api/discussion/**, /api/users/** с токеном из куки; статья — /api/public/articles/{slug} при рендере. Остальной контент — моки'
   tennisService.mobileApp.iosApp -> tennisService.apiGateway 'Контент (пока не подключено: работает на моках)'
@@ -481,6 +487,7 @@ views {
     include reader
     include registeredUser
     include author
+    include chiefEditor
     include moderator
     include admin
     include externalApis
@@ -498,9 +505,10 @@ views {
 
   view editorialFlow {
     title 'Editorial Flow — как есть'
-    description 'Автор → редакторский UI → gateway → BFF / Content / Transcription; там же временно очередь модерации'
+    description 'Автор и главный редактор → редакция и редактор → gateway → BFF / Content / Transcription; там же временно очередь модерации'
 
     include author
+    include chiefEditor
     include moderator
     include tennisService.editorial
     include tennisService.editorial.*
@@ -557,6 +565,7 @@ views {
     include reader
     include registeredUser
     include author
+    include chiefEditor
     include admin
     include tennisDataSources
     include externalApis
@@ -596,6 +605,7 @@ views {
 
     include registeredUser
     include author
+    include chiefEditor
     include moderator
     include admin
     include tennisService.identity
