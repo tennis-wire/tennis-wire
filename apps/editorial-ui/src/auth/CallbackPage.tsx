@@ -18,5 +18,5 @@ export default function CallbackPage() {
     }
 
     const state = auth.user?.state as { returnTo?: string } | undefined
-    return <Navigate to={state?.returnTo ?? '/editor'} replace />
+    return <Navigate to={state?.returnTo ?? '/desk'} replace />
 }

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import DiffViewer from 'react-diff-viewer-continued'
 import { Box, Paper, Tabs, Tab, Alert, Snackbar, IconButton, Tooltip } from '@mui/material'
-import { Psychology } from '@mui/icons-material'
+import { ArrowBack, Psychology } from '@mui/icons-material'
+import { Link as RouterLink } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 
 import { Toolbar } from './Toolbar.tsx'
@@ -150,6 +151,16 @@ export default function Editor({ articleId, sessionKey, sub }: Props) {
                                 gap: 1.5,
                             }}
                         >
+                            <Tooltip title="В редакцию">
+                                <IconButton
+                                    component={RouterLink}
+                                    to="/desk"
+                                    size="small"
+                                    aria-label="В редакцию"
+                                >
+                                    <ArrowBack fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
                             <Box
                                 component="span"
                                 sx={{

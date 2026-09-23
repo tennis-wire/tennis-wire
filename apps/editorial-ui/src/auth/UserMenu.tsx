@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Tooltip } from '@mui/material'
-import { AccountCircle, Gavel, Logout } from '@mui/icons-material'
+import { AccountCircle, Article, Gavel, Logout } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 
-import { hasRole, MODERATOR } from './realmRoles'
+import { AUTHOR, hasRole, MODERATOR } from './realmRoles'
 
 // Who is signed in, and the way out
 export default function UserMenu() {
@@ -16,6 +16,7 @@ export default function UserMenu() {
         auth.user?.profile.preferred_username ?? auth.user?.profile.email ?? 'Неизвестно кто'
     // Hiding the entry, not the page: RequireRole and the server both decide again
     const moderates = hasRole(auth.user?.profile, MODERATOR)
+    const writes = hasRole(auth.user?.profile, AUTHOR)
 
     return (
         <>
@@ -28,6 +29,19 @@ export default function UserMenu() {
                 <MenuItem disabled>
                     <ListItemText primary={username} />
                 </MenuItem>
+                {writes && (
+                    <MenuItem
+                        onClick={() => {
+                            setAnchorEl(null)
+                            void navigate('/desk')
+                        }}
+                    >
+                        <ListItemIcon>
+                            <Article fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText primary="Редакция" />
+                    </MenuItem>
+                )}
                 {moderates && (
                     <MenuItem
                         onClick={() => {

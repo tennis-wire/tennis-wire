@@ -3,12 +3,12 @@ import { ThemeProvider as MuiThemeProvider, CssBaseline } from '@mui/material'
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 
 import EditorRoute from './features/editor/components/EditorRoute.tsx'
-import CuratorPage from './features/curator/CuratorPage.tsx'
+import DeskPage from './features/desk/DeskPage.tsx'
+import SourcesPage from './features/desk/SourcesPage.tsx'
 import ModerationPage from './features/moderation/ModerationPage.tsx'
 import AvatarQueuePage from './features/moderation/AvatarQueuePage.tsx'
 import { ThemeProvider, useAppTheme, createAppTheme } from './theme'
 
-import RequireAuth from './auth/RequireAuth.tsx'
 import RequireRole from './auth/RequireRole.tsx'
 import { AUTHOR, MODERATOR } from './auth/realmRoles.ts'
 import CallbackPage from './auth/CallbackPage.tsx'
@@ -22,15 +22,25 @@ const router = createBrowserRouter([
     { path: '/auth/callback', element: <CallbackPage /> },
     { path: '/logged-out', element: <LoggedOutPage /> },
 
-    { path: '/', element: <Navigate to="/editor/new" replace /> },
+    { path: '/', element: <Navigate to="/desk" replace /> },
     {
-        path: '/curator',
+        path: '/desk',
         element: (
-            <RequireAuth>
-                <CuratorPage />
-            </RequireAuth>
+            <RequireRole role={AUTHOR}>
+                <DeskPage />
+            </RequireRole>
         ),
     },
+    {
+        path: '/desk/sources',
+        element: (
+            <RequireRole role={AUTHOR}>
+                <SourcesPage />
+            </RequireRole>
+        ),
+    },
+    // the old name of the section, kept for bookmarks
+    { path: '/curator', element: <Navigate to="/desk" replace /> },
     {
         path: '/moderation',
         element: (
