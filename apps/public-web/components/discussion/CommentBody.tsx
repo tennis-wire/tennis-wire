@@ -27,7 +27,7 @@ export default function CommentBody({ body }: { body: string }) {
                     <a
                         key={index}
                         href={part.href}
-                        rel="nofollow noopener"
+                        rel="ugc nofollow noopener"
                         style={{ color: 'var(--tw-primary)' }}
                     >
                         {part.href}
