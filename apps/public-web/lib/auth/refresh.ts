@@ -4,8 +4,9 @@ import { oidcConfig } from './config'
 import { mayEdit } from './roles'
 import type { Session } from './session'
 
-// A page fires several requests at once; without this each one would spend its
-// own refresh, and with rotation turned on later they would race.
+// A page fires several requests at once; without this each one would spend its own refresh, and
+// with rotation turned on later they would race. Keyed by the refresh token rather than by the
+// reader: two devices of one reader are two sessions, and one must never get the other's tokens.
 const inFlight = new Map<string, Promise<Session | null>>()
 
 const EARLY_SECONDS = 30
@@ -19,11 +20,11 @@ export function isFresh(session: Session, now: number = Date.now()): boolean {
 export async function freshSession(session: Session): Promise<Session | null> {
     if (isFresh(session)) return session
 
-    const running = inFlight.get(session.sub)
+    const running = inFlight.get(session.refreshToken)
     if (running) return running
 
-    const attempt = refresh(session).finally(() => inFlight.delete(session.sub))
-    inFlight.set(session.sub, attempt)
+    const attempt = refresh(session).finally(() => inFlight.delete(session.refreshToken))
+    inFlight.set(session.refreshToken, attempt)
     return attempt
 }
 
