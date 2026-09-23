@@ -328,7 +328,7 @@ export function useArticleSession({ articleId, sessionKey, sub, showSnackbar }: 
             await articlesApi.delete(current.id)
             removeBuffer(sub, current.id)
             leavingRef.current = true
-            void navigate('/editor/new', { replace: true })
+            void navigate('/desk', { replace: true })
         })
     }, [run, sub, navigate])
 
