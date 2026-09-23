@@ -5,6 +5,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +49,10 @@ class SecurityConfigTest {
 
     @Test
     void editorialAcceptsAuthorRole() throws Exception {
-        mvc.perform(get(EDITORIAL).with(jwt().authorities(new SimpleGrantedAuthority("ROLE_author"))))
+        // Staff are told apart by the subject, which Keycloak makes a UUID
+        mvc.perform(get(EDITORIAL)
+                        .with(jwt().jwt(token -> token.subject(UUID.randomUUID().toString()))
+                                .authorities(new SimpleGrantedAuthority("ROLE_author"))))
                 .andExpect(status().isOk());
     }
 
