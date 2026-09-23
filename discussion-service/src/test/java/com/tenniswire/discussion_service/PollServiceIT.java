@@ -6,11 +6,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.tenniswire.discussion_service.dto.poll.CreatePollRequest;
 import com.tenniswire.discussion_service.dto.poll.PollResponse;
 import com.tenniswire.discussion_service.dto.poll.UpdatePollRequest;
+import com.tenniswire.discussion_service.exception.CommentingRestrictedException;
 import com.tenniswire.discussion_service.exception.PollClosedException;
 import com.tenniswire.discussion_service.exception.ResourceNotFoundException;
 import com.tenniswire.discussion_service.repository.PollVoteRepository;
 import com.tenniswire.discussion_service.service.PollService;
 import com.tenniswire.discussion_service.service.ReaderErasure;
+import com.tenniswire.discussion_service.service.RestrictionService;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -32,6 +34,9 @@ class PollServiceIT {
 
     @Autowired
     private ReaderErasure erasure;
+
+    @Autowired
+    private RestrictionService restrictions;
 
     private final UUID author = UUID.randomUUID();
     private final UUID bob = UUID.randomUUID();
@@ -139,6 +144,20 @@ class PollServiceIT {
                         made.id(),
                         new UpdatePollRequest(null, List.of(new UpdatePollRequest.OptionText(UUID.randomUUID(), "x")))))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void aBanStopsAVoteButNotItsRetraction() {
+        var made = poll(null);
+        polls.vote(bob, made.id(), made.options().get(0).id());
+        restrictions.restrictCommenting(bob, carol, Instant.now().plus(Duration.ofHours(1)), "flood");
+
+        assertThatThrownBy(
+                        () -> polls.vote(bob, made.id(), made.options().get(1).id()))
+                .isInstanceOf(CommentingRestrictedException.class);
+        polls.retract(bob, made.id());
+
+        assertThat(counts(polls.get(made.id(), null))).isEqualTo(new int[] {0, 0, 0});
     }
 
     @Test
