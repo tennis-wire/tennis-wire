@@ -543,7 +543,8 @@ under `/editor` and `/curator` sits behind the login; `dev` / `dev` gets in.
 Tokens are held in memory, so every reload runs the authorization code flow
 again. While the SSO cookie lives that is silent — expect a brief flash, not a
 login form. Nothing of the session reaches `localStorage`; the only thing there
-is the editor draft, keyed by the user's `sub`.
+is what the editor has not saved to the server yet, keyed by the user's `sub` and
+the article.
 
 There are two Vite entry points: `index.html` and `popup-callback.html`. The
 second is where Keycloak lands the re-authentication popup, and it is listed in
