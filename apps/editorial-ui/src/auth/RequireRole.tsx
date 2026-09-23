@@ -3,7 +3,12 @@ import { Box, Stack, Typography } from '@mui/material'
 import { useAuth } from 'react-oidc-context'
 
 import RequireAuth from './RequireAuth'
-import { hasRole } from './realmRoles'
+import { AUTHOR, hasRole, MODERATOR } from './realmRoles'
+
+const AUDIENCE: Record<string, string> = {
+    [AUTHOR]: 'авторам',
+    [MODERATOR]: 'модераторам',
+}
 
 // Hides a page from people it is not for. A convenience, not a guard: the token
 // reaches the gateway and the service either way, and both decide for
@@ -32,7 +37,7 @@ function RoleGate({ role, children }: { role: string; children: ReactNode }) {
                 <Stack spacing={1} sx={{ alignItems: 'center' }}>
                     <Typography variant="h6">Раздел недоступен</Typography>
                     <Typography variant="body2" color="text.secondary">
-                        Он открыт только модераторам.
+                        Он открыт только {AUDIENCE[role] ?? 'сотрудникам с нужной ролью'}.
                     </Typography>
                 </Stack>
             </Box>
