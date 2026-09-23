@@ -294,12 +294,17 @@ export function useArticleSession({ articleId, sessionKey, sub, showSnackbar }: 
         await run('publish', async () => {
             const published = await articlesApi.publish(target.id, target.version)
             adoptSaved(published, sent)
+            // The site caches its pages for a minute, and the first visit after that still
+            // gets the old copy; the new page itself is there at once, the feeds are not
             if (target.status === 'draft') {
                 const what =
                     published.type === 'article' ? 'Статья опубликована' : 'Новость опубликована'
-                showSnackbar(what, 'success')
+                showSnackbar(`${what}, в лентах сайта появится в течение пары минут`, 'success')
             } else {
-                showSnackbar('Изменения на сайте', 'success')
+                showSnackbar(
+                    'Изменения опубликованы, на сайте появятся в течение пары минут',
+                    'success'
+                )
             }
         })
     }, [editor, metadata, save, run, adoptSaved, showSnackbar])
