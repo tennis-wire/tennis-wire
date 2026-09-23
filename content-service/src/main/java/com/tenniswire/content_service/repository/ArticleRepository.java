@@ -15,5 +15,9 @@ public interface ArticleRepository extends JpaRepository<Article, UUID>, JpaSpec
 
     List<Article> findByIdInAndStatus(Collection<UUID> ids, ArticleStatus status);
 
+    Optional<Article> findBySlug(String slug);
+
     boolean existsBySlug(String slug);
+
+    boolean existsBySlugAndIdNot(String slug, UUID id);
 }

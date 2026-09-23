@@ -39,6 +39,7 @@ class PublicArticleRefIT {
         var article = new Article();
         article.type(ArticleType.NEWS);
         article.status(status);
+        article.authorId(UUID.randomUUID());
         article.title("title-" + UUID.randomUUID());
         article.slug("slug-" + UUID.randomUUID());
         if (status == ArticleStatus.PUBLISHED) {

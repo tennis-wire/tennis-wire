@@ -3,6 +3,7 @@ package com.tenniswire.content_service.repository;
 import com.tenniswire.content_service.entity.Article;
 import com.tenniswire.content_service.entity.ArticleStatus;
 import com.tenniswire.content_service.entity.ArticleType;
+import java.util.UUID;
 import org.springframework.data.jpa.domain.Specification;
 
 public final class ArticleSpecification {
@@ -11,6 +12,10 @@ public final class ArticleSpecification {
 
     public static Specification<Article> hasType(ArticleType type) {
         return (root, query, cb) -> type == null ? null : cb.equal(root.get("type"), type);
+    }
+
+    public static Specification<Article> ownedBy(UUID authorId) {
+        return (root, query, cb) -> cb.equal(root.get("authorId"), authorId);
     }
 
     public static Specification<Article> hasStatus(ArticleStatus status) {
