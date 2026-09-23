@@ -55,12 +55,15 @@ public class RestrictionService {
         return restrictions.saveAndFlush(restriction);
     }
 
-    /** Lifts a restriction early. The row is removed: the audit copy lives in the moderation domain. */
-    public void lift(UUID restrictionId) {
-        if (!restrictions.existsById(restrictionId)) {
-            throw new ResourceNotFoundException("Restriction", restrictionId);
-        }
-        restrictions.deleteById(restrictionId);
+    // Ends a restriction early. The row stays with who ended it and when. One already lifted or run
+    // out is not there to lift.
+    public void lift(UUID restrictionId, UUID liftedBy) {
+        var now = Instant.now();
+        var restriction = restrictions
+                .findById(restrictionId)
+                .filter(found -> found.isActive(now))
+                .orElseThrow(() -> new ResourceNotFoundException("Restriction", restrictionId));
+        restriction.liftedAt(now).liftedBy(liftedBy);
     }
 
     @Transactional(readOnly = true)

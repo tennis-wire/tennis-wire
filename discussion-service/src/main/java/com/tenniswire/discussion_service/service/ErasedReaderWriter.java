@@ -74,7 +74,7 @@ class ErasedReaderWriter {
     @Transactional
     void eraseTheRest(UUID readerId, Instant now) {
         blocks.deleteInvolving(readerId);
-        restrictions.deleteExpiredFor(readerId, now);
+        restrictions.deleteEndedFor(readerId, now);
         // What he put on other people's comments comes off their counts; what he collected on his
         // own goes with him. A count a removal already swept into someone's total stays: the
         // comment it was collected on is not there to take it off.

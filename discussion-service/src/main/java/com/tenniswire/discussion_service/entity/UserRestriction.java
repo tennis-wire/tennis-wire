@@ -14,10 +14,8 @@ import org.hibernate.annotations.Generated;
 import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.generator.EventType;
 
-/**
- * A moderator's decision projected into this service: while active, the user may not exercise
- * {@link #capability}. The audit trail of that decision lives in the moderation domain.
- */
+// A moderator's decision: while active, the user may not exercise the capability. Active means not
+// lifted and not past expires_at. Ended rows stay as the ban history.
 @Entity
 @Table(name = "user_restriction")
 @Getter
@@ -51,4 +49,14 @@ public class UserRestriction {
     @Generated(event = EventType.INSERT)
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
+
+    @Column(name = "lifted_at")
+    private Instant liftedAt;
+
+    @Column(name = "lifted_by")
+    private UUID liftedBy;
+
+    public boolean isActive(Instant now) {
+        return liftedAt == null && (expiresAt == null || expiresAt.isAfter(now));
+    }
 }

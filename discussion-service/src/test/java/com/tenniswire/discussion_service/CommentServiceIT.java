@@ -219,14 +219,15 @@ class CommentServiceIT {
     @Test
     void liftedRestrictionNoLongerGates() {
         var lifted = restrictionService.restrictCommenting(bob, moderator, null, "indefinite");
-        restrictionService.lift(lifted.id());
+        restrictionService.lift(lifted.id(), moderator);
 
         assertThat(commentService
                         .create(bob, "publication", subjectId, "ok")
                         .comment()
                         .id())
                 .isNotNull();
-        assertThatThrownBy(() -> restrictionService.lift(lifted.id())).isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> restrictionService.lift(lifted.id(), moderator))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test

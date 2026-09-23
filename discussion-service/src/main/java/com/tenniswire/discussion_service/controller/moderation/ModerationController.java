@@ -124,7 +124,7 @@ public class ModerationController {
 
     @DeleteMapping("/restrictions/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void lift(@PathVariable UUID id) {
-        restrictionService.lift(id);
+    public void lift(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+        restrictionService.lift(id, currentUser.id(jwt));
     }
 }

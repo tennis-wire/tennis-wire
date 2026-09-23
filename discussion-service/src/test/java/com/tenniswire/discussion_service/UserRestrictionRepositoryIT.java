@@ -28,10 +28,11 @@ class UserRestrictionRepositoryIT {
         var expired = restricted(Instant.now().minus(Duration.ofMinutes(1)), UserRestriction.CAPABILITY_COMMENT);
         var otherCapability = restricted(null, "react");
         var notAsked = restricted(null, UserRestriction.CAPABILITY_COMMENT);
+        var lifted = lifted();
         var free = UUID.randomUUID();
 
         var found = restrictions.findRestrictedAmong(
-                List.of(indefinite, untilLater, expired, otherCapability, free),
+                List.of(indefinite, untilLater, expired, otherCapability, lifted, free),
                 UserRestriction.CAPABILITY_COMMENT,
                 Instant.now());
 
@@ -41,6 +42,14 @@ class UserRestrictionRepositoryIT {
     private UUID restricted(@Nullable Instant expiresAt, String capability) {
         var userId = UUID.randomUUID();
         restrictions.saveAndFlush(restriction(userId, expiresAt, capability));
+        return userId;
+    }
+
+    private UUID lifted() {
+        var userId = UUID.randomUUID();
+        restrictions.saveAndFlush(restriction(userId, null, UserRestriction.CAPABILITY_COMMENT)
+                .liftedAt(Instant.now())
+                .liftedBy(UUID.randomUUID()));
         return userId;
     }
 
