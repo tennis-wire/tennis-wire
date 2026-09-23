@@ -20,6 +20,13 @@
 
     "eventsEnabled": true,
     "eventsExpiration": 2592000,
+    "adminEventsEnabled": true,
+    "adminEventsDetailsEnabled": false,
+    "attributes": {
+        "adminEventsExpiration": "7776000"
+    },
+
+    "bruteForceProtected": true,
 
     "smtpServer": {
         "host": "mailpit",
