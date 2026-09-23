@@ -20,7 +20,7 @@ import { htmlOf, useArticleEditor } from './useArticleEditor'
 export type LoadState = 'loading' | 'ready' | 'missing' | 'forbidden' | 'failed'
 // locked: someone else holds a pending edit, and the article is read-only here
 export type Mode = 'new' | 'draft' | 'published' | 'locked'
-export type Busy = 'save' | 'publish' | 'discard' | 'delete' | null
+export type Busy = 'save' | 'publish' | 'discard' | 'delete' | 'unpublish' | null
 
 type Severity = 'success' | 'error' | 'warning' | 'info'
 
@@ -337,6 +337,25 @@ export function useArticleSession({ articleId, sessionKey, sub, showSnackbar }: 
         })
     }, [run, sub, navigate])
 
+    // A chief editor takes a published article off the site. It goes back to its owner as a
+    // draft, and the owner may not be the caller, so the editor leaves for the desk.
+    const unpublish = useCallback(async () => {
+        const current = articleRef.current
+        if (current === null) return
+        const unsaved = dirtyRef.current ? ' Несохранённые изменения пропадут.' : ''
+        const question = `Снять материал с публикации? Он вернётся автору черновиком, а с сайта пропадёт в течение пары минут.${unsaved}`
+        if (!window.confirm(question)) return
+        await run('unpublish', async () => {
+            await articlesApi.unpublish(current.id)
+            removeBuffer(sub, current.id)
+            leavingRef.current = true
+            void navigate('/desk', {
+                replace: true,
+                state: { notice: 'Материал снят с публикации и вернулся автору черновиком' },
+            })
+        })
+    }, [run, sub, navigate])
+
     // A new article only: back to an empty form
     const clearNew = useCallback(() => {
         if (!editor || !window.confirm('Очистить редактор? Всё введённое пропадёт.')) return
@@ -368,6 +387,7 @@ export function useArticleSession({ articleId, sessionKey, sub, showSnackbar }: 
         publish,
         discardEdit,
         remove,
+        unpublish,
         clearNew,
         forgetUnsaved,
     }

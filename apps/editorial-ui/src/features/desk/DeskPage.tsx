@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Alert, Button, Container, Stack, TextField, Typography } from '@mui/material'
 import { Add } from '@mui/icons-material'
 
@@ -15,6 +15,9 @@ import WorkList from './components/WorkList'
 // are saved but not on the site yet. Someone else's work is not listed here, to anyone.
 export default function DeskPage() {
     const navigate = useNavigate()
+    const location = useLocation()
+    // what the editor had to say on its way out, e.g. after taking an article off the site
+    const notice = (location.state as { notice?: string } | null)?.notice ?? null
     const [search, setSearch] = useState('')
     const [query, setQuery] = useState('')
     const [draftReloads, setDraftReloads] = useState(0)
@@ -58,6 +61,15 @@ export default function DeskPage() {
             </Stack>
             <DeskNav />
 
+            {notice !== null && (
+                <Alert
+                    severity="info"
+                    sx={{ mb: 2 }}
+                    onClose={() => void navigate(location.pathname, { replace: true })}
+                >
+                    {notice}
+                </Alert>
+            )}
             {error !== null && (
                 <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
                     {error}
