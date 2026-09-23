@@ -18,6 +18,8 @@ public class CurrentUser {
 
     private static final String MODERATOR = "ROLE_" + Roles.MODERATOR;
 
+    private static final String CHIEF_EDITOR = "ROLE_" + Roles.CHIEF_EDITOR;
+
     private final UserIdResolver resolver;
 
     public CurrentUser(UserIdResolver resolver) {
@@ -41,6 +43,10 @@ public class CurrentUser {
     // Whether a person is acting rather than the classifier: the bot has no reader profile.
     public boolean isModerator() {
         return hasAuthority(MODERATOR);
+    }
+
+    public boolean isChiefEditor() {
+        return hasAuthority(CHIEF_EDITOR);
     }
 
     private static boolean isReader() {

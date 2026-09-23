@@ -9,6 +9,7 @@ import com.tenniswire.discussion_service.entity.PollVote;
 import com.tenniswire.discussion_service.entity.PollVoteId;
 import com.tenniswire.discussion_service.entity.UserRestriction;
 import com.tenniswire.discussion_service.exception.CommentingRestrictedException;
+import com.tenniswire.discussion_service.exception.ForbiddenException;
 import com.tenniswire.discussion_service.exception.PollClosedException;
 import com.tenniswire.discussion_service.exception.ResourceNotFoundException;
 import com.tenniswire.discussion_service.repository.PollOptionRepository;
@@ -62,8 +63,8 @@ public class PollService {
         return PollResponse.from(poll, null, Instant.now());
     }
 
-    public PollResponse update(UUID pollId, UpdatePollRequest request) {
-        var poll = polls.findById(pollId).orElseThrow(() -> new ResourceNotFoundException("Poll", pollId));
+    public PollResponse update(UUID pollId, PollEditor editor, UpdatePollRequest request) {
+        var poll = editable(pollId, editor);
         var question = request.question();
         if (question != null) {
             poll.question(question.strip());
@@ -82,10 +83,19 @@ public class PollService {
         return PollResponse.from(poll, null, Instant.now());
     }
 
-    public PollResponse close(UUID pollId, @Nullable Instant closesAt) {
-        var poll = polls.findById(pollId).orElseThrow(() -> new ResourceNotFoundException("Poll", pollId));
+    public PollResponse close(UUID pollId, PollEditor editor, @Nullable Instant closesAt) {
+        var poll = editable(pollId, editor);
         poll.closesAt(closesAt);
         return PollResponse.from(poll, null, Instant.now());
+    }
+
+    // Its author's to change, as his article is, and anyone's for a chief editor
+    private Poll editable(UUID pollId, PollEditor editor) {
+        var poll = polls.findById(pollId).orElseThrow(() -> new ResourceNotFoundException("Poll", pollId));
+        if (!editor.chiefEditor() && !poll.createdBy().equals(editor.subject())) {
+            throw new ForbiddenException("Only its author or a chief editor may change a poll");
+        }
+        return poll;
     }
 
     @Transactional(readOnly = true)

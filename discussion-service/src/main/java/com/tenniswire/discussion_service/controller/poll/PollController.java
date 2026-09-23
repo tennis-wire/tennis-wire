@@ -6,6 +6,7 @@ import com.tenniswire.discussion_service.dto.poll.PollResponse;
 import com.tenniswire.discussion_service.dto.poll.UpdatePollRequest;
 import com.tenniswire.discussion_service.dto.poll.VoteRequest;
 import com.tenniswire.discussion_service.security.CurrentUser;
+import com.tenniswire.discussion_service.service.PollEditor;
 import com.tenniswire.discussion_service.service.PollService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -40,21 +41,19 @@ public class PollController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PollResponse create(@Valid @RequestBody CreatePollRequest request, @AuthenticationPrincipal Jwt jwt) {
-        var subject = jwt.getSubject();
-        if (subject == null) {
-            throw new IllegalStateException("Validated token carries no sub");
-        }
-        return polls.create(UUID.fromString(subject), request);
+        return polls.create(subjectOf(jwt), request);
     }
 
     @PatchMapping("/{id}")
-    public PollResponse update(@PathVariable UUID id, @Valid @RequestBody UpdatePollRequest request) {
-        return polls.update(id, request);
+    public PollResponse update(
+            @PathVariable UUID id, @Valid @RequestBody UpdatePollRequest request, @AuthenticationPrincipal Jwt jwt) {
+        return polls.update(id, editor(jwt), request);
     }
 
     @PutMapping("/{id}/closing")
-    public PollResponse close(@PathVariable UUID id, @RequestBody ClosingRequest request) {
-        return polls.close(id, request.closesAt());
+    public PollResponse close(
+            @PathVariable UUID id, @RequestBody ClosingRequest request, @AuthenticationPrincipal Jwt jwt) {
+        return polls.close(id, editor(jwt), request.closesAt());
     }
 
     @GetMapping("/{id}")
@@ -72,5 +71,17 @@ public class PollController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void retract(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
         polls.retract(currentUser.id(jwt), id);
+    }
+
+    private PollEditor editor(Jwt jwt) {
+        return new PollEditor(subjectOf(jwt), currentUser.isChiefEditor());
+    }
+
+    private static UUID subjectOf(Jwt jwt) {
+        var subject = jwt.getSubject();
+        if (subject == null) {
+            throw new IllegalStateException("Validated token carries no sub");
+        }
+        return UUID.fromString(subject);
     }
 }
