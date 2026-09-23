@@ -326,6 +326,16 @@
             "realmRoles": ["moderator", "user"]
         },
         {
+            "username": "author",
+            "enabled": true,
+            "emailVerified": true,
+            "email": "author@tennis-wire.local",
+            "firstName": "Dev",
+            "lastName": "Author",
+            "credentials": [{ "type": "password", "value": "author", "temporary": false }],
+            "realmRoles": ["author"]
+        },
+        {
             "username": "service-account-moderation-bot",
             "enabled": true,
             "serviceAccountClientId": "moderation-bot",
@@ -352,6 +362,12 @@
         "realm": [
             { "name": "user", "description": "Registered reader: comments, fantasy, own profile" },
             { "name": "author", "description": "Staff: editorial contour" },
+            {
+                "name": "chief-editor",
+                "description": "Staff: author plus others' published content",
+                "composite": true,
+                "composites": { "realm": ["author"] }
+            },
             { "name": "moderator", "description": "Staff: comment moderation" },
             { "name": "moderator-bot", "description": "Service account of the automatic moderator" },
             { "name": "service", "description": "Service account: calls into /internal/**" },
@@ -359,7 +375,7 @@
                 "name": "admin",
                 "description": "Administrator",
                 "composite": true,
-                "composites": { "realm": ["user", "author", "moderator"] }
+                "composites": { "realm": ["user", "author", "moderator", "chief-editor"] }
             }
         ]
     }
