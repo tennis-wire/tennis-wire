@@ -46,13 +46,13 @@ function EditorStub() {
     return <div>EDITOR {id}</div>
 }
 
-function openDesk() {
+function openDesk(state: unknown = null) {
     const router = createMemoryRouter(
         [
             { path: '/desk', element: <DeskPage /> },
             { path: '/editor/:id', element: <EditorStub /> },
         ],
-        { initialEntries: ['/desk'] }
+        { initialEntries: [{ pathname: '/desk', state }] }
     )
     render(<RouterProvider router={router} />)
     return router
@@ -122,6 +122,17 @@ describe('DeskPage', () => {
 
         expect(await screen.findByText('Не похоже на ссылку на материал')).not.toBeNull()
         expect(api.getBySlug).not.toHaveBeenCalled()
+    })
+
+    it('shows what the editor said on its way out, until closed', async () => {
+        const router = openDesk({ notice: 'Материал снят с публикации' })
+
+        expect(await screen.findByText('Материал снят с публикации')).not.toBeNull()
+
+        fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+
+        await waitFor(() => expect(screen.queryByText('Материал снят с публикации')).toBeNull())
+        expect(router.state.location.state).toBeNull()
     })
 
     it('searches the drafts by title', async () => {

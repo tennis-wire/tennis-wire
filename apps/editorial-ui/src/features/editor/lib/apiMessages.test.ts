@@ -13,6 +13,12 @@ describe('messageOf', () => {
         expect(messageOf(stale)).toMatch(/сохранили в другом месте/)
     })
 
+    it('tells a chief editor what stands in the way of unpublishing', () => {
+        const pending = new ContentApiError(409, 'HAS_PENDING_EDIT', 'Apply, drop or reset')
+
+        expect(messageOf(pending)).toMatch(/незавершённую правку/)
+    })
+
     it('names the missing fields in Russian', () => {
         const error = new ContentApiError(422, 'VALIDATION_FAILED', 'Article cannot be published', [
             { field: 'tags', message: 'At least one tag is required' },

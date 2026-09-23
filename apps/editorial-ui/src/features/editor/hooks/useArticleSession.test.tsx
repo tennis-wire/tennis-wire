@@ -22,6 +22,7 @@ vi.mock('../api/contentApi', async (importOriginal) => {
             save: vi.fn(),
             publish: vi.fn(),
             discardEdit: vi.fn(),
+            unpublish: vi.fn(),
             delete: vi.fn(),
         },
     }
@@ -52,9 +53,13 @@ function Route() {
 }
 
 function open(path: string) {
-    const router = createMemoryRouter([{ path: '/editor/:id', element: <Route /> }], {
-        initialEntries: [path],
-    })
+    const router = createMemoryRouter(
+        [
+            { path: '/editor/:id', element: <Route /> },
+            { path: '/desk', element: null },
+        ],
+        { initialEntries: [path] }
+    )
     render(<RouterProvider router={router} />)
     return router
 }
@@ -179,6 +184,37 @@ describe('useArticleSession', () => {
 
         await waitFor(() => expect(session.mode).toBe('locked'))
         expect(session.editor?.isEditable).toBe(false)
+    })
+
+    // the draft it becomes is its owner's, who may be someone else
+    it('takes a published article off the site and leaves for the desk', async () => {
+        vi.spyOn(window, 'confirm').mockReturnValue(true)
+        api.get.mockResolvedValue(
+            article({ status: 'published', firstPublishedAt: '2026-09-20T10:00:00Z' })
+        )
+        api.unpublish.mockResolvedValue(undefined)
+        const router = open('/editor/a1')
+        await waitFor(() => expect(session.mode).toBe('published'))
+
+        await act(() => session.unpublish())
+
+        expect(api.unpublish).toHaveBeenCalledWith('a1')
+        expect(router.state.location.pathname).toBe('/desk')
+        expect(router.state.location.state).toMatchObject({ notice: expect.any(String) })
+    })
+
+    it('stays put when the unpublishing is not confirmed', async () => {
+        vi.spyOn(window, 'confirm').mockReturnValue(false)
+        api.get.mockResolvedValue(
+            article({ status: 'published', firstPublishedAt: '2026-09-20T10:00:00Z' })
+        )
+        const router = open('/editor/a1')
+        await waitFor(() => expect(session.mode).toBe('published'))
+
+        await act(() => session.unpublish())
+
+        expect(api.unpublish).not.toHaveBeenCalled()
+        expect(router.state.location.pathname).toBe('/editor/a1')
     })
 
     it('says so when the article is not there', async () => {
