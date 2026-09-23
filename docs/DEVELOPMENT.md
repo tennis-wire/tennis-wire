@@ -628,20 +628,41 @@ npm run build                         # editorial-ui, public-web (next build typ
 
 ## CI
 
-Three workflows: `ci-java.yml`, `ci-python.yml`, `ci-frontend.yml`. They run the
-same checks as above.
+One workflow, `.github/workflows/ci.yml`, running the same checks as above. Its
+jobs `java`, `transcription-service`, `editorial-ui`, `public-web` and `mobile`
+are the required checks on `main`.
 
-Path filters are applied on `push` only. On pull requests every workflow runs
-unconditionally, so that every check always reports a status.
+On a pull request a first job, `changes`, looks at what the pull request changes
+against the base branch as it stands, and each area job runs only if its files
+are among them: a pull request that touches only `apps/public-web` waits for
+`public-web` and nothing else. The areas, and the files that count for more
+than their own directory, are listed in that job; the workflow file counts for
+all of them. On `main` everything runs: nobody waits on it, and it is what fills
+the Gradle cache that pull requests read.
 
-This is deliberate. `main` is protected and all jobs are required checks, and a
-workflow skipped by a `paths` filter never reports its check at all — the pull
-request then waits forever on a status that will never arrive. **Do not add
-`paths` to a `pull_request` trigger.** If a job ever needs to be conditional,
-gate it with a job-level `if:` instead: a job skipped by a conditional reports
-as successful and satisfies the required check.
+A job skipped by its `if:` reports as successful and satisfies its required
+check. A workflow skipped by a `paths` filter reports nothing, and the pull
+request waits forever on a status that never arrives. **Do not add `paths` to
+the triggers.** If `changes` itself fails, every area job runs rather than
+passing unrun.
 
-Running everything on every pull request is cheap here: the repository is
-public, and standard GitHub-hosted runners are free for public repositories.
-Filtering per job (a `dorny/paths-filter` job feeding `if:` conditions) is worth
-revisiting only once a job gets slow enough that waiting on it hurts.
+The Gradle build cache is on (`gradle.properties`). `setup-gradle` saves the
+Gradle home, the local build cache inside it, from `main` and restores it
+read-only on pull requests, so a change to one service takes the other
+services' compile, test, SpotBugs and PMD results from the cache instead of
+running them again.
+
+Supply chain:
+
+- The workflow token is read-only. The one exception is `java-dependency-graph`,
+  which needs `contents: write` to submit a graph. Checkouts do not keep the
+  token in `.git/config`.
+- Actions are pinned to a commit, with the version in a comment. Renovate
+  (`helpers:pinGitHubActionDigests`) keeps both current.
+- `dependency-review` fails a pull request that adds a dependency with a known
+  high or critical advisory. It sees npm and Python lock files; Java only as far
+  as `java-dependency-graph` has submitted it from `main`, so a Java dependency
+  added in the pull request itself goes unjudged.
+- Repository settings, outside the code: Dependabot alerts, secret scanning with
+  push protection, CodeQL default setup. `setup-gradle` validates the wrapper
+  jar on every run.
