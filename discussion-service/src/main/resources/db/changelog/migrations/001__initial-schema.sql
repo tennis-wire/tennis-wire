@@ -131,7 +131,9 @@ CREATE TRIGGER trigger_comment_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- changeset andrei:8
--- comment: Moderator-issued temporary restrictions on user capabilities (scoped for future extension)
+-- comment: Moderator-issued temporary restrictions on user capabilities (scoped for future extension).
+-- comment: A lifted row stays, marked: together with the expired ones it is the ban history a
+-- comment: moderator reads. Only the reader's own erase takes the ended rows away.
 CREATE TABLE user_restriction (
                                   id           UUID PRIMARY KEY DEFAULT uuidv7(),
                                   user_id      UUID NOT NULL,
@@ -139,10 +141,15 @@ CREATE TABLE user_restriction (
                                   expires_at   TIMESTAMPTZ,                        -- NULL = indefinite (still capability-scoped, not account-level)
                                   issued_by    UUID NOT NULL,                      -- moderator user id
                                   reason       TEXT,
-                                  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                                  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                                  lifted_at    TIMESTAMPTZ,                        -- ended early, by hand or by a ban that replaced it
+                                  lifted_by    UUID,                               -- moderator user id
+
+                                  CONSTRAINT chk_user_restriction_lifted CHECK ((lifted_at IS NULL) = (lifted_by IS NULL))
 );
 
-CREATE INDEX idx_user_restriction_active ON user_restriction (user_id, capability, expires_at);
+CREATE INDEX idx_user_restriction_active ON user_restriction (user_id, capability, expires_at)
+    WHERE lifted_at IS NULL;
 
 -- changeset andrei:9
 -- comment: Complaints about a comment, one row each. The moderator's queue groups them by comment:

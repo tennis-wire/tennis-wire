@@ -5,4 +5,9 @@ import jakarta.validation.constraints.Size;
 
 public record CreateReplyRequest(
         // 2000 by the rules; the schema itself holds more
-        @NotBlank @Size(max = 2000) String body) {}
+        @NotBlank @Size(max = 2000) String body) {
+
+    public CreateReplyRequest {
+        body = CommentText.clean(body);
+    }
+}

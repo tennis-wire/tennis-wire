@@ -6,11 +6,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.tenniswire.discussion_service.dto.poll.CreatePollRequest;
 import com.tenniswire.discussion_service.dto.poll.PollResponse;
 import com.tenniswire.discussion_service.dto.poll.UpdatePollRequest;
+import com.tenniswire.discussion_service.exception.CommentingRestrictedException;
+import com.tenniswire.discussion_service.exception.ForbiddenException;
 import com.tenniswire.discussion_service.exception.PollClosedException;
 import com.tenniswire.discussion_service.exception.ResourceNotFoundException;
 import com.tenniswire.discussion_service.repository.PollVoteRepository;
+import com.tenniswire.discussion_service.service.PollEditor;
 import com.tenniswire.discussion_service.service.PollService;
 import com.tenniswire.discussion_service.service.ReaderErasure;
+import com.tenniswire.discussion_service.service.RestrictionService;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -33,9 +37,13 @@ class PollServiceIT {
     @Autowired
     private ReaderErasure erasure;
 
+    @Autowired
+    private RestrictionService restrictions;
+
     private final UUID author = UUID.randomUUID();
     private final UUID bob = UUID.randomUUID();
     private final UUID carol = UUID.randomUUID();
+    private final PollEditor byAuthor = new PollEditor(author, false);
 
     private PollResponse poll(Instant closesAt) {
         return polls.create(author, new CreatePollRequest("Who wins?", List.of("Sinner", "Alcaraz"), closesAt));
@@ -106,7 +114,7 @@ class PollServiceIT {
         var sinner = made.options().get(0).id();
         polls.vote(bob, made.id(), sinner);
 
-        polls.close(made.id(), Instant.now().minus(Duration.ofMinutes(1)));
+        polls.close(made.id(), byAuthor, Instant.now().minus(Duration.ofMinutes(1)));
 
         assertThat(polls.get(made.id(), null).closed()).isTrue();
         assertThatThrownBy(() -> polls.vote(carol, made.id(), sinner)).isInstanceOf(PollClosedException.class);
@@ -114,9 +122,9 @@ class PollServiceIT {
         assertThat(counts(polls.get(made.id(), null))).isEqualTo(new int[] {1, 0, 1});
 
         // and a poll closed for a time in the future is still open
-        polls.close(made.id(), Instant.now().plus(Duration.ofDays(1)));
+        polls.close(made.id(), byAuthor, Instant.now().plus(Duration.ofDays(1)));
         assertThat(polls.get(made.id(), null).closed()).isFalse();
-        polls.close(made.id(), null);
+        polls.close(made.id(), byAuthor, null);
         assertThat(polls.get(made.id(), null).closesAt()).isNull();
     }
 
@@ -128,6 +136,7 @@ class PollServiceIT {
 
         var edited = polls.update(
                 made.id(),
+                byAuthor,
                 new UpdatePollRequest(
                         "Who takes the title?", List.of(new UpdatePollRequest.OptionText(sinner, "J. Sinner"))));
 
@@ -137,8 +146,38 @@ class PollServiceIT {
         assertThat(counts(edited)).isEqualTo(new int[] {1, 0, 1});
         assertThatThrownBy(() -> polls.update(
                         made.id(),
+                        byAuthor,
                         new UpdatePollRequest(null, List.of(new UpdatePollRequest.OptionText(UUID.randomUUID(), "x")))))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void onlyItsAuthorOrAChiefEditorChangesAPoll() {
+        var made = poll(null);
+        var anotherAuthor = new PollEditor(UUID.randomUUID(), false);
+
+        assertThatThrownBy(() -> polls.close(made.id(), anotherAuthor, null)).isInstanceOf(ForbiddenException.class);
+        assertThatThrownBy(() -> polls.update(made.id(), anotherAuthor, new UpdatePollRequest("Mine now?", null)))
+                .isInstanceOf(ForbiddenException.class);
+
+        var chiefEditor = new PollEditor(UUID.randomUUID(), true);
+        assertThat(polls.update(made.id(), chiefEditor, new UpdatePollRequest("Who takes it?", null))
+                        .question())
+                .isEqualTo("Who takes it?");
+    }
+
+    @Test
+    void aBanStopsAVoteButNotItsRetraction() {
+        var made = poll(null);
+        polls.vote(bob, made.id(), made.options().get(0).id());
+        restrictions.restrictCommenting(bob, carol, Instant.now().plus(Duration.ofHours(1)), "flood");
+
+        assertThatThrownBy(
+                        () -> polls.vote(bob, made.id(), made.options().get(1).id()))
+                .isInstanceOf(CommentingRestrictedException.class);
+        polls.retract(bob, made.id());
+
+        assertThat(counts(polls.get(made.id(), null))).isEqualTo(new int[] {0, 0, 0});
     }
 
     @Test
@@ -148,7 +187,7 @@ class PollServiceIT {
         polls.vote(bob, open.id(), open.options().get(0).id());
         polls.vote(bob, closed.id(), closed.options().get(1).id());
         polls.vote(carol, open.id(), open.options().get(0).id());
-        polls.close(closed.id(), Instant.now().minus(Duration.ofMinutes(1)));
+        polls.close(closed.id(), byAuthor, Instant.now().minus(Duration.ofMinutes(1)));
 
         erasure.erase(bob);
 

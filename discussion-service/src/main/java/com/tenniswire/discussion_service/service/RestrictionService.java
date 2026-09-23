@@ -43,6 +43,13 @@ public class RestrictionService {
         if (clearReactions && expiresAt != null) {
             throw new IllegalArgumentException("clearReactions is only allowed on an indefinite restriction");
         }
+        // One ban at a time. A new one replaces what stands, which is how a ban is extended,
+        // shortened or made permanent; the one replaced is lifted by whoever issued the new one.
+        restrictions.lockReader(userId.hashCode());
+        var now = Instant.now();
+        for (var standing : restrictions.findActive(userId, UserRestriction.CAPABILITY_COMMENT, now)) {
+            standing.liftedAt(now).liftedBy(issuedBy);
+        }
         if (clearReactions) {
             reactions.clearAllBy(userId);
         }
@@ -55,12 +62,15 @@ public class RestrictionService {
         return restrictions.saveAndFlush(restriction);
     }
 
-    /** Lifts a restriction early. The row is removed: the audit copy lives in the moderation domain. */
-    public void lift(UUID restrictionId) {
-        if (!restrictions.existsById(restrictionId)) {
-            throw new ResourceNotFoundException("Restriction", restrictionId);
-        }
-        restrictions.deleteById(restrictionId);
+    // Ends a restriction early. The row stays with who ended it and when. One already lifted or run
+    // out is not there to lift.
+    public void lift(UUID restrictionId, UUID liftedBy) {
+        var now = Instant.now();
+        var restriction = restrictions
+                .findById(restrictionId)
+                .filter(found -> found.isActive(now))
+                .orElseThrow(() -> new ResourceNotFoundException("Restriction", restrictionId));
+        restriction.liftedAt(now).liftedBy(liftedBy);
     }
 
     @Transactional(readOnly = true)

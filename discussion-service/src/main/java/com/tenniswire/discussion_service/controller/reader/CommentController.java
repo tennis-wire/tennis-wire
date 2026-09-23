@@ -98,10 +98,11 @@ public class CommentController {
         return new CommentPageResponse(responses.of(page.items(), viewerId), page.nextCursor(), null);
     }
 
-    // The number under the name on a profile. Not viewer-shaped, unlike the listing above.
+    // The number under the name on a profile. Not viewer-shaped, unlike the listing above, except
+    // that a restricted author's count is for himself only, as his listing is.
     @GetMapping("/count")
-    public CommentCountResponse countByAuthor(@RequestParam UUID authorId) {
-        return new CommentCountResponse(commentService.countByAuthor(authorId));
+    public CommentCountResponse countByAuthor(@RequestParam UUID authorId, @AuthenticationPrincipal Jwt jwt) {
+        return new CommentCountResponse(commentService.countByAuthor(authorId, currentUser.idOrNull(jwt)));
     }
 
     @PostMapping

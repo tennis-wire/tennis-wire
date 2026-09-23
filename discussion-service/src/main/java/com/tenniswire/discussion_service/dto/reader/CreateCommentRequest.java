@@ -10,4 +10,10 @@ public record CreateCommentRequest(
         @NotBlank @Size(max = 100) String subjectType,
         @NotNull UUID subjectId,
         // 2000 by the rules; the schema itself holds more
-        @NotBlank @Size(max = 2000) String body) {}
+        @NotBlank @Size(max = 2000) String body) {
+
+    // Before validation: a body of nothing but these is blank
+    public CreateCommentRequest {
+        body = CommentText.clean(body);
+    }
+}
