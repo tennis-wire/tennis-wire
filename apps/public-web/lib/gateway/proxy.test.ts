@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
+import { freshSession } from '@/lib/auth/refresh'
 import { proxy } from './proxy'
 import { resetBuckets } from './rateLimit'
 
@@ -29,7 +30,10 @@ vi.mock('@/lib/auth/session', () => ({
 }))
 
 vi.mock('@/lib/auth/refresh', () => ({
-    freshSession: vi.fn(async (current: typeof session) => current),
+    freshSession: vi.fn(async (current: typeof session) => ({
+        status: 'usable',
+        session: current,
+    })),
 }))
 
 function upstreamReturns(body = '[]') {
@@ -150,5 +154,38 @@ describe('proxy', () => {
             '/api/discussion/'
         )
         expect(signedIn.status).toBe(200)
+    })
+
+    it('answers 503 and leaves the cookie alone when Keycloak gives no answer', async () => {
+        const fetchMock = upstreamReturns()
+        vi.mocked(freshSession).mockResolvedValueOnce({ status: 'unavailable' })
+
+        const response = await proxy(
+            request('http://localhost:3000/api/discussion/comments', { cookie: 'signed-in' }),
+            '/api/discussion/'
+        )
+
+        expect(response.status).toBe(503)
+        expect(await response.json()).toEqual({ code: 'AUTH_UNAVAILABLE' })
+        expect(response.headers.get('set-cookie')).toBeNull()
+        expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('turns a write away and clears the cookie once the session is spent', async () => {
+        const fetchMock = upstreamReturns()
+        vi.mocked(freshSession).mockResolvedValueOnce({ status: 'signed-out' })
+
+        const response = await proxy(
+            request('http://localhost:3000/api/discussion/comments', {
+                method: 'POST',
+                cookie: 'signed-in',
+                headers: { origin: 'http://localhost:3000' },
+            }),
+            '/api/discussion/'
+        )
+
+        expect(response.status).toBe(401)
+        expect(response.cookies.get('tw_session')?.value).toBe('')
+        expect(fetchMock).not.toHaveBeenCalled()
     })
 })
