@@ -71,6 +71,7 @@ describe('GET /api/auth/session', () => {
             createdAt: '2026-09-01T10:00:00Z',
             avatarUrl: 'http://media/96/k.jpg',
             avatarLargeUrl: 'http://media/288/k.jpg',
+            editorialOrigin: null,
         })
         expect(JSON.stringify(body)).not.toContain('token')
         expect(response.headers.get('cache-control')).toBe('no-store')
@@ -89,6 +90,7 @@ describe('GET /api/auth/session', () => {
             createdAt: null,
             avatarUrl: null,
             avatarLargeUrl: null,
+            editorialOrigin: null,
         })
     })
 })

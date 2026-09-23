@@ -6,6 +6,7 @@ import { splitPolls } from '@/lib/content/polls'
 import { sanitizeArticle } from '@/lib/content/sanitize'
 
 import ArticleHead from './ArticleHead'
+import EditArticleLink from './EditArticleLink'
 import ArticleTags from './ArticleTags'
 import PollWidget from './PollWidget'
 
@@ -16,6 +17,7 @@ export default async function ArticlePage({ slug, type }: { slug: string; type: 
 
     return (
         <article style={{ maxWidth: 760, margin: '0 auto' }}>
+            <EditArticleLink articleId={article.id} />
             <ArticleHead article={article} />
             <div className="tw-article-body">
                 {splitPolls(sanitizeArticle(article.content)).map((piece, i) =>

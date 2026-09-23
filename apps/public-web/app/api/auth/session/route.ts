@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
+import { editorialOrigin } from '@/lib/auth/config'
 import { freshSession } from '@/lib/auth/refresh'
 import { SESSION_COOKIE, readSession, sealSession, sessionCookieOptions } from '@/lib/auth/session'
 import { fetchProfile } from '@/lib/gateway/client'
@@ -31,6 +32,8 @@ export async function GET(request: NextRequest) {
             createdAt: profile?.createdAt ?? null,
             avatarUrl: profile?.avatarUrl ?? null,
             avatarLargeUrl: profile?.avatarLargeUrl ?? null,
+            // Only to staff: the public HTML says nothing about the editor, not even where it is
+            editorialOrigin: session.canEdit ? editorialOrigin() : null,
         },
         { headers: NO_STORE }
     )
