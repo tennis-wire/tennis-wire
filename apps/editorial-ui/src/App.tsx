@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { ThemeProvider as MuiThemeProvider, CssBaseline } from '@mui/material'
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 
-import Editor from './features/editor/components/Editor.tsx'
+import EditorRoute from './features/editor/components/EditorRoute.tsx'
 import CuratorPage from './features/curator/CuratorPage.tsx'
 import ModerationPage from './features/moderation/ModerationPage.tsx'
 import AvatarQueuePage from './features/moderation/AvatarQueuePage.tsx'
@@ -10,19 +10,19 @@ import { ThemeProvider, useAppTheme, createAppTheme } from './theme'
 
 import RequireAuth from './auth/RequireAuth.tsx'
 import RequireRole from './auth/RequireRole.tsx'
-import { MODERATOR } from './auth/realmRoles.ts'
+import { AUTHOR, MODERATOR } from './auth/realmRoles.ts'
 import CallbackPage from './auth/CallbackPage.tsx'
 import LoggedOutPage from './auth/LoggedOutPage.tsx'
 
-// A data router, so that a page can ask before unsaved work is navigated away
-// from: useBlocker works with nothing else
+// A data router: the editor asks before unsaved work is navigated away from, and
+// useBlocker works with nothing else
 const router = createBrowserRouter([
     // Public: the guard must not run here or it would redirect away before the
     // code exchange finishes.
     { path: '/auth/callback', element: <CallbackPage /> },
     { path: '/logged-out', element: <LoggedOutPage /> },
 
-    { path: '/', element: <Navigate to="/editor" replace /> },
+    { path: '/', element: <Navigate to="/editor/new" replace /> },
     {
         path: '/curator',
         element: (
@@ -47,20 +47,14 @@ const router = createBrowserRouter([
             </RequireRole>
         ),
     },
+    { path: '/editor', element: <Navigate to="/editor/new" replace /> },
     {
-        path: '/editor',
+        // "new" or an article id
+        path: '/editor/:id',
         element: (
-            <RequireAuth>
-                <Editor />
-            </RequireAuth>
-        ),
-    },
-    {
-        path: '/editor/:aggregatorId',
-        element: (
-            <RequireAuth>
-                <Editor />
-            </RequireAuth>
+            <RequireRole role={AUTHOR}>
+                <EditorRoute />
+            </RequireRole>
         ),
     },
 ])

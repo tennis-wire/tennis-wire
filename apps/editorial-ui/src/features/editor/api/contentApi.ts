@@ -3,12 +3,10 @@
 
 import { apiFetch } from '../../../api/apiFetch'
 import type {
-    ArticleResponse,
-    ArticleSummaryResponse,
-    PublishResponse,
     CreateArticleRequest,
-    UpdateArticleRequest,
+    EditorialArticle,
     PagedResponse,
+    SaveArticleRequest,
     Tag,
     ApiError,
 } from '../types/content'
@@ -51,89 +49,48 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 // ===== Articles API =====
 
+const ARTICLES = '/api/editorial/articles'
+
+function sendJson(method: string, body: unknown): RequestInit {
+    return {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    }
+}
+
 export const articlesApi = {
-    /**
-     * Create a new draft article
-     */
-    async create(data: CreateArticleRequest): Promise<ArticleResponse> {
-        const response = await apiFetch('/api/editorial/articles', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        })
-        return handleResponse<ArticleResponse>(response)
+    async create(data: CreateArticleRequest): Promise<EditorialArticle> {
+        const response = await apiFetch(ARTICLES, sendJson('POST', data))
+        return handleResponse<EditorialArticle>(response)
     },
 
-    /**
-     * Get article by ID (full, with content)
-     */
-    async getById(id: string): Promise<ArticleResponse> {
-        const response = await apiFetch(`/api/editorial/articles/${id}`)
-        return handleResponse<ArticleResponse>(response)
+    async get(id: string): Promise<EditorialArticle> {
+        const response = await apiFetch(`${ARTICLES}/${encodeURIComponent(id)}`)
+        return handleResponse<EditorialArticle>(response)
     },
 
-    /**
-     * List articles (drafts + published)
-     */
-    async list(params?: {
-        type?: 'news' | 'article'
-        status?: 'draft' | 'published'
-        search?: string
-        page?: number
-        size?: number
-    }): Promise<PagedResponse<ArticleSummaryResponse>> {
-        const searchParams = new URLSearchParams()
-        if (params?.type) searchParams.set('type', params.type)
-        if (params?.status) searchParams.set('status', params.status)
-        if (params?.search) searchParams.set('search', params.search)
-        if (params?.page !== undefined) searchParams.set('page', String(params.page))
-        if (params?.size !== undefined) searchParams.set('size', String(params.size))
-
-        const url = `/api/editorial/articles${searchParams.toString() ? `?${searchParams}` : ''}`
-        const response = await apiFetch(url)
-        return handleResponse<PagedResponse<ArticleSummaryResponse>>(response)
+    // A draft is saved in place; a published article gets its pending edit created or updated
+    async save(id: string, data: SaveArticleRequest): Promise<EditorialArticle> {
+        const response = await apiFetch(`${ARTICLES}/${id}`, sendJson('PUT', data))
+        return handleResponse<EditorialArticle>(response)
     },
 
-    /**
-     * Partial update article
-     */
-    async update(id: string, data: UpdateArticleRequest): Promise<ArticleResponse> {
-        const response = await apiFetch(`/api/editorial/articles/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        })
-        return handleResponse<ArticleResponse>(response)
+    // A draft goes on the site; for a published article, the caller's pending edit does
+    async publish(id: string, version: string): Promise<EditorialArticle> {
+        const response = await apiFetch(`${ARTICLES}/${id}/publish`, sendJson('POST', { version }))
+        return handleResponse<EditorialArticle>(response)
     },
 
-    /**
-     * Delete draft article
-     */
-    async delete(id: string): Promise<void> {
-        const response = await apiFetch(`/api/editorial/articles/${id}`, {
-            method: 'DELETE',
-        })
+    // The holder drops his own edit; a chief editor resets anyone's
+    async discardEdit(id: string): Promise<void> {
+        const response = await apiFetch(`${ARTICLES}/${id}/edit`, { method: 'DELETE' })
         return handleResponse<void>(response)
     },
 
-    /**
-     * Publish article
-     */
-    async publish(id: string): Promise<PublishResponse> {
-        const response = await apiFetch(`/api/editorial/articles/${id}/publish`, {
-            method: 'POST',
-        })
-        return handleResponse<PublishResponse>(response)
-    },
-
-    /**
-     * Unpublish article (back to draft)
-     */
-    async unpublish(id: string): Promise<ArticleResponse> {
-        const response = await apiFetch(`/api/editorial/articles/${id}/unpublish`, {
-            method: 'POST',
-        })
-        return handleResponse<ArticleResponse>(response)
+    async delete(id: string): Promise<void> {
+        const response = await apiFetch(`${ARTICLES}/${id}`, { method: 'DELETE' })
+        return handleResponse<void>(response)
     },
 }
 

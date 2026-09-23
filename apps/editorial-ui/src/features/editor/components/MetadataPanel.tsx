@@ -27,9 +27,20 @@ interface Props {
     onChange: React.Dispatch<React.SetStateAction<ContentMetadata>>
     onError: (message: string) => void
     readingTime?: number
+    // once on the site, type and address stay as they are
+    frozen?: boolean
+    // someone else holds the article
+    readOnly?: boolean
 }
 
-export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, onError, readingTime }) => {
+export const MetadataPanel: React.FC<Props> = ({
+    metadata,
+    onChange,
+    onError,
+    readingTime,
+    frozen = false,
+    readOnly = false,
+}) => {
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [coverUploading, setCoverUploading] = React.useState(false)
     const [tagQuery, setTagQuery] = React.useState('')
@@ -65,22 +76,6 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, onError, re
             })
         }
     }
-
-    React.useEffect(() => {
-        if (metadata.title && !metadata.slug) {
-            const newSlug = metadata.title
-                .toLowerCase()
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .replace(/[^a-z0-9а-яё\s-]/g, '')
-                .trim()
-                .replace(/\s+/g, '-')
-                .replace(/-+/g, '-')
-                .replace(/^-|-$/g, '')
-
-            onChange({ ...metadata, slug: newSlug })
-        }
-    }, [metadata.title, metadata.slug, metadata, onChange])
 
     const handleCoverUpload = () => {
         fileInputRef.current?.click()
@@ -160,6 +155,7 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, onError, re
                 <Select
                     value={metadata.type}
                     label="Тип материала"
+                    disabled={frozen || readOnly}
                     onChange={(e) => handleTypeChange(e.target.value as ContentType)}
                 >
                     <MenuItem value="news">📰 Новость</MenuItem>
@@ -173,6 +169,7 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, onError, re
                 onChange={handleChange('title')}
                 fullWidth
                 required
+                disabled={readOnly}
                 sx={{
                     mb: 2,
                     '& .MuiInputBase-input': {
@@ -197,6 +194,7 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, onError, re
                     rows={2}
                     fullWidth
                     required
+                    disabled={readOnly}
                     placeholder="Краткое описание статьи для превью"
                     sx={{ mb: 2 }}
                 />
@@ -233,6 +231,7 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, onError, re
                             <IconButton
                                 size="small"
                                 onClick={handleCoverRemove}
+                                disabled={readOnly}
                                 sx={(theme) => ({
                                     position: 'absolute',
                                     top: 8,
@@ -248,7 +247,7 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, onError, re
                         <Button
                             variant="outlined"
                             startIcon={coverUploading ? <CircularProgress size={16} /> : <Upload />}
-                            disabled={coverUploading}
+                            disabled={coverUploading || readOnly}
                             onClick={handleCoverUpload}
                             sx={{
                                 borderStyle: 'dashed',
@@ -272,7 +271,13 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, onError, re
                 onChange={handleChange('slug')}
                 fullWidth
                 size="small"
-                helperText="Автоматически генерируется из заголовка"
+                disabled={frozen || readOnly}
+                placeholder={frozen ? undefined : 'сформируется из заголовка при публикации'}
+                helperText={
+                    frozen
+                        ? 'Адрес на сайте. После публикации не меняется'
+                        : 'Необязательно: латиница, цифры и дефисы'
+                }
                 sx={{ mb: 2 }}
             />
 
@@ -281,6 +286,7 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, onError, re
             <Box sx={{ mb: 2 }}>
                 <Autocomplete
                     multiple
+                    disabled={readOnly}
                     open={tagsOpen}
                     onOpen={() => setTagsOpen(true)}
                     onClose={() => setTagsOpen(false)}
@@ -337,6 +343,7 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, onError, re
                         onChange={handleChange('sourceUrl')}
                         fullWidth
                         size="small"
+                        disabled={readOnly}
                     />
                     <TextField
                         label="Название издания"
@@ -344,6 +351,7 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, onError, re
                         onChange={handleChange('sourceName')}
                         fullWidth
                         size="small"
+                        disabled={readOnly}
                     />
                     <TextField
                         label="Автор"
@@ -351,6 +359,7 @@ export const MetadataPanel: React.FC<Props> = ({ metadata, onChange, onError, re
                         onChange={handleChange('author')}
                         fullWidth
                         size="small"
+                        disabled={readOnly}
                     />
                 </Stack>
             </Box>
