@@ -3,6 +3,7 @@ package com.tenniswire.content_service.exception;
 import java.time.Instant;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -23,7 +24,26 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ErrorResponse("CONFLICT", ex.getMessage(), null, Instant.now()));
+                .body(new ErrorResponse(ex.error(), ex.getMessage(), null, Instant.now()));
+    }
+
+    // Another save got in between reading the version and writing the row
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(OptimisticLockingFailureException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse("STALE_VERSION", "Saved elsewhere in the meantime", null, Instant.now()));
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse("FORBIDDEN", ex.getMessage(), null, Instant.now()));
+    }
+
+    @ExceptionHandler(UnknownTagException.class)
+    public ResponseEntity<ErrorResponse> handleUnknownTag(UnknownTagException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse("UNKNOWN_TAG", ex.getMessage(), null, Instant.now()));
     }
 
     @ExceptionHandler(PublishValidationException.class)

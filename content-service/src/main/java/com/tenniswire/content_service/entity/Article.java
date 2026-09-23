@@ -10,7 +10,9 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
@@ -43,7 +45,7 @@ public class Article {
 
     private String subtitle;
 
-    @Column(nullable = false, unique = true, length = 500)
+    @Column(unique = true, length = 500)
     private String slug;
 
     @Column(columnDefinition = "TEXT")
@@ -63,7 +65,7 @@ public class Article {
     @Column(name = "source_name", length = 300)
     private String sourceName;
 
-    @Column(name = "author_id")
+    @Column(name = "author_id", nullable = false)
     private UUID authorId;
 
     // -- Aggregator fields --
@@ -82,11 +84,17 @@ public class Article {
     @Column(name = "published_at")
     private Instant publishedAt;
 
+    @Column(name = "first_published_at")
+    private Instant firstPublishedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Version
+    private Long version;
 
     // -- Relationships --
 
@@ -116,5 +124,11 @@ public class Article {
         if (this.updatedAt == null) {
             this.updatedAt = now;
         }
+    }
+
+    // The trigger sets the column too; this keeps the value in the response in step with it
+    @PreUpdate
+    void onUpdate() {
+        this.updatedAt = Instant.now();
     }
 }

@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+// What the site renders. No author id: that is a staff member's Keycloak subject.
 public record ArticleResponse(
         UUID id,
         String type,
@@ -17,7 +18,6 @@ public record ArticleResponse(
         Integer readingTime,
         String sourceUrl,
         String sourceName,
-        UUID authorId,
         List<TagResponse> tags,
         List<RelatedArticleResponse> relatedArticles,
         String aggregatorItemId,
@@ -49,7 +49,6 @@ public record ArticleResponse(
                 article.readingTime(),
                 article.sourceUrl(),
                 article.sourceName(),
-                article.authorId(),
                 tags,
                 related,
                 article.aggregatorItemId(),

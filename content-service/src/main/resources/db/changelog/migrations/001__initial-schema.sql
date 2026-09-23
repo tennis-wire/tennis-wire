@@ -26,7 +26,8 @@ CREATE TABLE articles (
     -- Основной контент
                           title               VARCHAR(500) NOT NULL,
                           subtitle            TEXT,
-                          slug                VARCHAR(500) NOT NULL UNIQUE,
+                          -- NULL while a draft has none yet: it is made from the title at publication
+                          slug                VARCHAR(500) UNIQUE,
                           content             TEXT,
                           cover_image_url     VARCHAR(2000),
                           reading_time        INTEGER,
@@ -34,7 +35,7 @@ CREATE TABLE articles (
     -- Атрибуция
                           source_url          VARCHAR(2000),
                           source_name         VARCHAR(300),
-                          author_id           UUID,
+                          author_id           UUID NOT NULL,
 
     -- Агрегатор (на будущее)
                           aggregator_item_id  VARCHAR(255),
@@ -43,8 +44,13 @@ CREATE TABLE articles (
 
     -- Временные метки
                           published_at        TIMESTAMPTZ,
+                          -- set once and kept through unpublishing: from then on slug and type are frozen
+                          first_published_at  TIMESTAMPTZ,
                           created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                          updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                          updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                          version             BIGINT NOT NULL DEFAULT 0,
+
+                          CONSTRAINT chk_articles_published_slug CHECK (status = 'draft' OR slug IS NOT NULL)
 );
 
 -- changeset andrei:4
@@ -52,7 +58,7 @@ CREATE TABLE articles (
 CREATE INDEX idx_articles_type ON articles (type);
 CREATE INDEX idx_articles_status ON articles (status);
 CREATE INDEX idx_articles_published_at ON articles (published_at DESC);
-CREATE INDEX idx_articles_author_id ON articles (author_id);
+CREATE INDEX idx_articles_author_status ON articles (author_id, status, updated_at DESC);
 CREATE INDEX idx_articles_aggregator_item_id ON articles (aggregator_item_id)
     WHERE aggregator_item_id IS NOT NULL;
 
@@ -172,3 +178,22 @@ INSERT INTO tags (name, slug, type, description, icon, sort_order) VALUES
                                                                        ('Рейтинг', 'rankings', 'topic', NULL, NULL, NULL),
                                                                        ('Допинг', 'doping', 'topic', NULL, NULL, NULL),
                                                                        ('Интервью', 'interview', 'topic', NULL, NULL, NULL);
+
+-- changeset andrei:11
+-- comment: Create article_edits table: the pending edit of a published article, at most one each
+CREATE TABLE article_edits (
+    article_id  UUID PRIMARY KEY REFERENCES articles(id) ON DELETE CASCADE,
+    owner_id    UUID NOT NULL,
+    owner_name  VARCHAR(255) NOT NULL,
+    payload     JSONB NOT NULL,
+    version     BIGINT NOT NULL DEFAULT 0,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_article_edits_owner ON article_edits (owner_id, updated_at DESC);
+
+CREATE TRIGGER trigger_article_edits_updated_at
+    BEFORE UPDATE ON article_edits
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
