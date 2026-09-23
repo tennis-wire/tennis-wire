@@ -2,6 +2,7 @@ package com.tenniswire.discussion_service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.tenniswire.discussion_service.entity.UserRestriction;
 import com.tenniswire.discussion_service.repository.UserRestrictionRepository;
 import com.tenniswire.discussion_service.service.ReaderErasure;
 import com.tenniswire.discussion_service.service.RestrictionService;
@@ -41,6 +42,19 @@ class RestrictionHistoryIT {
         assertThat(row.liftedBy()).isEqualTo(anotherModerator);
         assertThat(row.liftedAt()).isNotNull();
         assertThat(restrictionService.activeFor(bob)).isEmpty();
+    }
+
+    @Test
+    void aNewBanReplacesTheOneStanding() {
+        var first = restrictionService.restrictCommenting(
+                bob, moderator, Instant.now().plus(Duration.ofDays(1)), "first");
+
+        var second = restrictionService.restrictCommenting(bob, anotherModerator, null, "made permanent");
+
+        assertThat(restrictionService.activeFor(bob))
+                .extracting(UserRestriction::id)
+                .containsExactly(second.id());
+        assertThat(restrictions.findById(first.id()).orElseThrow().liftedBy()).isEqualTo(anotherModerator);
     }
 
     @Test

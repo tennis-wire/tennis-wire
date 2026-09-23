@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface UserRestrictionRepository extends JpaRepository<UserRestriction, UUID> {
 
@@ -47,6 +49,13 @@ public interface UserRestrictionRepository extends JpaRepository<UserRestriction
             @Param("userIds") Collection<UUID> userIds,
             @Param("capability") String capability,
             @Param("now") Instant now);
+
+    // One ban decision per reader at a time: two moderators replacing the same ban would otherwise
+    // both find it standing and leave two. The two-argument key space is shared with the comment
+    // locks; 3 is this lock's name within it. Held until the transaction ends.
+    @Transactional(propagation = Propagation.MANDATORY)
+    @Query(value = "select 1 from pg_advisory_xact_lock(3, :key)", nativeQuery = true)
+    int lockReader(@Param("key") int key);
 
     // Expired and lifted rows only: his ban history goes with the account. A ban still running
     // outlives it on purpose: it is the answer the erase gives user-service, and asking twice has to
