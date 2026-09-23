@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
 
+# Read-only unless a job asks for more. The code a pull request brings runs in these jobs, and a
+# token that can push is the first thing that code would reach for.
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -27,6 +32,7 @@ jobs:
         with:
           # the pull request's merge commit and its first parent, the base branch as it stands
           fetch-depth: 2
+          persist-credentials: false
 
       - name: Areas touched
         id: areas
@@ -66,6 +72,9 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+        with:
+          # nothing here pushes, so the token is not left in .git/config for the build to read
+          persist-credentials: false
 
       - uses: actions/setup-java@v6
         with:
@@ -86,6 +95,8 @@ jobs:
         working-directory: transcription-service
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - uses: astral-sh/setup-uv@v10.0.1
         with:
@@ -121,6 +132,8 @@ jobs:
         working-directory: apps/editorial-ui
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v7
         with:
@@ -155,6 +168,8 @@ jobs:
         working-directory: apps/public-web
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v7
         with:
@@ -187,6 +202,8 @@ jobs:
         working-directory: apps/mobile
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v7
         with:
