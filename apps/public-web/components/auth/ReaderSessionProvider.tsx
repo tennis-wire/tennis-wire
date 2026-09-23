@@ -15,6 +15,8 @@ export type ReaderSession =
           // 96 px for the header and the comments, 288 px for the cabinet; null without a photo
           avatarUrl: string | null
           avatarLargeUrl: string | null
+          // where to send staff to edit what they are reading; null for everyone else
+          editorialOrigin: string | null
       }
 
 type Store = {

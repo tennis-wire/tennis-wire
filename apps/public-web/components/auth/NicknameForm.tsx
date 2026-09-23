@@ -44,7 +44,7 @@ export default function NicknameForm({
     displayName: string
     chosen: boolean
 }) {
-    const { setSession } = useReaderSession()
+    const { session, setSession } = useReaderSession()
     const [value, setValue] = useState('')
     const [error, setError] = useState<string | null>(null)
     const [saved, setSaved] = useState(false)
@@ -91,6 +91,8 @@ export default function NicknameForm({
             createdAt: profile.createdAt ?? null,
             avatarUrl: profile.avatarUrl ?? null,
             avatarLargeUrl: profile.avatarLargeUrl ?? null,
+            // a new name does not change who may edit
+            editorialOrigin: session?.authenticated ? session.editorialOrigin : null,
         })
         setValue('')
         setSaved(true)

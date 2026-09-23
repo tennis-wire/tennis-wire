@@ -10,6 +10,11 @@ const session = {
     accessExpiresAt: 9_999_999_999,
 }
 
+vi.mock('@/lib/auth/config', () => ({
+    editorialOrigin: () => editorial.origin,
+}))
+const editorial: { origin: string | null } = { origin: null }
+
 vi.mock('@/lib/auth/session', () => ({
     SESSION_COOKIE: 'tw_session',
     sessionCookieOptions: () => ({
@@ -18,7 +23,9 @@ vi.mock('@/lib/auth/session', () => ({
         path: '/',
         maxAge: 1,
     }),
-    readSession: vi.fn(async (seal?: string) => (seal === 'signed-in' ? session : null)),
+    readSession: vi.fn(async (seal?: string) =>
+        seal === 'signed-in' ? session : seal === 'staff' ? { ...session, canEdit: true } : null
+    ),
     sealSession: vi.fn(async () => 'sealed'),
 }))
 
@@ -39,6 +46,7 @@ function request(cookie?: string) {
 
 beforeEach(() => {
     fetchProfile.mockReset()
+    editorial.origin = null
 })
 
 describe('GET /api/auth/session', () => {
@@ -71,6 +79,7 @@ describe('GET /api/auth/session', () => {
             createdAt: '2026-09-01T10:00:00Z',
             avatarUrl: 'http://media/96/k.jpg',
             avatarLargeUrl: 'http://media/288/k.jpg',
+            editorialOrigin: null,
         })
         expect(JSON.stringify(body)).not.toContain('token')
         expect(response.headers.get('cache-control')).toBe('no-store')
@@ -89,6 +98,33 @@ describe('GET /api/auth/session', () => {
             createdAt: null,
             avatarUrl: null,
             avatarLargeUrl: null,
+            editorialOrigin: null,
         })
+    })
+
+    it('tells staff where the editor is', async () => {
+        fetchProfile.mockResolvedValue(null)
+        editorial.origin = 'http://editor.test'
+
+        const body = await (await GET(request('staff'))).json()
+
+        expect(body.editorialOrigin).toBe('http://editor.test')
+    })
+
+    it('tells a reader nothing about the editor', async () => {
+        fetchProfile.mockResolvedValue(null)
+        editorial.origin = 'http://editor.test'
+
+        const body = await (await GET(request('signed-in'))).json()
+
+        expect(body.editorialOrigin).toBeNull()
+    })
+
+    it('gives staff no link where the editor is not configured', async () => {
+        fetchProfile.mockResolvedValue(null)
+
+        const body = await (await GET(request('staff'))).json()
+
+        expect(body.editorialOrigin).toBeNull()
     })
 })

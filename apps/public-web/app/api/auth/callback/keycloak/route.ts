@@ -15,6 +15,7 @@ import {
 } from '@/lib/auth/session'
 import { withoutDeletionMark } from '@/lib/auth/deletion'
 import { safeReturnTo } from '@/lib/auth/returnTo'
+import { mayEdit } from '@/lib/auth/roles'
 
 function failed(reason: string, error?: unknown) {
     console.error('login failed: %s', reason, error)
@@ -56,7 +57,8 @@ export async function GET(request: NextRequest) {
             expectedNonce: flow.nonce,
         })
 
-        const sub = tokens.claims()?.sub
+        const claims = tokens.claims()
+        const sub = claims?.sub
         if (!sub) return failed('no sub in the id token')
         if (!tokens.refresh_token) return failed('no refresh token, offline_access did not apply')
 
@@ -65,6 +67,7 @@ export async function GET(request: NextRequest) {
             accessToken: tokens.access_token,
             refreshToken: tokens.refresh_token,
             accessExpiresAt: Math.floor(Date.now() / 1000) + (tokens.expiresIn() ?? 0),
+            canEdit: mayEdit(claims),
         }
         idToken = tokens.id_token
     } catch (error) {

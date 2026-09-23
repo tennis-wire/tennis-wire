@@ -11,6 +11,12 @@ export function appOrigin(): string {
     return required('APP_ORIGIN').replace(/\/$/, '')
 }
 
+/** Where editorial-ui lives, for the link staff get on an article. Unset: no link. */
+export function editorialOrigin(): string | null {
+    const value = process.env.EDITORIAL_ORIGIN
+    return value ? value.replace(/\/$/, '') : null
+}
+
 /** The one redirect URI registered for this client in the realm. */
 export function callbackUrl(): string {
     return `${appOrigin()}/api/auth/callback/keycloak`
