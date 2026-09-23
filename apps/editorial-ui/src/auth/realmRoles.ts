@@ -10,6 +10,8 @@
 
 import type { IdTokenClaims } from 'oidc-client-ts'
 
+export const AUTHOR = 'author'
+export const CHIEF_EDITOR = 'chief-editor'
 export const MODERATOR = 'moderator'
 
 // Claims are typed as unknown, so the shape is checked rather than asserted

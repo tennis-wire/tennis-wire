@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import { ThemeProvider as MuiThemeProvider, CssBaseline } from '@mui/material'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 
-import Editor from './features/editor/components/Editor.tsx'
+import EditorRoute from './features/editor/components/EditorRoute.tsx'
 import CuratorPage from './features/curator/CuratorPage.tsx'
 import ModerationPage from './features/moderation/ModerationPage.tsx'
 import AvatarQueuePage from './features/moderation/AvatarQueuePage.tsx'
@@ -10,9 +10,54 @@ import { ThemeProvider, useAppTheme, createAppTheme } from './theme'
 
 import RequireAuth from './auth/RequireAuth.tsx'
 import RequireRole from './auth/RequireRole.tsx'
-import { MODERATOR } from './auth/realmRoles.ts'
+import { AUTHOR, MODERATOR } from './auth/realmRoles.ts'
 import CallbackPage from './auth/CallbackPage.tsx'
 import LoggedOutPage from './auth/LoggedOutPage.tsx'
+
+// A data router: the editor asks before unsaved work is navigated away from, and
+// useBlocker works with nothing else
+const router = createBrowserRouter([
+    // Public: the guard must not run here or it would redirect away before the
+    // code exchange finishes.
+    { path: '/auth/callback', element: <CallbackPage /> },
+    { path: '/logged-out', element: <LoggedOutPage /> },
+
+    { path: '/', element: <Navigate to="/editor/new" replace /> },
+    {
+        path: '/curator',
+        element: (
+            <RequireAuth>
+                <CuratorPage />
+            </RequireAuth>
+        ),
+    },
+    {
+        path: '/moderation',
+        element: (
+            <RequireRole role={MODERATOR}>
+                <ModerationPage />
+            </RequireRole>
+        ),
+    },
+    {
+        path: '/moderation/avatars',
+        element: (
+            <RequireRole role={MODERATOR}>
+                <AvatarQueuePage />
+            </RequireRole>
+        ),
+    },
+    { path: '/editor', element: <Navigate to="/editor/new" replace /> },
+    {
+        // "new" or an article id
+        path: '/editor/:id',
+        element: (
+            <RequireRole role={AUTHOR}>
+                <EditorRoute />
+            </RequireRole>
+        ),
+    },
+])
 
 function AppRoutes() {
     const { colors, fontPair, isDark } = useAppTheme()
@@ -25,56 +70,7 @@ function AppRoutes() {
     return (
         <MuiThemeProvider theme={muiTheme}>
             <CssBaseline />
-            <BrowserRouter>
-                <Routes>
-                    {/* Public: the guard must not run here or it would redirect
-                        away before the code exchange finishes. */}
-                    <Route path="/auth/callback" element={<CallbackPage />} />
-                    <Route path="/logged-out" element={<LoggedOutPage />} />
-
-                    <Route path="/" element={<Navigate to="/editor" replace />} />
-                    <Route
-                        path="/curator"
-                        element={
-                            <RequireAuth>
-                                <CuratorPage />
-                            </RequireAuth>
-                        }
-                    />
-                    <Route
-                        path="/moderation"
-                        element={
-                            <RequireRole role={MODERATOR}>
-                                <ModerationPage />
-                            </RequireRole>
-                        }
-                    />
-                    <Route
-                        path="/moderation/avatars"
-                        element={
-                            <RequireRole role={MODERATOR}>
-                                <AvatarQueuePage />
-                            </RequireRole>
-                        }
-                    />
-                    <Route
-                        path="/editor"
-                        element={
-                            <RequireAuth>
-                                <Editor />
-                            </RequireAuth>
-                        }
-                    />
-                    <Route
-                        path="/editor/:aggregatorId"
-                        element={
-                            <RequireAuth>
-                                <Editor />
-                            </RequireAuth>
-                        }
-                    />
-                </Routes>
-            </BrowserRouter>
+            <RouterProvider router={router} />
         </MuiThemeProvider>
     )
 }

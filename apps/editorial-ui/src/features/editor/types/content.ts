@@ -15,81 +15,65 @@ export interface Tag {
     type: TagType
 }
 
-// ===== API Response types =====
+// ===== API types =====
 
-// Full article response (with content)
-export interface ArticleResponse {
-    id: string
-    type: ContentType
-    status: ContentStatus
+// The fields that are saved: on the article itself, or on its pending edit
+export interface ArticleCopy {
     title: string
     subtitle: string | null
-    slug: string
-    content: string
+    content: string | null
     coverImageUrl: string | null
     readingTime: number | null
     sourceUrl: string | null
     sourceName: string | null
-    author: string | null
     tags: Tag[]
-    relatedArticles: ArticleSummaryResponse[]
-    aggregatorItemId: string | null
-    sourceLanguage: string | null
-    parsedAt: string | null
-    publishedAt: string | null
-    updatedAt: string
-    createdAt: string
 }
 
-// Compact article response (for lists, no content)
-export interface ArticleSummaryResponse {
+// An article as the editor opens it. `working` is what is edited and saved. `live` is
+// the site's version, present only while the caller holds a pending edit. `lockedBy`
+// is set while someone else holds one: the article is then read-only for the caller.
+// `version` goes back with the next save or publish.
+export interface EditorialArticle {
     id: string
     type: ContentType
     status: ContentStatus
-    title: string
-    slug: string
-    coverImageUrl: string | null
-    sourceUrl: string | null
-    sourceName: string | null
-    author: string | null
-    tags: Tag[]
+    slug: string | null
+    version: string
+    working: ArticleCopy
+    live: ArticleCopy | null
+    lockedBy: string | null
+    aggregatorItemId: string | null
     publishedAt: string | null
+    firstPublishedAt: string | null
     updatedAt: string
     createdAt: string
 }
-
-// Publish response
-export interface PublishResponse {
-    id: string
-    status: ContentStatus
-    slug: string
-    publishedAt: string
-}
-
-// ===== API Request types =====
 
 export interface CreateArticleRequest {
     type: ContentType
     title: string
-    subtitle?: string | null
-    slug?: string | null
+    subtitle: string | null
+    slug: string | null
     content: string
-    coverImageUrl?: string | null
-    sourceUrl?: string | null
-    sourceName?: string | null
+    coverImageUrl: string | null
+    sourceUrl: string | null
+    sourceName: string | null
     tagIds: string[]
     aggregatorItemId?: string | null
 }
 
-export interface UpdateArticleRequest {
-    title?: string
-    subtitle?: string | null
-    slug?: string | null
-    content?: string
-    coverImageUrl?: string | null
-    sourceUrl?: string | null
-    sourceName?: string | null
-    tagIds?: string[]
+// The whole working copy: a field sent as null is cleared
+export interface SaveArticleRequest {
+    version: string
+    type: ContentType
+    title: string
+    subtitle: string | null
+    slug: string | null
+    content: string
+    coverImageUrl: string | null
+    sourceUrl: string | null
+    sourceName: string | null
+    tagIds: string[]
 }
 
 // ===== Paginated response =====
@@ -167,25 +151,4 @@ export const defaultArticleMetadata: ArticleMetadata = {
     type: 'article',
     subtitle: '',
     coverImage: undefined,
-}
-
-// for snackbar
-export interface SnackbarState {
-    open: boolean
-    message: string
-    severity: 'success' | 'error' | 'warning' | 'info'
-}
-
-// full content document (for local state)
-export interface ContentDocument {
-    id?: string
-    metadata: ContentMetadata
-    content: string
-    status: ContentStatus
-    createdAt?: string
-    updatedAt?: string
-    publishedAt?: string
-    // for parsed content
-    aggregatorItemId?: string
-    originalContent?: string
 }
