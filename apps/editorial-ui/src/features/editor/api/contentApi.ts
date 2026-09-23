@@ -120,6 +120,12 @@ export const articlesApi = {
         return handleResponse<void>(response)
     },
 
+    // Back to its owner as a draft; a chief editor only
+    async unpublish(id: string): Promise<void> {
+        const response = await apiFetch(`${ARTICLES}/${id}/unpublish`, { method: 'POST' })
+        return handleResponse<void>(response)
+    },
+
     async delete(id: string): Promise<void> {
         const response = await apiFetch(`${ARTICLES}/${id}`, { method: 'DELETE' })
         return handleResponse<void>(response)

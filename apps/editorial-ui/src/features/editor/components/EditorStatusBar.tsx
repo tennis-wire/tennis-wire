@@ -19,11 +19,14 @@ interface Props {
     canDelete: boolean
     // a chief editor looking at someone else's edit
     canReset: boolean
+    // a chief editor on a published article nobody holds an edit of
+    canUnpublish: boolean
     busy: Busy
     onReset: () => void
     onClear: () => void
     onDelete: () => void
     onDiscardEdit: () => void
+    onUnpublish: () => void
     onSave: () => void
     onPublish: () => void
 }
@@ -39,11 +42,13 @@ export const EditorStatusBar: React.FC<Props> = ({
     dirty,
     canDelete,
     canReset,
+    canUnpublish,
     busy,
     onReset,
     onClear,
     onDelete,
     onDiscardEdit,
+    onUnpublish,
     onSave,
     onPublish,
 }) => {
@@ -132,6 +137,18 @@ export const EditorStatusBar: React.FC<Props> = ({
                         sx={quiet}
                     >
                         Отменить правку
+                    </Button>
+                )}
+                {published && canUnpublish && (
+                    <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        onClick={onUnpublish}
+                        disabled={isLoading}
+                        startIcon={spinner('unpublish')}
+                    >
+                        Снять с публикации
                     </Button>
                 )}
                 {mode === 'locked' && canReset && (

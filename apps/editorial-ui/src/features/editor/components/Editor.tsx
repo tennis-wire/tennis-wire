@@ -117,6 +117,7 @@ export default function Editor({ articleId, sessionKey, sub }: Props) {
     const hasOriginal = Boolean(originalContent)
     const live = article?.live ?? null
     const readOnly = mode === 'locked'
+    const chief = hasRole(auth.user?.profile, CHIEF_EDITOR)
     // it writes into the text, which is not the caller's to change while locked
     const aiOpen = isAIPanelOpen && !readOnly
     const tab: TabKey =
@@ -361,12 +362,14 @@ export default function Editor({ articleId, sessionKey, sub }: Props) {
                             hasEdit={live !== null}
                             dirty={dirty}
                             canDelete={mode === 'draft' && !article?.firstPublishedAt}
-                            canReset={hasRole(auth.user?.profile, CHIEF_EDITOR)}
+                            canReset={chief}
+                            canUnpublish={chief && live === null}
                             busy={session.busy}
                             onReset={handleReset}
                             onClear={session.clearNew}
                             onDelete={() => void session.remove()}
                             onDiscardEdit={() => void session.discardEdit()}
+                            onUnpublish={() => void session.unpublish()}
                             onSave={() => void session.save()}
                             onPublish={() => void session.publish()}
                         />
