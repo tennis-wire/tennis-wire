@@ -24,6 +24,13 @@ export type Session = {
     refreshToken: string
     /** Epoch seconds. */
     accessExpiresAt: number
+    /**
+     * Carried the author role in the last id token: at sign-in, then on every refresh,
+     * so a role granted or taken away shows within one access token lifetime. Only
+     * decides whether the site offers a link to the editor. Absent in cookies sealed
+     * before it existed, which reads as false until the next refresh.
+     */
+    canEdit?: boolean
 }
 
 export type Flow = {
