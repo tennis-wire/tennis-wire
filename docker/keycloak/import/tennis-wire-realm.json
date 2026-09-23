@@ -20,6 +20,13 @@
 
     "eventsEnabled": true,
     "eventsExpiration": 2592000,
+    "adminEventsEnabled": true,
+    "adminEventsDetailsEnabled": false,
+    "attributes": {
+        "adminEventsExpiration": "7776000"
+    },
+
+    "bruteForceProtected": true,
 
     "smtpServer": {
         "host": "mailpit",
@@ -117,6 +124,7 @@
             "serviceAccountsEnabled": false,
             "redirectUris": ["http://localhost:3000/api/auth/callback/keycloak"],
             "webOrigins": ["http://localhost:3000"],
+            "fullScopeAllowed": false,
             "defaultClientScopes": ["acr", "basic", "email", "profile", "roles", "web-origins"],
             "optionalClientScopes": ["address", "microprofile-jwt", "offline_access", "organization", "phone"],
             "attributes": {
@@ -164,6 +172,7 @@
             "serviceAccountsEnabled": false,
             "redirectUris": ["tenniswire://*", "exp://127.0.0.1:8081/*"],
             "webOrigins": [],
+            "fullScopeAllowed": false,
             "defaultClientScopes": ["acr", "basic", "email", "profile", "roles", "web-origins"],
             "optionalClientScopes": ["address", "microprofile-jwt", "offline_access", "organization", "phone"],
             "attributes": {
@@ -338,7 +347,7 @@
             "firstName": "Dev",
             "lastName": "Moderator",
             "credentials": [{ "type": "password", "value": "moderator", "temporary": false }],
-            "realmRoles": ["moderator", "user"]
+            "realmRoles": ["moderator", "user", "offline_access"]
         },
         {
             "username": "author",
@@ -371,6 +380,11 @@
             "serviceAccountClientId": "discussion-service",
             "realmRoles": ["service"]
         }
+    ],
+
+    "scopeMappings": [
+        { "client": "public-web", "roles": ["user", "author"] },
+        { "client": "mobile", "roles": ["user"] }
     ],
 
     "roles": {

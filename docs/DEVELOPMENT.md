@@ -175,8 +175,8 @@ Local principals:
 | Principal | Credentials | Roles |
 |---|---|---|
 | `dev` | `dev` / `dev` | `author`, `admin`, `offline_access` (so also `chief-editor`, `moderator` and `user`) |
-| `reader` | `reader` / `reader` | `user` |
-| `moderator` | `moderator` / `moderator` | `moderator`, `user` |
+| `reader` | `reader` / `reader` | `user`, `offline_access` |
+| `moderator` | `moderator` / `moderator` | `moderator`, `user`, `offline_access` |
 | `author` | `author` / `author` | `author`, `user`, `offline_access` |
 | `moderation-bot` | client secret `dev-moderation-bot-secret` | `moderator-bot` |
 | `user-service` | client secret `dev-user-service-secret` | `service`, plus `realm-management`: `manage-users`, `view-realm` |
@@ -196,7 +196,9 @@ rights, and `author` with `dev` are those two. Both also carry `offline_access`,
 and `author` carries `user`: that is what a staff account made in the console
 gets from the default roles and the `readers` group, and it is what signing in
 on the site needs: without `offline_access` there is no offline session (see
-the note on `reader` under Readers below).
+the note on `reader` under Readers below). `moderator` carries `offline_access`
+for the same reason, so that it too can sign in on the site, where it is a
+reader like every other member of staff (see Role scope below).
 
 `dev-cli` is a password-grant client that exists only for `curl` and for the
 gateway integration test. ROPC is deprecated in OAuth 2.1; this client must
@@ -229,10 +231,10 @@ realm file gets exactly the roles listed for it and nothing besides — Keycloak
 skips both default roles and default groups on import. That is what keeps the
 service accounts above free of `user`, and it is also why `reader` carries
 `offline_access` explicitly: the client scope of that name is gated on the realm
-role of the same name, and a user without the role does not get an error. The
-scope is dropped from the request and an ordinary refresh token comes back in
-place of an offline one. Whatever a fixture is meant to exercise has to be
-spelled out on the fixture.
+role of the same name, and a user without the role is turned away at the code
+exchange with `not_allowed`, "Offline tokens not allowed for the user or
+client" (seen on 26.7.3 with `moderator`, before it had the role). Whatever a
+fixture is meant to exercise has to be spelled out on the fixture.
 
 `editorial-ui` and `public-web` carry one more mapper of their own: realm roles
 into the **id** token. The built-in `roles` scope puts them in the access token, which is
@@ -240,7 +242,8 @@ addressed to the services — a browser app reading it would be opening a token
 written for someone else. The id token is the one issued to the client, so that
 is where a screen decides whether to offer a moderator-only page, or the site
 whether to show staff a link to the editor. Composites are
-expanded on the way in, so `dev` arrives carrying `moderator`. Hiding a page is
+expanded on the way in, so `dev` arrives in `editorial-ui` carrying `moderator`;
+on the site it arrives with `user` and `author` only (see Role scope below). Hiding a page is
 a convenience and never a control: the gateway and the service each check the
 role again, and neither trusts that the browser did.
 
@@ -347,6 +350,38 @@ Keycloak's own clients (`account`, `admin-cli`, `security-admin-console` and the
 rest) are not described in the realm file and keep `offline_access`. None of
 them carries the `tennis-wire-api` audience mapper, so our services reject their
 tokens anyway.
+
+#### Role scope of the reader clients
+
+`public-web` and `mobile` have `fullScopeAllowed` off. Their tokens carry only
+the realm roles listed for them under `scopeMappings` — `user` and `author` for
+the site, `user` for the app — plus `offline_access`, which comes with the client
+scope of that name rather than through the client's own list. Staff who sign in
+on the site are readers there: `admin`, `moderator` and `chief-editor` stay out
+of both tokens, and `author` stays in because the site decides from it whether
+to offer a link to the editor. Composites are expanded first, so a chief editor
+or an admin gets the link as well. Without this an admin who opened an article
+would leave every role he has in the site's offline session for up to 180 days,
+behind a proxy that forwards moderation and account deletion as readily as
+comments.
+
+To see what a client would issue for someone: admin console, Clients →
+`public-web` → Client scopes → Evaluate, pick the user, Generated access token.
+`GatewayKeycloakIT` pins the same through a real code flow.
+
+#### Lockout and events
+
+Brute-force detection is on with Keycloak's defaults: 30 failed passwords within
+12 hours lock the account for a minute, growing to 15; two failures less than a
+second apart lock it for a minute straight away. A locked account sees the usual
+"Invalid username or password". A fixture locked while testing is released on
+its page in the admin console (Temporarily locked), or by recreating the
+container.
+
+Admin events — roles granted, passwords reset, accounts disabled, whether from
+the console or through the admin API — are recorded without representations and
+kept for 90 days: Realm settings → Events → Admin events, or
+`GET /admin/realms/tennis-wire/admin-events`.
 
 Login events are kept for 30 days: admin console → Events → User events. Worth
 checking first when a registration mail does not arrive or a login fails for no
