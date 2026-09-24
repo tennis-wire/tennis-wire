@@ -150,6 +150,139 @@ a:hover {
     color: var(--tw-text-secondary);
 }
 
+/* The header: one line from 1025px. Narrower, the search folds into a button that opens the
+   field over the line; from 900px down the sections move to a second line that scrolls
+   sideways, with the menu of sections held at its end so the scroll does not cut it off. */
+.tw-header-row {
+    position: relative;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    gap: 26px;
+}
+
+.tw-nav,
+.tw-nav-links {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+}
+
+.tw-header-tools {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tw-sections-panel {
+    left: 0;
+}
+
+.tw-search-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tw-search-input {
+    width: 170px;
+}
+
+.tw-search-results {
+    right: 0;
+    width: 260px;
+    min-width: 100%;
+}
+
+.tw-search-open,
+.tw-search-close {
+    display: none;
+}
+
+@media (max-width: 1024px) {
+    .tw-search-open,
+    .tw-search-close {
+        display: flex;
+    }
+
+    .tw-search:not([data-open]) .tw-search-field {
+        display: none;
+    }
+
+    .tw-search[data-open] .tw-search-field {
+        position: absolute;
+        inset: 0 20px;
+        z-index: 30;
+        background: var(--tw-surface);
+    }
+
+    .tw-search[data-open] .tw-search-input {
+        flex: 1;
+        width: auto;
+    }
+}
+
+@media (max-width: 900px) {
+    .tw-header-row {
+        flex-wrap: wrap;
+        gap: 0 16px;
+        min-height: 0;
+    }
+
+    .tw-logo {
+        height: 52px;
+        display: flex;
+        align-items: center;
+    }
+
+    .tw-nav {
+        order: 1;
+        flex-basis: 100%;
+        min-width: 0;
+        position: relative;
+        height: 42px;
+    }
+
+    .tw-nav::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -20px;
+        right: -20px;
+        border-top: 1px solid var(--tw-border);
+    }
+
+    /* The fade at the end says there is more; the padding lets the last item scroll clear of it */
+    .tw-nav-links {
+        flex: 1;
+        min-width: 0;
+        align-self: stretch;
+        padding-right: 24px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+    }
+
+    .tw-nav-links::-webkit-scrollbar {
+        display: none;
+    }
+
+    .tw-sections-panel {
+        left: auto;
+        right: 0;
+    }
+
+    .tw-search[data-open] .tw-search-field {
+        bottom: auto;
+        height: 52px;
+    }
+}
+
 /* The front page: the paper and its side column, the lead story beside its picture, the three
    materials in a row. One column each on a phone. */
 .tw-front {

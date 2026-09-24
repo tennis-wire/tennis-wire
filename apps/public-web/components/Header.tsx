@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Search from '@/components/Search'
 import ReaderMenu from '@/components/auth/ReaderMenu'
 import LiveTicker from '@/components/home/LiveTicker'
@@ -36,6 +36,18 @@ const navLink = (active: boolean): React.CSSProperties => ({
 
 export default function Header() {
     const pathname = usePathname()
+    const links = useRef<HTMLDivElement>(null)
+    const active = useRef<HTMLAnchorElement>(null)
+
+    // On a phone the sections scroll sideways: the one the reader is on is brought into view
+    useEffect(() => {
+        const box = links.current
+        const item = active.current
+        if (!box || !item || box.scrollWidth <= box.clientWidth) return
+        const at = item.getBoundingClientRect()
+        const within = box.getBoundingClientRect()
+        box.scrollLeft += at.left - within.left - (within.width - at.width) / 2
+    }, [pathname])
 
     return (
         <header
@@ -47,20 +59,10 @@ export default function Header() {
                 borderBottom: '1px solid var(--tw-border)',
             }}
         >
-            <div
-                style={{
-                    maxWidth: 1200,
-                    margin: '0 auto',
-                    padding: '0 20px',
-                    height: 64,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 26,
-                }}
-            >
+            <div className="tw-header-row">
                 <Link
                     href="/"
-                    className="tw-display"
+                    className="tw-display tw-logo"
                     style={{
                         fontSize: 25,
                         fontWeight: 700,
@@ -73,39 +75,42 @@ export default function Header() {
                     Tennis Wire
                 </Link>
 
-                <nav style={{ display: 'flex', gap: 22, alignItems: 'center' }}>
-                    {NAV_ITEMS.map((item) => {
-                        const isActive =
-                            item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
+                <nav className="tw-nav">
+                    <div ref={links} className="tw-nav-links">
+                        {NAV_ITEMS.map((item) => {
+                            const isActive =
+                                item.href === '/'
+                                    ? pathname === '/'
+                                    : pathname.startsWith(item.href)
 
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                aria-current={isActive ? 'page' : undefined}
-                                style={navLink(isActive)}
-                            >
-                                {item.label}
-                                {item.live && (
-                                    <span
-                                        style={{
-                                            width: 7,
-                                            height: 7,
-                                            borderRadius: '50%',
-                                            background: 'var(--tw-live)',
-                                        }}
-                                    />
-                                )}
-                            </Link>
-                        )
-                    })}
+                            return (
+                                <Link
+                                    key={item.href}
+                                    ref={isActive ? active : undefined}
+                                    href={item.href}
+                                    aria-current={isActive ? 'page' : undefined}
+                                    style={navLink(isActive)}
+                                >
+                                    {item.label}
+                                    {item.live && (
+                                        <span
+                                            style={{
+                                                width: 7,
+                                                height: 7,
+                                                borderRadius: '50%',
+                                                background: 'var(--tw-live)',
+                                            }}
+                                        />
+                                    )}
+                                </Link>
+                            )
+                        })}
+                    </div>
 
                     <SectionsMenu />
                 </nav>
 
-                <div style={{ flex: 1 }} />
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div className="tw-header-tools">
                     <Search />
                     <ReaderMenu />
                 </div>
@@ -146,7 +151,11 @@ function SectionsMenu() {
             </button>
 
             {open && (
-                <div id={panelId} style={{ ...popoverPanel, left: 0, marginTop: 8, minWidth: 180 }}>
+                <div
+                    id={panelId}
+                    className="tw-sections-panel"
+                    style={{ ...popoverPanel, marginTop: 8, minWidth: 180 }}
+                >
                     {SECTIONS.map((section) => (
                         <Link
                             key={section.href}

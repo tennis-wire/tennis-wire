@@ -41,6 +41,27 @@ const TYPE_LABELS: Record<TagResult['type'], string> = {
     section: 'Раздел',
 }
 
+const iconButton: React.CSSProperties = {
+    width: 34,
+    height: 34,
+    padding: 0,
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: 'none',
+    borderRadius: '50%',
+    background: 'none',
+    color: 'var(--tw-text-secondary)',
+    cursor: 'pointer',
+}
+
+const stroke = {
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round',
+} as const
+
 function getTagRoute(tag: TagResult): string {
     switch (tag.type) {
         case 'player':
@@ -58,8 +79,11 @@ export default function Search() {
     const [query, setQuery] = useState('')
     const [isOpen, setIsOpen] = useState(false)
     const [highlightIndex, setHighlightIndex] = useState(-1)
+    // Below 1025px the field folds into a button and opens over the header line
+    const [expanded, setExpanded] = useState(false)
     const wrapperRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
+    const openRef = useRef<HTMLButtonElement>(null)
     const router = useRouter()
 
     const results =
@@ -75,19 +99,33 @@ export default function Search() {
         function handleClick(e: MouseEvent) {
             if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
                 setIsOpen(false)
+                setExpanded(false)
             }
         }
         document.addEventListener('mousedown', handleClick)
         return () => document.removeEventListener('mousedown', handleClick)
     }, [])
 
+    useEffect(() => {
+        if (expanded) inputRef.current?.focus()
+    }, [expanded])
+
+    function fold() {
+        setQuery('')
+        setIsOpen(false)
+        setExpanded(false)
+        openRef.current?.focus()
+    }
+
     function navigate(tag: TagResult) {
         setQuery('')
         setIsOpen(false)
+        setExpanded(false)
         router.push(getTagRoute(tag))
     }
 
     function handleKeyDown(e: React.KeyboardEvent) {
+        if (e.key === 'Escape' && expanded) return fold()
         if (!isOpen || results.length === 0) return
 
         if (e.key === 'ArrowDown') {
@@ -106,111 +144,135 @@ export default function Search() {
     }
 
     return (
-        <div ref={wrapperRef} style={{ position: 'relative' }}>
-            <input
-                ref={inputRef}
-                type="text"
-                value={query}
-                onChange={(e) => {
-                    setQuery(e.target.value)
-                    setIsOpen(true)
-                    setHighlightIndex(-1)
-                }}
-                onFocus={() => query.length >= 1 && setIsOpen(true)}
-                onKeyDown={handleKeyDown}
-                placeholder="Поиск"
-                style={{
-                    width: 170,
-                    height: 34,
-                    padding: '0 14px',
-                    borderRadius: 17,
-                    border: '1px solid var(--tw-border)',
-                    background: 'transparent',
-                    color: 'var(--tw-text)',
-                    fontSize: 14,
-                    fontFamily: 'var(--tw-font-body)',
-                    outline: 'none',
-                    transition: 'border-color 0.15s',
-                }}
-            />
+        <div ref={wrapperRef} className="tw-search" data-open={expanded || undefined}>
+            <button
+                ref={openRef}
+                type="button"
+                className="tw-search-open"
+                aria-label="Поиск"
+                onClick={() => setExpanded(true)}
+                style={iconButton}
+            >
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
+                    <circle cx="10.5" cy="10.5" r="6.5" {...stroke} />
+                    <path d="M15.5 15.5 21 21" {...stroke} />
+                </svg>
+            </button>
 
-            {isOpen && results.length > 0 && (
-                <div
-                    style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        right: 0,
-                        marginTop: 4,
-                        background: 'var(--tw-surface)',
-                        border: '1px solid var(--tw-border)',
-                        borderRadius: 10,
-                        boxShadow: 'var(--tw-card-shadow)',
-                        padding: 4,
-                        zIndex: 50,
-                        minWidth: 260,
+            <div className="tw-search-field">
+                <input
+                    ref={inputRef}
+                    type="text"
+                    value={query}
+                    onChange={(e) => {
+                        setQuery(e.target.value)
+                        setIsOpen(true)
+                        setHighlightIndex(-1)
                     }}
-                >
-                    {results.map((tag, i) => (
-                        <button
-                            key={tag.slug}
-                            onClick={() => navigate(tag)}
-                            onMouseEnter={() => setHighlightIndex(i)}
-                            style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                width: '100%',
-                                padding: '8px 10px',
-                                borderRadius: 6,
-                                border: 'none',
-                                background:
-                                    i === highlightIndex ? 'var(--tw-bg-alt)' : 'transparent',
-                                cursor: 'pointer',
-                                fontFamily: 'var(--tw-font-body)',
-                                fontSize: 13,
-                                color: 'var(--tw-text)',
-                                textAlign: 'left',
-                            }}
-                        >
-                            <span>{tag.name}</span>
-                            <span
+                    onFocus={() => query.length >= 1 && setIsOpen(true)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Поиск"
+                    className="tw-search-input"
+                    style={{
+                        height: 34,
+                        padding: '0 14px',
+                        borderRadius: 17,
+                        border: '1px solid var(--tw-border)',
+                        background: 'transparent',
+                        color: 'var(--tw-text)',
+                        fontSize: 14,
+                        fontFamily: 'var(--tw-font-body)',
+                        outline: 'none',
+                        transition: 'border-color 0.15s',
+                    }}
+                />
+
+                {isOpen && results.length > 0 && (
+                    <div
+                        className="tw-search-results"
+                        style={{
+                            position: 'absolute',
+                            top: '100%',
+                            marginTop: 4,
+                            background: 'var(--tw-surface)',
+                            border: '1px solid var(--tw-border)',
+                            borderRadius: 10,
+                            boxShadow: 'var(--tw-card-shadow)',
+                            padding: 4,
+                            zIndex: 50,
+                        }}
+                    >
+                        {results.map((tag, i) => (
+                            <button
+                                key={tag.slug}
+                                onClick={() => navigate(tag)}
+                                onMouseEnter={() => setHighlightIndex(i)}
                                 style={{
-                                    fontSize: 11,
-                                    color: 'var(--tw-text-muted)',
-                                    flexShrink: 0,
-                                    marginLeft: 12,
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    width: '100%',
+                                    padding: '8px 10px',
+                                    borderRadius: 6,
+                                    border: 'none',
+                                    background:
+                                        i === highlightIndex ? 'var(--tw-bg-alt)' : 'transparent',
+                                    cursor: 'pointer',
+                                    fontFamily: 'var(--tw-font-body)',
+                                    fontSize: 13,
+                                    color: 'var(--tw-text)',
+                                    textAlign: 'left',
                                 }}
                             >
-                                {TYPE_LABELS[tag.type]}
-                            </span>
-                        </button>
-                    ))}
-                </div>
-            )}
+                                <span>{tag.name}</span>
+                                <span
+                                    style={{
+                                        fontSize: 11,
+                                        color: 'var(--tw-text-muted)',
+                                        flexShrink: 0,
+                                        marginLeft: 12,
+                                    }}
+                                >
+                                    {TYPE_LABELS[tag.type]}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                )}
 
-            {isOpen && query.length >= 1 && results.length === 0 && (
-                <div
-                    style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        right: 0,
-                        marginTop: 4,
-                        background: 'var(--tw-surface)',
-                        border: '1px solid var(--tw-border)',
-                        borderRadius: 10,
-                        boxShadow: 'var(--tw-card-shadow)',
-                        padding: '12px 14px',
-                        zIndex: 50,
-                        minWidth: 260,
-                        fontSize: 13,
-                        color: 'var(--tw-text-muted)',
-                    }}
+                {isOpen && query.length >= 1 && results.length === 0 && (
+                    <div
+                        className="tw-search-results"
+                        style={{
+                            position: 'absolute',
+                            top: '100%',
+                            marginTop: 4,
+                            background: 'var(--tw-surface)',
+                            border: '1px solid var(--tw-border)',
+                            borderRadius: 10,
+                            boxShadow: 'var(--tw-card-shadow)',
+                            padding: '12px 14px',
+                            zIndex: 50,
+                            fontSize: 13,
+                            color: 'var(--tw-text-muted)',
+                        }}
+                    >
+                        Ничего не найдено
+                    </div>
+                )}
+
+                <button
+                    type="button"
+                    className="tw-search-close"
+                    aria-label="Закрыть поиск"
+                    onClick={fold}
+                    style={iconButton}
                 >
-                    Ничего не найдено
-                </div>
-            )}
+                    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
+                        <path d="M6 6 18 18M18 6 6 18" {...stroke} />
+                    </svg>
+                </button>
+            </div>
         </div>
     )
 }
