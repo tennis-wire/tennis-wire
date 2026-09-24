@@ -305,9 +305,15 @@ a:hover {
     gap: 22px;
 }
 
+/* Beside its picture the lead headline needs about 340px, which the paper has from 1150px */
+@media (max-width: 1150px) {
+    .tw-hero {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
 @media (max-width: 900px) {
     .tw-front,
-    .tw-hero,
     .tw-trio {
         grid-template-columns: minmax(0, 1fr);
     }
