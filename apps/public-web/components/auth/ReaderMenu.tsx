@@ -10,9 +10,8 @@ import { clearDraftsOf } from '@/lib/discussion/drafts'
 import { useReaderSession } from './ReaderSessionProvider'
 
 const trigger: React.CSSProperties = {
-    width: 36,
-    height: 36,
-    marginLeft: 8,
+    width: 34,
+    height: 34,
     padding: 0,
     borderRadius: '50%',
     border: 'none',
@@ -105,7 +104,7 @@ export default function ReaderMenu() {
                 aria-label={signedIn ? (displayName ?? 'Личный кабинет') : 'Войти'}
                 style={trigger}
             >
-                <Avatar name={displayName} src={avatarUrl} size={36} />
+                <Avatar name={displayName} src={avatarUrl} size={34} />
                 {unnamed && <span aria-hidden style={dot} />}
             </button>
 

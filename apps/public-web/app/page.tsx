@@ -1,4 +1,3 @@
-import LiveTicker from '@/components/home/LiveTicker'
 import HeroNews from '@/components/home/HeroNews'
 import { TournamentWidget, RankingWidget } from '@/components/home/SidebarWidgets'
 import NewsFeed from '@/components/home/NewsFeed'
@@ -8,8 +7,6 @@ import SectionCards from '@/components/home/SectionCards'
 export default function HomePage() {
     return (
         <div>
-            <LiveTicker />
-
             <div
                 style={{
                     display: 'grid',

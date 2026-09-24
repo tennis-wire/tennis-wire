@@ -118,16 +118,16 @@ export default function Search() {
                 }}
                 onFocus={() => query.length >= 1 && setIsOpen(true)}
                 onKeyDown={handleKeyDown}
-                placeholder="Поиск..."
+                placeholder="Поиск"
                 style={{
-                    width: 200,
-                    height: 32,
-                    padding: '0 12px',
-                    borderRadius: 8,
+                    width: 170,
+                    height: 34,
+                    padding: '0 14px',
+                    borderRadius: 17,
                     border: '1px solid var(--tw-border)',
-                    background: 'var(--tw-bg)',
+                    background: 'transparent',
                     color: 'var(--tw-text)',
-                    fontSize: 13,
+                    fontSize: 14,
                     fontFamily: 'var(--tw-font-body)',
                     outline: 'none',
                     transition: 'border-color 0.15s',
