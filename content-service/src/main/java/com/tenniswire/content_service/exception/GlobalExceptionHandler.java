@@ -46,6 +46,13 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse("UNKNOWN_TAG", ex.getMessage(), null, Instant.now()));
     }
 
+    @ExceptionHandler(ForeignMediaException.class)
+    public ResponseEntity<ErrorResponse> handleForeignMedia(ForeignMediaException ex) {
+        var violation = new ErrorResponse.FieldViolation(ex.field(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse("FOREIGN_MEDIA", ex.getMessage(), List.of(violation), Instant.now()));
+    }
+
     @ExceptionHandler(PublishValidationException.class)
     public ResponseEntity<ErrorResponse> handlePublishValidation(PublishValidationException ex) {
         var violations = ex.violations().stream()

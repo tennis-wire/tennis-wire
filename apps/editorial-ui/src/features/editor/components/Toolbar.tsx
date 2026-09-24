@@ -19,7 +19,6 @@ import {
     FormatQuote,
     Link,
     LinkOff,
-    Image,
     HorizontalRule,
     Undo,
     Redo,
@@ -29,7 +28,6 @@ import {
     YouTube,
     Telegram,
     Poll as PollIcon,
-    OndemandVideo,
     Mic,
 } from '@mui/icons-material'
 import type { Editor } from '@tiptap/react'
@@ -142,23 +140,6 @@ export const Toolbar: React.FC<Props> = ({
         }
 
         editor.chain().focus().setTelegramPost({ src: url }).run()
-    }
-
-    const handleVideoInsert = () => {
-        const url = window.prompt('Вставьте прямую ссылку на видео (.mp4, .webm):', 'https://')
-        if (!url) return
-
-        const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.m4v']
-        const isVideo = videoExtensions.some((ext) => url.toLowerCase().includes(ext))
-
-        if (!isVideo) {
-            const proceed = window.confirm(
-                'Эта ссылка не похожа на прямую ссылку на видео файл.\n\nДля YouTube используйте кнопку YouTube.\nДля Telegram используйте кнопку Telegram.\n\nВсё равно вставить?'
-            )
-            if (!proceed) return
-        }
-
-        editor.chain().focus().setVideo({ src: url }).run()
     }
 
     const isValidUrl = (url: string) => {
@@ -438,18 +419,6 @@ export const Toolbar: React.FC<Props> = ({
                 </span>
             </Tooltip>
 
-            <Tooltip title="Вставить изображение по URL">
-                <IconButton
-                    size="small"
-                    onClick={() => {
-                        const url = window.prompt('Введите URL изображения:', 'https://')
-                        if (url) editor.chain().focus().setImage({ src: url }).run()
-                    }}
-                >
-                    <Image fontSize="small" />
-                </IconButton>
-            </Tooltip>
-
             <Tooltip title="Вставить YouTube видео">
                 <IconButton size="small" onClick={handleYoutubeInsert}>
                     <YouTube fontSize="small" sx={{ color: colors.live }} />
@@ -459,12 +428,6 @@ export const Toolbar: React.FC<Props> = ({
             <Tooltip title="Вставить пост из Telegram">
                 <IconButton size="small" onClick={handleTelegramInsert}>
                     <Telegram fontSize="small" sx={{ color: '#0088cc' }} />
-                </IconButton>
-            </Tooltip>
-
-            <Tooltip title="Вставить видео по ссылке (.mp4)">
-                <IconButton size="small" onClick={handleVideoInsert}>
-                    <OndemandVideo fontSize="small" />
                 </IconButton>
             </Tooltip>
 

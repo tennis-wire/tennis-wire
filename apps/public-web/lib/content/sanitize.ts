@@ -1,5 +1,7 @@
 import sanitizeHtml from 'sanitize-html'
 
+import { originOf } from '@/lib/security/csp'
+
 import { EMBED_HOSTS } from './embeds'
 
 // What the editor emits (editorial-ui: TipTap StarterKit, Image, Youtube and the two embeds of
@@ -42,21 +44,30 @@ const OPTIONS: sanitizeHtml.IOptions = {
         img: ['src', 'alt', 'width', 'height'],
         div: ['data-video', 'data-telegram-post', 'data-youtube-video', 'data-poll'],
         iframe: ['src', 'width', 'height', 'allow', 'allowfullscreen', 'frameborder'],
-        video: ['src', 'controls', 'width', 'height', 'poster'],
+        video: ['src', 'controls', 'width', 'height'],
     },
     allowedClasses: {
         div: ['telegram-embed', 'video-embed', 'poll-embed'],
     },
     allowedSchemes: ['http', 'https', 'mailto'],
     allowedIframeHostnames: EMBED_HOSTS,
-    // A frame from anywhere else loses its src above and would stay as an empty box. So does a
-    // picture pasted into the editor before it had uploads: a data: URL, dropped with its scheme.
-    exclusiveFilter: (frame) =>
-        (frame.tag === 'iframe' || frame.tag === 'img') && !frame.attribs.src,
     // inline style is decoration, and the Telegram embed's border-radius is not worth an attribute
     // that can carry url()
 }
 
-export function sanitizeArticle(html: string): string {
-    return sanitizeHtml(html, OPTIONS)
+// media: the bucket's origin. A picture or video from anywhere else is dropped whole: the page's
+// CSP would refuse it and leave a broken box. So is a data: picture pasted before the editor had
+// uploads, and every one of them when there is no media origin.
+export function sanitizeArticle(html: string, media: string | null): string {
+    return sanitizeHtml(html, {
+        ...OPTIONS,
+        exclusiveFilter: (frame) => {
+            // a frame from anywhere else has lost its src above and would stay as an empty box
+            if (frame.tag === 'iframe') return !frame.attribs.src
+            if (frame.tag === 'img' || frame.tag === 'video') {
+                return media === null || originOf(frame.attribs.src) !== media
+            }
+            return false
+        },
+    })
 }
