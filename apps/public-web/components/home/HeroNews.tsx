@@ -23,7 +23,7 @@ export default function HeroNews() {
                 </div>
                 <h2
                     style={{
-                        fontSize: 44,
+                        fontSize: 'clamp(30px, 8vw, 44px)',
                         lineHeight: 1.08,
                         letterSpacing: '-0.015em',
                         margin: '0 0 16px',

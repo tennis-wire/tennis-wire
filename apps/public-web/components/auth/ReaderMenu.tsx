@@ -1,15 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 
 import Avatar from '@/components/Avatar'
+import { popoverPanel, usePopover } from '@/components/ui/popover'
 import { loginHere } from '@/lib/auth/loginHref'
 import { clearDraftsOf } from '@/lib/discussion/drafts'
 
 import { useReaderSession } from './ReaderSessionProvider'
 
-const trigger: React.CSSProperties = {
+const triggerStyle: React.CSSProperties = {
     width: 34,
     height: 34,
     padding: 0,
@@ -35,19 +36,7 @@ const dot: React.CSSProperties = {
     border: '2px solid var(--tw-surface)',
 }
 
-const panel: React.CSSProperties = {
-    position: 'absolute',
-    top: '100%',
-    right: 0,
-    marginTop: 6,
-    padding: 6,
-    minWidth: 200,
-    background: 'var(--tw-surface)',
-    border: '1px solid var(--tw-border)',
-    borderRadius: 10,
-    boxShadow: 'var(--tw-card-shadow)',
-    zIndex: 20,
-}
+const panel: React.CSSProperties = { ...popoverPanel, right: 0, minWidth: 200 }
 
 // No background: the class gives one under the pointer, and an inline one would win over it
 const item: React.CSSProperties = {
@@ -77,16 +66,8 @@ const separator: React.CSSProperties = {
 export default function ReaderMenu() {
     const { session } = useReaderSession()
     const [open, setOpen] = useState(false)
-    const box = useRef<HTMLDivElement>(null)
-
-    useEffect(() => {
-        if (!open) return
-        const onKey = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') setOpen(false)
-        }
-        document.addEventListener('keydown', onKey)
-        return () => document.removeEventListener('keydown', onKey)
-    }, [open])
+    const close = useCallback(() => setOpen(false), [])
+    const { root, trigger, panelId } = usePopover(open, close)
 
     const signedIn = session?.authenticated === true
     const displayName = session?.authenticated ? session.displayName : null
@@ -95,41 +76,36 @@ export default function ReaderMenu() {
     const unnamed = session?.authenticated === true && !session.displayNameChosen
 
     return (
-        <div ref={box} style={{ position: 'relative' }}>
+        <div ref={root} style={{ position: 'relative' }}>
             <button
+                ref={trigger}
                 type="button"
                 onClick={() => setOpen(!open)}
-                aria-haspopup="menu"
                 aria-expanded={open}
+                aria-controls={panelId}
                 aria-label={signedIn ? (displayName ?? 'Личный кабинет') : 'Войти'}
-                style={trigger}
+                style={triggerStyle}
             >
                 <Avatar name={displayName} src={avatarUrl} size={34} />
                 {unnamed && <span aria-hidden style={dot} />}
             </button>
 
+            {/* Empty until the session is known: a signed-in reader should not see the
+                invitation to sign in flash first */}
             {open && (
-                <>
-                    <div
-                        style={{ position: 'fixed', inset: 0, zIndex: 10 }}
-                        onClick={() => setOpen(false)}
-                    />
-                    {/* Empty until the session is known: a signed-in reader should not see the
-                        invitation to sign in flash first */}
-                    <div role="menu" style={panel}>
-                        {session !== null &&
-                            (signedIn ? (
-                                <Account
-                                    displayName={displayName}
-                                    avatarUrl={avatarUrl}
-                                    userId={session.authenticated ? session.userId : null}
-                                    onNavigate={() => setOpen(false)}
-                                />
-                            ) : (
-                                <Anonymous onNavigate={() => setOpen(false)} />
-                            ))}
-                    </div>
-                </>
+                <div id={panelId} style={panel}>
+                    {session !== null &&
+                        (signedIn ? (
+                            <Account
+                                displayName={displayName}
+                                avatarUrl={avatarUrl}
+                                userId={session.authenticated ? session.userId : null}
+                                onNavigate={close}
+                            />
+                        ) : (
+                            <Anonymous onNavigate={close} />
+                        ))}
+                </div>
             )}
         </div>
     )
@@ -140,17 +116,11 @@ export default function ReaderMenu() {
 function Anonymous({ onNavigate }: { onNavigate: () => void }) {
     return (
         <>
-            <a
-                href={loginHere()}
-                role="menuitem"
-                className="tw-menu-item"
-                style={{ ...item, fontWeight: 600 }}
-            >
+            <a href={loginHere()} className="tw-menu-item" style={{ ...item, fontWeight: 600 }}>
                 Войти
             </a>
             <Link
                 href="/me/settings/appearance"
-                role="menuitem"
                 className="tw-menu-item"
                 style={item}
                 onClick={onNavigate}
@@ -188,13 +158,7 @@ function Account({
                 </span>
             </div>
             <div style={separator} />
-            <Link
-                href="/me"
-                role="menuitem"
-                className="tw-menu-item"
-                style={item}
-                onClick={onNavigate}
-            >
+            <Link href="/me" className="tw-menu-item" style={item} onClick={onNavigate}>
                 Личный кабинет
             </Link>
             {/* Drafts leave with the reader, for a shared computer; the form goes on to
@@ -208,7 +172,6 @@ function Account({
             >
                 <button
                     type="submit"
-                    role="menuitem"
                     className="tw-menu-item"
                     style={{ ...item, color: 'var(--tw-text-secondary)' }}
                 >

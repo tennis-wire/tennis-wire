@@ -2,10 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Search from '@/components/Search'
 import ReaderMenu from '@/components/auth/ReaderMenu'
 import LiveTicker from '@/components/home/LiveTicker'
+import { popoverPanel, usePopover } from '@/components/ui/popover'
 
 const NAV_ITEMS = [
     { label: 'Главная', href: '/' },
@@ -35,7 +36,18 @@ const navLink = (active: boolean): React.CSSProperties => ({
 
 export default function Header() {
     const pathname = usePathname()
-    const [sectionsOpen, setSectionsOpen] = useState(false)
+    const links = useRef<HTMLDivElement>(null)
+    const active = useRef<HTMLAnchorElement>(null)
+
+    // On a phone the sections scroll sideways: the one the reader is on is brought into view
+    useEffect(() => {
+        const box = links.current
+        const item = active.current
+        if (!box || !item || box.scrollWidth <= box.clientWidth) return
+        const at = item.getBoundingClientRect()
+        const within = box.getBoundingClientRect()
+        box.scrollLeft += at.left - within.left - (within.width - at.width) / 2
+    }, [pathname])
 
     return (
         <header
@@ -47,20 +59,10 @@ export default function Header() {
                 borderBottom: '1px solid var(--tw-border)',
             }}
         >
-            <div
-                style={{
-                    maxWidth: 1200,
-                    margin: '0 auto',
-                    padding: '0 20px',
-                    height: 64,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 26,
-                }}
-            >
+            <div className="tw-header-row">
                 <Link
                     href="/"
-                    className="tw-display"
+                    className="tw-display tw-logo"
                     style={{
                         fontSize: 25,
                         fontWeight: 700,
@@ -73,105 +75,42 @@ export default function Header() {
                     Tennis Wire
                 </Link>
 
-                <nav style={{ display: 'flex', gap: 22, alignItems: 'center' }}>
-                    {NAV_ITEMS.map((item) => {
-                        const isActive =
-                            item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
+                <nav className="tw-nav">
+                    <div ref={links} className="tw-nav-links">
+                        {NAV_ITEMS.map((item) => {
+                            const isActive =
+                                item.href === '/'
+                                    ? pathname === '/'
+                                    : pathname.startsWith(item.href)
 
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                aria-current={isActive ? 'page' : undefined}
-                                style={navLink(isActive)}
-                            >
-                                {item.label}
-                                {item.live && (
-                                    <span
-                                        style={{
-                                            width: 7,
-                                            height: 7,
-                                            borderRadius: '50%',
-                                            background: 'var(--tw-live)',
-                                        }}
-                                    />
-                                )}
-                            </Link>
-                        )
-                    })}
-
-                    <div style={{ position: 'relative' }}>
-                        <button
-                            type="button"
-                            aria-expanded={sectionsOpen}
-                            onClick={() => setSectionsOpen(!sectionsOpen)}
-                            style={{
-                                // first: the shorthand would reset the size set after it
-                                font: 'inherit',
-                                ...navLink(false),
-                                background: 'none',
-                                borderTop: 'none',
-                                borderLeft: 'none',
-                                borderRight: 'none',
-                                padding: '0 0 2px',
-                                cursor: 'pointer',
-                            }}
-                        >
-                            Разделы&nbsp;&#9662;
-                        </button>
-
-                        {sectionsOpen && (
-                            <>
-                                <div
-                                    style={{
-                                        position: 'fixed',
-                                        inset: 0,
-                                        zIndex: 10,
-                                    }}
-                                    onClick={() => setSectionsOpen(false)}
-                                />
-                                <div
-                                    style={{
-                                        position: 'absolute',
-                                        top: '100%',
-                                        left: 0,
-                                        marginTop: 8,
-                                        background: 'var(--tw-surface)',
-                                        border: '1px solid var(--tw-border)',
-                                        borderRadius: 10,
-                                        boxShadow: 'var(--tw-card-shadow)',
-                                        padding: 6,
-                                        minWidth: 180,
-                                        zIndex: 20,
-                                    }}
+                            return (
+                                <Link
+                                    key={item.href}
+                                    ref={isActive ? active : undefined}
+                                    href={item.href}
+                                    aria-current={isActive ? 'page' : undefined}
+                                    style={navLink(isActive)}
                                 >
-                                    {SECTIONS.map((section) => (
-                                        <Link
-                                            key={section.href}
-                                            href={section.href}
-                                            onClick={() => setSectionsOpen(false)}
-                                            className="tw-menu-item"
+                                    {item.label}
+                                    {item.live && (
+                                        <span
                                             style={{
-                                                display: 'block',
-                                                padding: '8px 12px',
-                                                borderRadius: 6,
-                                                fontSize: 14,
-                                                color: 'var(--tw-text)',
-                                                textDecoration: 'none',
+                                                width: 7,
+                                                height: 7,
+                                                borderRadius: '50%',
+                                                background: 'var(--tw-live)',
                                             }}
-                                        >
-                                            {section.label}
-                                        </Link>
-                                    ))}
-                                </div>
-                            </>
-                        )}
+                                        />
+                                    )}
+                                </Link>
+                            )
+                        })}
                     </div>
+
+                    <SectionsMenu />
                 </nav>
 
-                <div style={{ flex: 1 }} />
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div className="tw-header-tools">
                     <Search />
                     <ReaderMenu />
                 </div>
@@ -180,5 +119,63 @@ export default function Header() {
             {/* The front page only: elsewhere the reader came for something else */}
             {pathname === '/' && <LiveTicker />}
         </header>
+    )
+}
+
+function SectionsMenu() {
+    const [open, setOpen] = useState(false)
+    const close = useCallback(() => setOpen(false), [])
+    const { root, trigger, panelId } = usePopover(open, close)
+
+    return (
+        <div ref={root} style={{ position: 'relative' }}>
+            <button
+                ref={trigger}
+                type="button"
+                aria-expanded={open}
+                aria-controls={panelId}
+                onClick={() => setOpen(!open)}
+                style={{
+                    // first: the shorthand would reset the size set after it
+                    font: 'inherit',
+                    ...navLink(false),
+                    background: 'none',
+                    borderTop: 'none',
+                    borderLeft: 'none',
+                    borderRight: 'none',
+                    padding: '0 0 2px',
+                    cursor: 'pointer',
+                }}
+            >
+                Разделы&nbsp;&#9662;
+            </button>
+
+            {open && (
+                <div
+                    id={panelId}
+                    className="tw-sections-panel"
+                    style={{ ...popoverPanel, marginTop: 8, minWidth: 180 }}
+                >
+                    {SECTIONS.map((section) => (
+                        <Link
+                            key={section.href}
+                            href={section.href}
+                            onClick={close}
+                            className="tw-menu-item"
+                            style={{
+                                display: 'block',
+                                padding: '8px 12px',
+                                borderRadius: 6,
+                                fontSize: 14,
+                                color: 'var(--tw-text)',
+                                textDecoration: 'none',
+                            }}
+                        >
+                            {section.label}
+                        </Link>
+                    ))}
+                </div>
+            )}
+        </div>
     )
 }
