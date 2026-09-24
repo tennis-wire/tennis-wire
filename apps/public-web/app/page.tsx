@@ -1,32 +1,22 @@
 import HeroNews from '@/components/home/HeroNews'
-import { TournamentWidget, RankingWidget } from '@/components/home/SidebarWidgets'
+import { TournamentWidget, RankingWidget, TrashZone } from '@/components/home/SidebarWidgets'
 import NewsFeed from '@/components/home/NewsFeed'
 import MaterialsGrid from '@/components/home/MaterialsGrid'
-import SectionCards from '@/components/home/SectionCards'
 
 export default function HomePage() {
     return (
-        <div>
-            <div
-                style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 280px',
-                    gap: 20,
-                    marginBottom: 24,
-                }}
-            >
+        <div className="tw-front">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 34, minWidth: 0 }}>
                 <HeroNews />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    <TournamentWidget />
-                    <RankingWidget />
-                </div>
+                <NewsFeed />
+                <MaterialsGrid />
             </div>
 
-            <NewsFeed />
-
-            <MaterialsGrid />
-
-            <SectionCards />
+            <aside style={{ display: 'flex', flexDirection: 'column', gap: 28, minWidth: 0 }}>
+                <TournamentWidget />
+                <RankingWidget />
+                <TrashZone />
+            </aside>
         </div>
     )
 }

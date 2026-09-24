@@ -1,124 +1,114 @@
 import Link from 'next/link'
 
+// A heading ruled off like a newspaper column's
+const rubric: React.CSSProperties = {
+    fontSize: 12,
+    fontWeight: 700,
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase',
+    color: 'var(--tw-text-secondary)',
+    paddingBottom: 10,
+    borderBottom: '2px solid var(--tw-text)',
+}
+
+const more: React.CSSProperties = {
+    fontSize: 14,
+    fontWeight: 600,
+    color: 'var(--tw-primary)',
+    textDecoration: 'none',
+}
+
 export function TournamentWidget() {
     return (
-        <div
-            style={{
-                background: 'var(--tw-surface)',
-                border: '1px solid var(--tw-border)',
-                borderRadius: 12,
-                padding: 16,
-                boxShadow: 'var(--tw-card-shadow)',
-            }}
-        >
+        <section>
+            <div style={rubric}>Ближайший турнир</div>
             <div
-                style={{
-                    fontSize: 11,
-                    color: 'var(--tw-text-muted)',
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.5,
-                    marginBottom: 8,
-                }}
-            >
-                Ближайший турнир
-            </div>
-            <div
-                style={{
-                    fontFamily: 'var(--tw-font-display)',
-                    fontSize: 16,
-                    marginBottom: 4,
-                }}
+                style={{ fontFamily: 'var(--tw-font-display)', fontSize: 22, margin: '14px 0 4px' }}
             >
                 Roland Garros 2026
             </div>
-            <div style={{ fontSize: 13, color: 'var(--tw-text-muted)', marginBottom: 12 }}>
-                25 мая — 8 июня
+            <div style={{ fontSize: 14, color: 'var(--tw-text-secondary)', marginBottom: 12 }}>
+                25 мая &mdash; 8 июня / Париж, грунт
             </div>
-            <div
-                style={{
-                    borderTop: '1px solid var(--tw-border)',
-                    paddingTop: 10,
-                }}
-            >
-                <Link
-                    href="/tournaments/roland-garros-2026"
-                    style={{
-                        fontSize: 12,
-                        color: 'var(--tw-primary)',
-                        textDecoration: 'none',
-                    }}
-                >
-                    Сетка · Расписание →
-                </Link>
-            </div>
-        </div>
+            <Link href="/tournaments/roland-garros-2026" style={more}>
+                Сетка и расписание
+            </Link>
+        </section>
     )
 }
 
-export function RankingWidget() {
-    const top = [
-        { rank: 1, name: 'Синнер', points: '11,830' },
-        { rank: 2, name: 'Алькарас', points: '9,855' },
-        { rank: 3, name: 'Джокович', points: '8,120' },
-        { rank: 4, name: 'Медведев', points: '6,740' },
-        { rank: 5, name: 'Рублёв', points: '5,390' },
-    ]
+const TOP = [
+    { rank: 1, name: 'Синнер', points: 11830 },
+    { rank: 2, name: 'Алькарас', points: 9855 },
+    { rank: 3, name: 'Джокович', points: 8120 },
+    { rank: 4, name: 'Медведев', points: 6740 },
+    { rank: 5, name: 'Рублёв', points: 5390 },
+]
 
+const points = new Intl.NumberFormat('ru-RU')
+
+export function RankingWidget() {
     return (
-        <div
+        <section>
+            <div style={rubric}>Рейтинг ATP</div>
+            <div style={{ marginTop: 6 }}>
+                {TOP.map((player, i) => (
+                    <div
+                        key={player.rank}
+                        style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            padding: '9px 0',
+                            borderBottom:
+                                i < TOP.length - 1 ? '1px solid var(--tw-border)' : 'none',
+                            fontSize: 15,
+                        }}
+                    >
+                        <span>
+                            <span
+                                style={{
+                                    display: 'inline-block',
+                                    width: 20,
+                                    color: 'var(--tw-text-secondary)',
+                                }}
+                            >
+                                {player.rank}
+                            </span>
+                            {player.name}
+                        </span>
+                        <span style={{ color: 'var(--tw-text-secondary)' }}>
+                            {points.format(player.points)}
+                        </span>
+                    </div>
+                ))}
+            </div>
+            <Link href="/rankings" style={{ ...more, display: 'inline-block', marginTop: 12 }}>
+                Полный рейтинг
+            </Link>
+        </section>
+    )
+}
+
+export function TrashZone() {
+    return (
+        <Link
+            href="/sections/trash"
             style={{
-                background: 'var(--tw-surface)',
-                border: '1px solid var(--tw-border)',
-                borderRadius: 12,
+                display: 'block',
                 padding: 16,
-                boxShadow: 'var(--tw-card-shadow)',
+                borderRadius: 10,
+                background: 'var(--tw-live-bg)',
+                textDecoration: 'none',
             }}
         >
             <div
-                style={{
-                    fontSize: 11,
-                    color: 'var(--tw-text-muted)',
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.5,
-                    marginBottom: 10,
-                }}
+                style={{ fontSize: 15, fontWeight: 700, color: 'var(--tw-live)', marginBottom: 4 }}
             >
-                Рейтинг ATP
+                Треш-зона
             </div>
-            {top.map((p) => (
-                <div
-                    key={p.rank}
-                    style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        padding: '4px 0',
-                        fontSize: 13,
-                    }}
-                >
-                    <span style={{ color: 'var(--tw-text-secondary)' }}>
-                        {p.rank}. {p.name}
-                    </span>
-                    <span style={{ color: 'var(--tw-text-muted)' }}>{p.points}</span>
-                </div>
-            ))}
-            <div
-                style={{
-                    borderTop: '1px solid var(--tw-border)',
-                    paddingTop: 10,
-                    marginTop: 8,
-                }}
-            >
-                <Link
-                    href="/rankings"
-                    style={{
-                        fontSize: 12,
-                        color: 'var(--tw-primary)',
-                        textDecoration: 'none',
-                    }}
-                >
-                    Полный рейтинг →
-                </Link>
+            <div style={{ fontSize: 14, lineHeight: 1.4, color: 'var(--tw-text-secondary)' }}>
+                Кринж, скандалы, мемы. Отдельный раздел со своими правилами.
             </div>
-        </div>
+        </Link>
     )
 }

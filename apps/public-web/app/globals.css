@@ -117,6 +117,36 @@ a:hover {
     color: var(--tw-text-secondary);
 }
 
+/* The front page: the paper and its side column, the lead story beside its picture, the three
+   materials in a row. One column each on a phone. */
+.tw-front {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 40px;
+    padding-top: 10px;
+}
+
+.tw-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 400px;
+    gap: 28px;
+    align-items: start;
+}
+
+.tw-trio {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 22px;
+}
+
+@media (max-width: 900px) {
+    .tw-front,
+    .tw-hero,
+    .tw-trio {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
 /* The cabinet: tabs over a column of sections beside the section being read, everything under
    everything else on a phone. Inline styles cannot hold a media query, and this is the only
    place that needs one. */

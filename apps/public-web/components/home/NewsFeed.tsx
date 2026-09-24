@@ -1,5 +1,7 @@
 import Link from 'next/link'
 
+import SectionHead from './SectionHead'
+
 interface NewsItem {
     slug: string
     title: string
@@ -11,7 +13,7 @@ const MOCK_NEWS: NewsItem[] = [
     {
         slug: 'rybakina-doha',
         title: 'Рыбакина снялась с турнира в Дохе из-за травмы',
-        time: '25 мин назад',
+        time: '25 минут назад',
         tag: 'WTA 1000',
     },
     {
@@ -34,88 +36,52 @@ const MOCK_NEWS: NewsItem[] = [
     },
 ]
 
+const slash = <span style={{ color: 'var(--tw-border)' }}>/</span>
+
+// Headlines without covers: a news item is read by its title
 export default function NewsFeed() {
     return (
-        <div
-            style={{
-                background: 'var(--tw-surface)',
-                border: '1px solid var(--tw-border)',
-                borderRadius: 12,
-                padding: 20,
-                boxShadow: 'var(--tw-card-shadow)',
-                marginBottom: 24,
-            }}
-        >
-            <div
-                style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: 14,
-                }}
-            >
-                <h2
-                    style={{
-                        fontFamily: 'var(--tw-font-display)',
-                        fontSize: 20,
-                        margin: 0,
-                    }}
-                >
-                    Новости
-                </h2>
-                <Link
-                    href="/news"
-                    style={{
-                        fontSize: 12,
-                        color: 'var(--tw-text-muted)',
-                        textDecoration: 'none',
-                    }}
-                >
-                    Все новости →
-                </Link>
-            </div>
-
-            {MOCK_NEWS.map((item, i) => (
-                <Link
-                    key={item.slug}
-                    href={`/news/${item.slug}`}
-                    style={{
-                        display: 'flex',
-                        gap: 12,
-                        padding: '12px 0',
-                        borderTop: i > 0 ? '1px solid var(--tw-border)' : 'none',
-                        textDecoration: 'none',
-                        color: 'var(--tw-text)',
-                    }}
-                >
-                    {/* Image placeholder */}
-                    <div
+        <section>
+            <SectionHead title="Новости" href="/news" more="Все новости" gap={6} />
+            <div style={{ borderBottom: '1px solid var(--tw-border)' }}>
+                {MOCK_NEWS.map((item) => (
+                    <Link
+                        key={item.slug}
+                        href={`/news/${item.slug}`}
                         style={{
-                            width: 72,
-                            height: 52,
-                            borderRadius: 8,
-                            background: `linear-gradient(135deg, var(--tw-primary-light), var(--tw-accent))`,
-                            opacity: 0.3,
-                            flexShrink: 0,
+                            display: 'block',
+                            padding: '16px 0',
+                            borderTop: '1px solid var(--tw-border)',
+                            color: 'var(--tw-text)',
+                            textDecoration: 'none',
                         }}
-                    />
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    >
                         <div
                             style={{
-                                fontSize: 14,
-                                fontWeight: 500,
-                                lineHeight: 1.35,
-                                marginBottom: 4,
+                                fontSize: 19,
+                                fontWeight: 600,
+                                lineHeight: 1.3,
+                                marginBottom: 6,
+                                maxWidth: '64ch',
                             }}
                         >
                             {item.title}
                         </div>
-                        <div style={{ fontSize: 12, color: 'var(--tw-text-muted)' }}>
-                            {item.time} · {item.tag}
+                        <div
+                            style={{
+                                display: 'flex',
+                                gap: 10,
+                                fontSize: 13,
+                                color: 'var(--tw-text-secondary)',
+                            }}
+                        >
+                            <span>{item.time}</span>
+                            {slash}
+                            <span>{item.tag}</span>
                         </div>
-                    </div>
-                </Link>
-            ))}
-        </div>
+                    </Link>
+                ))}
+            </div>
+        </section>
     )
 }
