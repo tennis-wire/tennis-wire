@@ -25,6 +25,13 @@ describe('contentSecurityPolicy', () => {
         expect(policy.get('media-src')).toEqual(["'self'", 'https://media.example'])
     })
 
+    it('takes fonts and stylesheets from this site only', () => {
+        const policy = directives(contentSecurityPolicy(stand))
+
+        expect(policy.get('font-src')).toEqual(["'self'"])
+        expect(policy.get('style-src')).toEqual(["'self'", "'unsafe-inline'"])
+    })
+
     it('sends forms to this site and to Keycloak only', () => {
         const policy = directives(contentSecurityPolicy(stand))
 

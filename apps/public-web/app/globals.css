@@ -16,8 +16,8 @@
     --tw-tag: #edf5f0;
     --tw-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 6px 16px rgba(0, 0, 0, 0.04);
 
-    --tw-font-display: 'DM Serif Display', serif;
-    --tw-font-body: 'Source Sans 3', sans-serif;
+    --tw-font-display: var(--font-noto-serif-display);
+    --tw-font-body: var(--font-source-sans-3);
 }
 
 * {

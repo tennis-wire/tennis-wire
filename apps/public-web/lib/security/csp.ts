@@ -1,10 +1,5 @@
 import { EMBED_HOSTS } from '@/lib/content/embeds'
 
-// theme/fonts.ts loads the font pairs from Google: the stylesheet from one host, the files from
-// the other
-const GOOGLE_FONTS_CSS = 'https://fonts.googleapis.com'
-const GOOGLE_FONTS_FILES = 'https://fonts.gstatic.com'
-
 export type PolicySources = {
     dev: boolean
     // the media bucket: covers, pictures in articles, avatars
@@ -23,8 +18,8 @@ export function contentSecurityPolicy({ dev, media, keycloak }: PolicySources): 
         // eval is for React's dev tooling only
         ['script-src', "'self'", "'unsafe-inline'", dev && "'unsafe-eval'"],
         // React renders style attributes into the server markup
-        ['style-src', "'self'", "'unsafe-inline'", GOOGLE_FONTS_CSS],
-        ['font-src', "'self'", GOOGLE_FONTS_FILES],
+        ['style-src', "'self'", "'unsafe-inline'"],
+        ['font-src', "'self'"],
         // blob: is the avatar cropper's picture of the chosen file
         ['img-src', "'self'", 'data:', 'blob:', media],
         ['media-src', "'self'", media],
