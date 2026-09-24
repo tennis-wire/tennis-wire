@@ -61,12 +61,7 @@ export default function ReaderPage({ id }: { id: string }) {
 
     if (own) return null
     if (state.kind === 'loading') return <p style={text}>{strings.loading}</p>
-    if (state.kind === 'missing')
-        return (
-            <h1 style={{ fontFamily: 'var(--tw-font-display)', fontSize: 26 }}>
-                {strings.readerMissing}
-            </h1>
-        )
+    if (state.kind === 'missing') return <h1 style={{ fontSize: 26 }}>{strings.readerMissing}</h1>
     if (state.kind === 'failed')
         return (
             <p style={text}>
@@ -99,7 +94,6 @@ export default function ReaderPage({ id }: { id: string }) {
                 <div style={{ minWidth: 0 }}>
                     <h1
                         style={{
-                            fontFamily: 'var(--tw-font-display)',
                             fontSize: 26,
                             margin: 0,
                             overflowWrap: 'anywhere',

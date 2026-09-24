@@ -12,9 +12,7 @@ export default function IgnorePage() {
 
     return (
         <div style={{ maxWidth: 680 }}>
-            <h1 style={{ fontFamily: 'var(--tw-font-display)', fontSize: 22, margin: '0 0 4px' }}>
-                {strings.ignoreList}
-            </h1>
+            <h1 style={{ fontSize: 22, margin: '0 0 4px' }}>{strings.ignoreList}</h1>
             <p style={{ ...muted, margin: '0 0 20px', maxWidth: '60ch' }}>
                 {strings.ignoreListAbout}
             </p>

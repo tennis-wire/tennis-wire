@@ -21,9 +21,7 @@ export default function AuthoredPage() {
 
     return (
         <div style={box}>
-            <h1 style={{ fontFamily: 'var(--tw-font-display)', fontSize: 22, margin: '0 0 4px' }}>
-                {strings.authored}
-            </h1>
+            <h1 style={{ fontSize: 22, margin: '0 0 4px' }}>{strings.authored}</h1>
             <p style={{ ...text, margin: '0 0 20px' }}>{strings.authoredAbout}</p>
             {session.userId ? (
                 <AuthorComments authorId={session.userId} empty={strings.authoredEmpty} />

@@ -165,7 +165,16 @@ export default function AvatarForm({
 
     return (
         <section>
-            <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 12px' }}>Фото</h2>
+            <h2
+                style={{
+                    fontFamily: 'var(--tw-font-body)',
+                    fontSize: 16,
+                    fontWeight: 600,
+                    margin: '0 0 12px',
+                }}
+            >
+                Фото
+            </h2>
 
             {source ? (
                 <>

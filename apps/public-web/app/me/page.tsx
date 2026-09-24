@@ -74,7 +74,6 @@ export default function ProfilePage() {
             <div>
                 <h1
                     style={{
-                        fontFamily: 'var(--tw-font-display)',
                         fontSize: 22,
                         margin: '0 0 4px',
                     }}
@@ -88,7 +87,16 @@ export default function ProfilePage() {
             <NicknameForm displayName={session.displayName} chosen={session.displayNameChosen} />
 
             <section>
-                <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px' }}>Аккаунт</h2>
+                <h2
+                    style={{
+                        fontFamily: 'var(--tw-font-body)',
+                        fontSize: 16,
+                        fontWeight: 600,
+                        margin: '0 0 4px',
+                    }}
+                >
+                    Аккаунт
+                </h2>
                 <div style={row}>
                     <span style={{ color: 'var(--tw-text-secondary)' }}>На сайте</span>
                     <span>

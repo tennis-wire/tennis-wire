@@ -3,7 +3,6 @@ export default function NewsPage() {
         <div>
             <h1
                 style={{
-                    fontFamily: 'var(--tw-font-display)',
                     fontSize: 28,
                     marginBottom: 8,
                 }}

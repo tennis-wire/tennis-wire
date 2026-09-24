@@ -96,8 +96,8 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
                 <Avatar name={displayName} src={photo} size={56} />
                 <div style={{ minWidth: 0 }}>
                     <div
+                        className="tw-display"
                         style={{
-                            fontFamily: 'var(--tw-font-display)',
                             fontSize: 24,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',

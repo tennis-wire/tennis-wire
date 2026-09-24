@@ -36,6 +36,14 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* The display face: every heading, and the few lines set like one */
+h1,
+h2,
+h3,
+.tw-display {
+    font-family: var(--tw-font-display);
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
     width: 8px;

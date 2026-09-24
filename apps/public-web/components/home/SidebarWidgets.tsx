@@ -22,9 +22,7 @@ export function TournamentWidget() {
     return (
         <section>
             <div style={rubric}>Ближайший турнир</div>
-            <div
-                style={{ fontFamily: 'var(--tw-font-display)', fontSize: 22, margin: '14px 0 4px' }}
-            >
+            <div className="tw-display" style={{ fontSize: 22, margin: '14px 0 4px' }}>
                 Roland Garros 2026
             </div>
             <div style={{ fontSize: 14, color: 'var(--tw-text-secondary)', marginBottom: 12 }}>
