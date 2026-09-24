@@ -33,9 +33,11 @@ const button: React.CSSProperties = {
 
 const hint: React.CSSProperties = {
     fontSize: 13,
-    color: 'var(--tw-text-muted)',
+    color: 'var(--tw-text-secondary)',
     margin: '8px 0 0',
 }
+
+const RULE = '3\u201324 символа: латиница, цифры, дефис или подчёркивание'
 
 export default function NicknameForm({
     displayName,
@@ -45,14 +47,16 @@ export default function NicknameForm({
     chosen: boolean
 }) {
     const { session, setSession } = useReaderSession()
-    const [value, setValue] = useState('')
+    // The field holds the name as it stands: the reader edits it rather than typing it anew
+    const [value, setValue] = useState(displayName)
     const [error, setError] = useState<string | null>(null)
     const [saved, setSaved] = useState(false)
     const [saving, setSaving] = useState(false)
 
     async function save() {
+        if (value === displayName) return
         if (!PATTERN.test(value)) {
-            setError('3–24 символа: латиница, цифры, дефис или подчёркивание')
+            setError(RULE)
             return
         }
         setSaving(true)
@@ -94,7 +98,7 @@ export default function NicknameForm({
             // a new name does not change who may edit
             editorialOrigin: session?.authenticated ? session.editorialOrigin : null,
         })
-        setValue('')
+        setValue(profile.displayName)
         setSaved(true)
     }
 
@@ -110,7 +114,10 @@ export default function NicknameForm({
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                 <input
                     value={value}
-                    onChange={(event) => setValue(event.target.value)}
+                    onChange={(event) => {
+                        setValue(event.target.value)
+                        setSaved(false)
+                    }}
                     placeholder="например, tennis_fan"
                     maxLength={24}
                     aria-label="Новое имя"
@@ -119,7 +126,7 @@ export default function NicknameForm({
                 <button
                     type="button"
                     onClick={save}
-                    disabled={saving || value === ''}
+                    disabled={saving || value === '' || value === displayName}
                     style={button}
                 >
                     {saving ? 'Сохраняем…' : 'Сохранить'}
@@ -134,7 +141,9 @@ export default function NicknameForm({
             {saved && <p style={hint}>Имя сохранено.</p>}
             {/* The name is not stamped onto a comment, it is looked up, so the old ones
                 change with it */}
-            <p style={hint}>Новое имя появится на всех ваших комментариях, включая старые.</p>
+            <p style={hint}>
+                {RULE}. Новое имя появится на всех ваших комментариях, включая старые.
+            </p>
         </section>
     )
 }

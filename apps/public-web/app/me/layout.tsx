@@ -2,16 +2,19 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 import Avatar from '@/components/Avatar'
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
+import { countByAuthor } from '@/lib/discussion/endpoints'
 
-// Appearance is kept by the browser rather than the account, so the cabinet opens for a stranger
-// too, with one tab in it.
+// One row of tabs. Appearance is kept by the browser rather than the account, so the cabinet
+// opens for a stranger too, with that one tab in it.
 const TABS = [
     { href: '/me', label: 'Профиль', account: true },
     { href: '/me/comments', label: 'Комментарии', account: true },
-    { href: '/me/settings', label: 'Настройки', account: false },
+    { href: '/me/settings/appearance', label: 'Внешний вид', account: false },
+    { href: '/me/settings/ignore', label: 'Игнор-лист', account: true },
 ]
 
 // Month and year only, but in the genitive the phrase needs. Intl gives that form of the month
@@ -23,6 +26,14 @@ function since(iso: string): string {
     const part = (type: Intl.DateTimeFormatPartTypes) =>
         parts.find((p) => p.type === type)?.value ?? ''
     return `с ${part('month')} ${part('year')} г.`
+}
+
+function commentsWord(count: number): string {
+    const last = count % 10
+    const teen = count % 100 >= 11 && count % 100 <= 14
+    if (last === 1 && !teen) return 'комментарий'
+    if (last >= 2 && last <= 4 && !teen) return 'комментария'
+    return 'комментариев'
 }
 
 const card: React.CSSProperties = {
@@ -43,13 +54,15 @@ const strip: React.CSSProperties = {
     background: 'var(--tw-bg-alt)',
 }
 
-const tab: React.CSSProperties = {
+const tab = (active: boolean): React.CSSProperties => ({
     padding: '14px 2px',
-    fontSize: 14,
+    fontSize: 15,
+    fontWeight: active ? 600 : 400,
+    color: active ? 'var(--tw-text)' : 'var(--tw-text-secondary)',
     textDecoration: 'none',
     whiteSpace: 'nowrap',
-    borderBottom: '2px solid transparent',
-}
+    borderBottom: `2px solid ${active ? 'var(--tw-primary)' : 'transparent'}`,
+})
 
 export default function CabinetLayout({ children }: { children: React.ReactNode }) {
     const { session } = useReaderSession()
@@ -59,6 +72,23 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
     const displayName = session?.authenticated ? session.displayName : null
     const createdAt = session?.authenticated ? session.createdAt : null
     const photo = session?.authenticated ? session.avatarLargeUrl : null
+    const authorId = session?.authenticated ? session.userId : null
+
+    // The one number about the reader, over every tab rather than on one of them
+    const [count, setCount] = useState<number | null>(null)
+    useEffect(() => {
+        if (!authorId) return
+        let live = true
+        countByAuthor(authorId)
+            .then((answer) => {
+                if (live) setCount(answer.count)
+            })
+            // a count that did not come is simply not shown
+            .catch(() => undefined)
+        return () => {
+            live = false
+        }
+    }, [authorId])
 
     return (
         <div style={card}>
@@ -75,7 +105,7 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
                     >
                         {signedIn ? (displayName ?? 'Читатель') : 'Личный кабинет'}
                     </div>
-                    <div style={{ fontSize: 13, color: 'var(--tw-text-muted)', marginTop: 3 }}>
+                    <div style={{ fontSize: 14, color: 'var(--tw-text-secondary)', marginTop: 3 }}>
                         {signedIn
                             ? createdAt
                                 ? since(createdAt)
@@ -83,6 +113,22 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
                             : 'настройки этого браузера'}
                     </div>
                 </div>
+                {signedIn && count !== null && (
+                    <Link
+                        href="/me/comments"
+                        style={{
+                            marginLeft: 'auto',
+                            textAlign: 'right',
+                            color: 'var(--tw-text)',
+                            textDecoration: 'none',
+                        }}
+                    >
+                        <div style={{ fontSize: 22, fontWeight: 700 }}>{count}</div>
+                        <div style={{ fontSize: 13, color: 'var(--tw-text-secondary)' }}>
+                            {commentsWord(count)}
+                        </div>
+                    </Link>
+                )}
             </div>
 
             <div className="tw-tabs">
@@ -95,12 +141,7 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
                             key={item.href}
                             href={item.href}
                             aria-current={active ? 'page' : undefined}
-                            style={{
-                                ...tab,
-                                fontWeight: active ? 600 : 400,
-                                color: active ? 'var(--tw-text)' : 'var(--tw-text-secondary)',
-                                borderBottomColor: active ? 'var(--tw-primary)' : 'transparent',
-                            }}
+                            style={tab(active)}
                         >
                             {item.label}
                         </Link>

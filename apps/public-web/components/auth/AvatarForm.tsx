@@ -34,9 +34,27 @@ const quiet: React.CSSProperties = {
     borderColor: 'var(--tw-border)',
 }
 
+// Beside the photo: the name below it is the form's main action, this one is not
+const outline: React.CSSProperties = {
+    ...button,
+    padding: '9px 16px',
+    background: 'var(--tw-surface)',
+    color: 'var(--tw-primary)',
+}
+
+const plain: React.CSSProperties = {
+    font: 'inherit',
+    fontSize: 14,
+    padding: '9px 4px',
+    border: 'none',
+    background: 'none',
+    color: 'var(--tw-text-secondary)',
+    cursor: 'pointer',
+}
+
 const hint: React.CSSProperties = {
     fontSize: 13,
-    color: 'var(--tw-text-muted)',
+    color: 'var(--tw-text-secondary)',
     margin: '8px 0 0',
 }
 
@@ -146,8 +164,8 @@ export default function AvatarForm({
     }
 
     return (
-        <section style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 14px' }}>Фото</h2>
+        <section>
+            <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 12px' }}>Фото</h2>
 
             {source ? (
                 <>
@@ -206,18 +224,20 @@ export default function AvatarForm({
                 </>
             ) : (
                 <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <Avatar name={displayName} src={avatarLargeUrl} size={96} />
-                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <Avatar name={displayName} src={avatarLargeUrl} size={72} />
+                    <div
+                        style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}
+                    >
                         <button
                             type="button"
                             onClick={() => input.current?.click()}
                             disabled={busy}
-                            style={button}
+                            style={outline}
                         >
-                            {avatarLargeUrl ? 'Заменить' : 'Загрузить'}
+                            {avatarLargeUrl ? 'Заменить фото' : 'Загрузить фото'}
                         </button>
                         {avatarLargeUrl && (
-                            <button type="button" onClick={remove} disabled={busy} style={quiet}>
+                            <button type="button" onClick={remove} disabled={busy} style={plain}>
                                 Удалить
                             </button>
                         )}

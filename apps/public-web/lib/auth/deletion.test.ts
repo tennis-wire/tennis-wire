@@ -13,7 +13,7 @@ describe('confirmDeletionHref', () => {
 
         expect(url.pathname).toBe('/api/auth/login')
         expect(url.searchParams.get('prompt')).toBe('login')
-        expect(url.searchParams.get('returnTo')).toBe('/me/settings/actions?delete=confirmed')
+        expect(url.searchParams.get('returnTo')).toBe('/me?delete=confirmed')
     })
 })
 
@@ -27,12 +27,8 @@ describe('carriesDeletionMark', () => {
 
 describe('withoutDeletionMark', () => {
     it('drops the mark and keeps the rest of the address', () => {
-        expect(withoutDeletionMark('/me/settings/actions?delete=confirmed')).toBe(
-            '/me/settings/actions'
-        )
-        expect(withoutDeletionMark('/me/settings/actions?tab=1&delete=confirmed#top')).toBe(
-            '/me/settings/actions?tab=1#top'
-        )
+        expect(withoutDeletionMark('/me?delete=confirmed')).toBe('/me')
+        expect(withoutDeletionMark('/me?tab=1&delete=confirmed#top')).toBe('/me?tab=1#top')
     })
 
     it('leaves an address without the mark exactly as it was', () => {

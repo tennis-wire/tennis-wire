@@ -1,58 +1,61 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { carriesDeletionMark, confirmDeletionHref, deletionOutcome } from '@/lib/auth/deletion'
 import { clearDraftsOf } from '@/lib/discussion/drafts'
 
-const box: React.CSSProperties = {
-    marginTop: 36,
-    padding: '18px 20px',
-    border: '1px solid var(--tw-border)',
-    borderRadius: 10,
+// A row of the account table on the profile tab: the label on the left, the step the reader is on
+// on the right
+const row: React.CSSProperties = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 16,
+    padding: '12px 0',
+    borderTop: '1px solid var(--tw-border)',
+    fontSize: 15,
 }
 
 const hint: React.CSSProperties = {
     fontSize: 13,
-    color: 'var(--tw-text-muted)',
-    margin: '8px 0 0',
-}
-
-const danger: React.CSSProperties = {
-    font: 'inherit',
-    fontSize: 14,
-    padding: '9px 18px',
-    borderRadius: 7,
-    border: '1px solid var(--tw-live)',
-    background: 'var(--tw-live)',
-    color: '#fff',
-    cursor: 'pointer',
+    color: 'var(--tw-text-secondary)',
+    margin: '10px 0 0',
 }
 
 const quiet: React.CSSProperties = {
-    ...danger,
-    background: 'none',
+    font: 'inherit',
+    fontSize: 14,
+    padding: '7px 14px',
+    borderRadius: 7,
+    border: '1px solid var(--tw-live)',
+    background: 'var(--tw-surface)',
     color: 'var(--tw-live)',
-}
-
-const quietLink: React.CSSProperties = {
-    ...quiet,
+    cursor: 'pointer',
     display: 'inline-block',
     textDecoration: 'none',
+}
+
+const danger: React.CSSProperties = {
+    ...quiet,
+    background: 'var(--tw-live)',
+    color: '#fff',
 }
 
 const cancel: React.CSSProperties = {
     background: 'none',
     border: 'none',
+    padding: 0,
     font: 'inherit',
     fontSize: 14,
     color: 'var(--tw-text-secondary)',
     cursor: 'pointer',
 }
 
-const row: React.CSSProperties = {
+const steps: React.CSSProperties = {
     display: 'flex',
-    gap: 10,
+    gap: 14,
     flexWrap: 'wrap',
     alignItems: 'center',
 }
@@ -69,7 +72,14 @@ export default function DeleteAccount({ userId }: { userId: string | null }) {
     )
     const [error, setError] = useState<string | null>(null)
     const [deleting, setDeleting] = useState(false)
+    const box = useRef<HTMLDivElement>(null)
     const signOut = useRef<HTMLFormElement>(null)
+
+    // The row is at the foot of the profile tab: back from the login, the reader is brought to it
+    useEffect(() => {
+        if (carriesDeletionMark(window.location.search))
+            box.current?.scrollIntoView({ block: 'center' })
+    }, [])
 
     // The mark leaves with the step it opened, or a reload would offer the last button again
     function goTo(next: Step, message: string | null = null) {
@@ -109,53 +119,48 @@ export default function DeleteAccount({ userId }: { userId: string | null }) {
     }
 
     return (
-        <div style={box}>
-            <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Удаление аккаунта</h2>
-            {/* The rules' wording, word for word. Other people's replies are not mentioned: they stay, and
-                saying so here would read as a reason to think twice about them rather than
-                about this. */}
-            <p style={{ ...hint, margin: '8px 0 0' }}>
-                Все ваши комментарии будут удалены. Восстановить аккаунт нельзя.
-            </p>
+        <div ref={box}>
+            <div style={row}>
+                <span style={{ color: 'var(--tw-text-secondary)' }}>Удаление аккаунта</span>
 
-            {step === 'idle' && (
-                <p style={{ margin: '16px 0 0' }}>
+                {step === 'idle' && (
                     <button type="button" onClick={() => goTo('login')} style={quiet}>
                         Удалить аккаунт
                     </button>
-                </p>
-            )}
+                )}
 
-            {step === 'login' && (
-                <div style={{ marginTop: 16 }}>
-                    <p style={{ fontSize: 14, margin: '0 0 12px' }}>
-                        Чтобы удалить аккаунт, подтвердите вход тем же способом, которым входили.
-                    </p>
-                    <div style={row}>
-                        <a href={confirmDeletionHref()} style={quietLink}>
+                {step === 'login' && (
+                    <span style={steps}>
+                        <a href={confirmDeletionHref()} style={quiet}>
                             Подтвердить вход
                         </a>
                         <button type="button" onClick={() => goTo('idle')} style={cancel}>
                             Отмена
                         </button>
-                    </div>
-                </div>
-            )}
+                    </span>
+                )}
 
-            {step === 'last' && (
-                <div style={{ ...row, marginTop: 16 }}>
-                    <button type="button" onClick={remove} disabled={deleting} style={danger}>
-                        {deleting ? 'Удаляем…' : 'Удалить навсегда'}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => goTo('idle')}
-                        disabled={deleting}
-                        style={cancel}
-                    >
-                        Отмена
-                    </button>
-                </div>
+                {step === 'last' && (
+                    <span style={steps}>
+                        <button type="button" onClick={remove} disabled={deleting} style={danger}>
+                            {deleting ? 'Удаляем\u2026' : 'Удалить навсегда'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => goTo('idle')}
+                            disabled={deleting}
+                            style={cancel}
+                        >
+                            Отмена
+                        </button>
+                    </span>
+                )}
+            </div>
+
+            {step === 'login' && (
+                <p style={{ fontSize: 14, margin: '4px 0 0' }}>
+                    Чтобы удалить аккаунт, подтвердите вход тем же способом, которым входили.
+                </p>
             )}
 
             {error && (
@@ -163,6 +168,11 @@ export default function DeleteAccount({ userId }: { userId: string | null }) {
                     {error}
                 </p>
             )}
+
+            {/* The rules' wording, word for word. Other people's replies are not mentioned: they
+                stay, and saying so here would read as a reason to think twice about them rather
+                than about this. */}
+            <p style={hint}>Все ваши комментарии будут удалены. Восстановить аккаунт нельзя.</p>
 
             <form ref={signOut} method="post" action="/api/auth/logout" hidden />
         </div>

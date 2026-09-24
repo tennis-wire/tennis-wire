@@ -1,12 +1,12 @@
 // Deleting an account takes a fresh login first. The reader leaves for Keycloak and comes back to the
-// actions page with this mark, which opens the last step at once. The mark proves nothing:
+// profile tab of the cabinet with this mark, which opens the last step at once. The mark proves nothing:
 // user-service decides on its own whether the login is recent enough.
 const PARAM = 'delete'
 const CONFIRMED = 'confirmed'
-const ACTIONS = '/me/settings/actions'
+const PROFILE = '/me'
 
 export function confirmDeletionHref(): string {
-    const back = `${ACTIONS}?${PARAM}=${CONFIRMED}`
+    const back = `${PROFILE}?${PARAM}=${CONFIRMED}`
     return `/api/auth/login?prompt=login&returnTo=${encodeURIComponent(back)}`
 }
 

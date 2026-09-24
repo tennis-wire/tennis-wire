@@ -111,7 +111,7 @@ describe('GET /api/auth/callback/keycloak', () => {
     })
 
     describe('the mark that opens the last step of deleting an account', () => {
-        const marked = '/me/settings/actions?delete=confirmed'
+        const marked = '/me?delete=confirmed'
 
         it('comes back with the account that left for the login', async () => {
             flow.returnTo = marked
@@ -128,9 +128,7 @@ describe('GET /api/auth/callback/keycloak', () => {
 
             const response = await GET(callback('signed-in'))
 
-            expect(response.headers.get('location')).toBe(
-                'http://localhost:3000/me/settings/actions'
-            )
+            expect(response.headers.get('location')).toBe('http://localhost:3000/me')
         })
 
         it('is dropped when nobody was signed in before', async () => {
@@ -139,9 +137,7 @@ describe('GET /api/auth/callback/keycloak', () => {
 
             const response = await GET(callback())
 
-            expect(response.headers.get('location')).toBe(
-                'http://localhost:3000/me/settings/actions'
-            )
+            expect(response.headers.get('location')).toBe('http://localhost:3000/me')
         })
     })
 })
