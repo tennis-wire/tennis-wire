@@ -20,6 +20,12 @@ import { clientAddress, takeToken } from './rateLimit'
 const REQUEST_HEADERS = ['content-type', 'accept', 'idempotency-key']
 const RESPONSE_HEADERS = ['content-type']
 
+// Everything the browser writes through here is a little JSON, but for the avatar: user-service
+// takes up to 6 MB of multipart for that one
+const BODY_LIMIT = 16 * 1024
+const AVATAR_PATH = '/api/users/me/avatar'
+const AVATAR_LIMIT = 6 * 1024 * 1024
+
 function json(status: number, code: string) {
     return NextResponse.json({ code }, { status })
 }
@@ -36,7 +42,25 @@ export async function proxy(request: NextRequest, prefix: string): Promise<NextR
         return json(403, 'BAD_ORIGIN')
     }
 
+    const limit = path === AVATAR_PATH ? AVATAR_LIMIT : BODY_LIMIT
+    if (write && Number(request.headers.get('content-length')) > limit) {
+        return json(413, 'PAYLOAD_TOO_LARGE')
+    }
+
     let session = await readSession(request.cookies.get(SESSION_COOKIE)?.value)
+
+    // Every write needs a reader, and the gateway would refuse this one: no reason to take the
+    // body in first
+    if (write && !session) return json(401, 'SIGN_IN_REQUIRED')
+
+    // Before the refresh, so that a body turned away here does not take a refreshed cookie with it
+    let body: Uint8Array<ArrayBuffer> | undefined
+    if (write) {
+        const read = await readBody(request, limit)
+        if (!read) return json(413, 'PAYLOAD_TOO_LARGE')
+        body = read
+    }
+
     let refreshed: Session | null = null
     let signedOut = false
 
@@ -73,7 +97,7 @@ export async function proxy(request: NextRequest, prefix: string): Promise<NextR
         upstream = await fetch(`${gatewayOrigin()}${path}${request.nextUrl.search}`, {
             method: request.method,
             headers,
-            body: write ? await request.arrayBuffer() : undefined,
+            body,
             redirect: 'manual',
             cache: 'no-store',
         })
@@ -92,6 +116,33 @@ export async function proxy(request: NextRequest, prefix: string): Promise<NextR
         response.cookies.set(SESSION_COOKIE, await sealSession(refreshed), sessionCookieOptions())
     if (signedOut) clearSession(response)
     return response
+}
+
+// Content-Length is checked before this, but a chunked body comes without one
+async function readBody(
+    request: NextRequest,
+    limit: number
+): Promise<Uint8Array<ArrayBuffer> | null> {
+    const chunks: Uint8Array[] = []
+    let size = 0
+    if (request.body) {
+        const reader = request.body.getReader()
+        for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
+            size += chunk.value.byteLength
+            if (size > limit) {
+                await reader.cancel()
+                return null
+            }
+            chunks.push(chunk.value)
+        }
+    }
+    const body = new Uint8Array(size)
+    let offset = 0
+    for (const chunk of chunks) {
+        body.set(chunk, offset)
+        offset += chunk.byteLength
+    }
+    return body
 }
 
 function clearSession(response: NextResponse): NextResponse {
