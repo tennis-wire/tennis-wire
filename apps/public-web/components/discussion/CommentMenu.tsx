@@ -73,15 +73,18 @@ const popover: React.CSSProperties = {
     zIndex: 20,
 }
 
+// No background: the class gives one under the pointer, and an inline one would win over it
 const item: React.CSSProperties = {
-    ...linkButton,
     display: 'block',
     width: '100%',
     padding: '8px 10px',
+    border: 'none',
     borderRadius: 6,
+    font: 'inherit',
     fontSize: 14,
     color: 'var(--tw-text)',
     textAlign: 'left',
+    cursor: 'pointer',
 }
 
 const danger: React.CSSProperties = { ...item, color: 'var(--tw-live)' }
@@ -250,6 +253,7 @@ export default function CommentMenu({
                                         <button
                                             type="button"
                                             role="menuitem"
+                                            className="tw-menu-item"
                                             style={item}
                                             onClick={() => {
                                                 setPanel({ kind: 'closed' })
@@ -262,6 +266,7 @@ export default function CommentMenu({
                                     <button
                                         type="button"
                                         role="menuitem"
+                                        className="tw-menu-item"
                                         style={danger}
                                         onClick={() =>
                                             setPanel({ kind: 'remove', busy: false, failed: false })
@@ -275,6 +280,7 @@ export default function CommentMenu({
                                     <button
                                         type="button"
                                         role="menuitem"
+                                        className="tw-menu-item"
                                         style={item}
                                         disabled={reported}
                                         onClick={openReport}
@@ -286,6 +292,7 @@ export default function CommentMenu({
                                         <button
                                             type="button"
                                             role="menuitem"
+                                            className="tw-menu-item"
                                             style={item}
                                             onClick={openIgnore}
                                         >
@@ -306,6 +313,7 @@ export default function CommentMenu({
                                 <p style={row}>
                                     <button
                                         type="button"
+                                        className="tw-menu-item"
                                         style={danger}
                                         disabled={panel.busy}
                                         onClick={remove}
@@ -318,6 +326,7 @@ export default function CommentMenu({
                                     </button>
                                     <button
                                         type="button"
+                                        className="tw-menu-item"
                                         style={item}
                                         disabled={panel.busy}
                                         onClick={close}
@@ -351,6 +360,7 @@ export default function CommentMenu({
                                         key={reason}
                                         type="button"
                                         role="menuitem"
+                                        className="tw-menu-item"
                                         style={{
                                             ...item,
                                             fontWeight: panel.reason === reason ? 600 : 400,
@@ -394,6 +404,7 @@ export default function CommentMenu({
                                     <button
                                         type="button"
                                         role="menuitem"
+                                        className="tw-menu-item"
                                         style={item}
                                         onClick={openIgnore}
                                     >

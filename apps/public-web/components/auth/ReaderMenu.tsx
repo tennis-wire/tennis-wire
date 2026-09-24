@@ -49,6 +49,7 @@ const panel: React.CSSProperties = {
     zIndex: 20,
 }
 
+// No background: the class gives one under the pointer, and an inline one would win over it
 const item: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
@@ -57,7 +58,6 @@ const item: React.CSSProperties = {
     padding: '8px 12px',
     borderRadius: 6,
     border: 'none',
-    background: 'none',
     font: 'inherit',
     fontSize: 14,
     color: 'var(--tw-text)',
@@ -140,10 +140,21 @@ export default function ReaderMenu() {
 function Anonymous({ onNavigate }: { onNavigate: () => void }) {
     return (
         <>
-            <a href={loginHere()} role="menuitem" style={{ ...item, fontWeight: 600 }}>
+            <a
+                href={loginHere()}
+                role="menuitem"
+                className="tw-menu-item"
+                style={{ ...item, fontWeight: 600 }}
+            >
                 Войти
             </a>
-            <Link href="/me/settings/appearance" role="menuitem" style={item} onClick={onNavigate}>
+            <Link
+                href="/me/settings/appearance"
+                role="menuitem"
+                className="tw-menu-item"
+                style={item}
+                onClick={onNavigate}
+            >
                 Внешний вид
             </Link>
         </>
@@ -177,7 +188,13 @@ function Account({
                 </span>
             </div>
             <div style={separator} />
-            <Link href="/me" role="menuitem" style={item} onClick={onNavigate}>
+            <Link
+                href="/me"
+                role="menuitem"
+                className="tw-menu-item"
+                style={item}
+                onClick={onNavigate}
+            >
                 Личный кабинет
             </Link>
             {/* Drafts leave with the reader, for a shared computer; the form goes on to
@@ -192,6 +209,7 @@ function Account({
                 <button
                     type="submit"
                     role="menuitem"
+                    className="tw-menu-item"
                     style={{ ...item, color: 'var(--tw-text-secondary)' }}
                 >
                     Выйти

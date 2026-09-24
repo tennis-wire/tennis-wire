@@ -79,6 +79,16 @@ a:hover {
     outline-offset: 2px;
 }
 
+/* A row of a popover menu lights up under the pointer. The background lives here and not in the
+   inline style, which would win over :hover. */
+.tw-menu-item {
+    background: none;
+}
+
+.tw-menu-item:hover:not(:disabled) {
+    background: var(--tw-bg-alt);
+}
+
 /* Markup this app does not render: the article body arrives from the editor as HTML */
 .tw-article-body {
     font-size: 18px;

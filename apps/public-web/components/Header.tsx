@@ -150,6 +150,7 @@ export default function Header() {
                                             key={section.href}
                                             href={section.href}
                                             onClick={() => setSectionsOpen(false)}
+                                            className="tw-menu-item"
                                             style={{
                                                 display: 'block',
                                                 padding: '8px 12px',
