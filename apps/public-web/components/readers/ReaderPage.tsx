@@ -80,8 +80,16 @@ export default function ReaderPage({ id }: { id: string }) {
     const { reader } = state
     return (
         <>
+            {/* The header wraps: the ignore control stands at its right, and the mode picker,
+                once open, takes a line of its own under the name */}
             <header
-                style={{ display: 'flex', gap: 16, alignItems: 'center', margin: '8px 0 20px' }}
+                style={{
+                    display: 'flex',
+                    gap: 16,
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    margin: '8px 0 18px',
+                }}
             >
                 <Avatar
                     name={reader.displayName}
@@ -99,16 +107,17 @@ export default function ReaderPage({ id }: { id: string }) {
                     >
                         {reader.displayName}
                     </h1>
-                    <p style={{ ...text, marginTop: 4 }}>
+                    <p style={{ ...text, color: 'var(--tw-text-secondary)', marginTop: 4 }}>
                         {strings.readerSince(since.format(new Date(reader.createdAt)))} ·{' '}
                         {strings.commentTally(reader.commentCount)}
                     </p>
                 </div>
+                <ReaderIgnore readerId={reader.id} onMode={setMode} />
             </header>
-            <ReaderIgnore readerId={reader.id} onMode={setMode} />
             <AuthorComments
                 key={mode ?? 'none'}
                 authorId={reader.id}
+                framed
                 empty={
                     mode === 'subtree_removal' ? strings.readerRemovedByIgnore : strings.readerEmpty
                 }

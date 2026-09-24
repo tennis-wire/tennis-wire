@@ -3,15 +3,45 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
-import IgnoreModePicker from '@/components/discussion/IgnoreModePicker'
+import IgnoreModePicker, { PickerPanel } from '@/components/discussion/IgnoreModePicker'
+import ModeBadge from '@/components/discussion/ModeBadge'
 import { strings } from '@/components/discussion/strings'
-import { action, muted } from '@/components/discussion/styles'
+import { action, linkButton, muted } from '@/components/discussion/styles'
 import { DiscussionError } from '@/lib/discussion/api'
 import { getBlock, removeBlock, setBlock } from '@/lib/discussion/endpoints'
 import type { BlockMode } from '@/lib/discussion/modes'
 
 // null: not ignored. No entry yet is the loading state.
 type Entry = { kind: 'failed' } | { kind: 'known'; mode: BlockMode | null }
+
+// The right of the reader page's header
+const side: React.CSSProperties = {
+    marginLeft: 'auto',
+    display: 'flex',
+    gap: 14,
+    alignItems: 'center',
+    flexWrap: 'wrap',
+}
+
+// Not ignored yet: one plain button, nothing about modes until the reader asks
+const button: React.CSSProperties = {
+    font: 'inherit',
+    fontSize: 14,
+    padding: '9px 16px',
+    borderRadius: 7,
+    border: '1px solid var(--tw-border)',
+    background: 'var(--tw-surface)',
+    color: 'var(--tw-text-secondary)',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+}
+
+const changeLink: React.CSSProperties = { ...linkButton, fontSize: 14, fontWeight: 600 }
+const liftLink: React.CSSProperties = {
+    ...linkButton,
+    fontSize: 14,
+    color: 'var(--tw-text-secondary)',
+}
 
 const status = (error: unknown) => (error instanceof DiscussionError ? error.status : null)
 
@@ -78,8 +108,8 @@ export default function ReaderIgnore({ readerId, onMode }: Props) {
 
     if (entry.kind === 'failed')
         return (
-            <p style={{ ...muted, margin: '0 0 16px' }}>
-                {strings.loadFailed} ·{' '}
+            <p style={{ ...muted, ...side, margin: 0 }}>
+                {strings.loadFailed} &middot;{' '}
                 <button
                     type="button"
                     style={action}
@@ -96,50 +126,68 @@ export default function ReaderIgnore({ readerId, onMode }: Props) {
     const { mode } = entry
     if (editing)
         return (
-            <div style={{ margin: '0 0 16px' }}>
-                <IgnoreModePicker
-                    initial={mode ?? 'soft'}
-                    confirmLabel={mode ? strings.save : strings.ignore}
-                    busy={busy}
-                    failure={error}
-                    onConfirm={(next) =>
-                        next === mode
-                            ? setEditing(false)
-                            : void change(
-                                  async () => (await setBlock(readerId, next)).mode,
-                                  mode ? strings.saveFailed : strings.ignoreFailed
-                              )
-                    }
-                    onCancel={() => {
-                        setEditing(false)
-                        setError(null)
-                    }}
-                />
+            <div style={{ flexBasis: '100%' }}>
+                <PickerPanel>
+                    <IgnoreModePicker
+                        initial={mode ?? 'soft'}
+                        confirmLabel={mode ? strings.save : strings.ignore}
+                        busy={busy}
+                        failure={error}
+                        onConfirm={(next) =>
+                            next === mode
+                                ? setEditing(false)
+                                : void change(
+                                      async () => (await setBlock(readerId, next)).mode,
+                                      mode ? strings.saveFailed : strings.ignoreFailed
+                                  )
+                        }
+                        onCancel={() => {
+                            setEditing(false)
+                            setError(null)
+                        }}
+                    />
+                </PickerPanel>
+            </div>
+        )
+
+    if (!mode)
+        return (
+            <div style={side}>
+                <button type="button" style={button} onClick={() => setEditing(true)}>
+                    {strings.ignore}
+                </button>
             </div>
         )
 
     return (
-        <p style={{ ...muted, margin: '0 0 16px', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-            {mode && <span>{strings.ignoredAs(strings.modes[mode])}</span>}
-            <button type="button" style={action} disabled={busy} onClick={() => setEditing(true)}>
-                {mode ? strings.changeMode : strings.ignore}
+        <div style={side}>
+            <ModeBadge mode={mode} />
+            <button
+                type="button"
+                style={changeLink}
+                disabled={busy}
+                onClick={() => setEditing(true)}
+            >
+                {strings.changeMode}
             </button>
-            {mode && (
-                <button
-                    type="button"
-                    style={action}
-                    disabled={busy}
-                    onClick={() =>
-                        void change(async () => {
-                            await removeBlock(readerId)
-                            return null
-                        }, strings.unignoreFailed)
-                    }
-                >
-                    {strings.unignore}
-                </button>
+            <button
+                type="button"
+                style={liftLink}
+                disabled={busy}
+                onClick={() =>
+                    void change(async () => {
+                        await removeBlock(readerId)
+                        return null
+                    }, strings.unignoreFailed)
+                }
+            >
+                {strings.unignore}
+            </button>
+            {error && (
+                <span role="alert" style={muted}>
+                    {error}
+                </span>
             )}
-            {error && <span role="alert">{error}</span>}
-        </p>
+        </div>
     )
 }
