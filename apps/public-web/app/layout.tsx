@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { ThemeProvider, bootScript, themeCss } from '@/theme'
+import { fontVariables } from '@/theme/faces'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import ReaderSessionProvider from '@/components/auth/ReaderSessionProvider'
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
 // inside the tree still shows up.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
-        <html lang="ru" suppressHydrationWarning>
+        <html lang="ru" className={fontVariables} suppressHydrationWarning>
             <body>
                 {/* Every look, and the line that picks one, both before the page is drawn */}
                 <style dangerouslySetInnerHTML={{ __html: themeCss() }} />

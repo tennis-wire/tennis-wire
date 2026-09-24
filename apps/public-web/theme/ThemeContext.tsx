@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useSyncExternalStore } from 'react'
 
-import { FONT_PAIRS, type FontPairKey } from './fonts'
+import type { FontPairKey } from './fonts'
 import type { PaletteKey } from './palettes'
 import {
     serverTheme,
@@ -35,19 +35,6 @@ function systemIsDark() {
     return window.matchMedia(DARK_QUERY).matches
 }
 
-// The face files still arrive after the page: the boot script picks the family, the browser
-// falls back until the sheet lands
-function loadFontUrls(key: FontPairKey) {
-    const pair = FONT_PAIRS[key]
-    for (const url of [pair.displayUrl, pair.bodyUrl]) {
-        if (document.querySelector(`link[href="${url}"]`)) continue
-        const link = document.createElement('link')
-        link.rel = 'stylesheet'
-        link.href = url
-        document.head.appendChild(link)
-    }
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const state = useSyncExternalStore(subscribeToStored, storedTheme, serverTheme)
     const systemDark = useSyncExternalStore(subscribeToSystem, systemIsDark, () => false)
@@ -65,8 +52,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         query.addEventListener('change', apply)
         return () => query.removeEventListener('change', apply)
     }, [state.mode])
-
-    useEffect(() => loadFontUrls(state.fontPair), [state.fontPair])
 
     // Everything else onto <html> is written here, where a reader asked for it, so the only
     // writer before that is the boot script, and the two never race
