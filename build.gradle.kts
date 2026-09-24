@@ -20,6 +20,11 @@ allprojects {
 }
 
 subprojects {
+    // Spring Boot 4.1.1 manages Tomcat 11.0.24, which carries CVE-2026-65905 and the advisories
+    // published with it. The dependency-management plugin reads this in place of the BOM's value.
+    // Remove once Spring Boot itself manages 11.0.25 or later.
+    extra["tomcat.version"] = "11.0.26"
+
     apply(plugin = "java")
     apply(plugin = "com.github.spotbugs")
     apply(plugin = "pmd")
