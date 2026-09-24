@@ -1,264 +1,240 @@
 'use client'
 
+import { useState } from 'react'
+
 import { useTheme, PALETTES, FONT_PAIRS } from '@/theme'
 import type { PaletteKey, FontPairKey, ThemeMode } from '@/theme'
 
-const MODES: { value: ThemeMode; label: string; icon: string; hint: string }[] = [
-    { value: 'light', label: 'Светлая', icon: '☀️', hint: 'По умолчанию' },
-    { value: 'dark', label: 'Тёмная', icon: '🌙', hint: 'Для вечерних матчей' },
-    { value: 'system', label: 'Как в системе', icon: '🖥️', hint: 'Переключается сама' },
+const MODES: { value: ThemeMode; label: string }[] = [
+    { value: 'system', label: 'Системная' },
+    { value: 'light', label: 'Светлая' },
+    { value: 'dark', label: 'Тёмная' },
 ]
 
+type Row = 'palette' | 'fonts'
+
+const card: React.CSSProperties = {
+    background: 'var(--tw-surface)',
+    border: '1px solid var(--tw-border)',
+    borderRadius: 12,
+}
+
+const label: React.CSSProperties = { fontSize: 15, fontWeight: 600 }
+
+const note: React.CSSProperties = { fontSize: 13, color: 'var(--tw-text-secondary)' }
+
+const segment = (chosen: boolean): React.CSSProperties => ({
+    font: 'inherit',
+    fontSize: 14,
+    padding: '7px 14px',
+    border: 'none',
+    borderRadius: 7,
+    background: chosen ? 'var(--tw-surface)' : 'transparent',
+    color: chosen ? 'var(--tw-text)' : 'var(--tw-text-secondary)',
+    fontWeight: chosen ? 600 : 400,
+    boxShadow: chosen ? '0 1px 2px rgba(0,0,0,0.12)' : 'none',
+    cursor: 'pointer',
+})
+
+const choice = (chosen: boolean): React.CSSProperties => ({
+    font: 'inherit',
+    fontSize: 14,
+    color: 'var(--tw-text)',
+    fontWeight: chosen ? 600 : 400,
+    borderRadius: 9,
+    border: chosen ? '2px solid var(--tw-primary)' : '1px solid var(--tw-border)',
+    background: chosen ? 'var(--tw-tag)' : 'var(--tw-surface)',
+    cursor: 'pointer',
+    textAlign: 'left',
+})
+
+const dot = (color: string, overlap: boolean): React.CSSProperties => ({
+    width: 16,
+    height: 16,
+    borderRadius: '50%',
+    background: color,
+    marginLeft: overlap ? -5 : 0,
+})
+
+// Three rows, each with its value on the right. The theme is short enough to set in place; the
+// palette and the font open under their row, one at a time.
 export default function AppearancePage() {
     const { palette, fontPair, mode, isDark, setPalette, setFontPair, setMode } = useTheme()
+    const [open, setOpen] = useState<Row | null>(null)
+    const toggle = (row: Row) => setOpen(open === row ? null : row)
 
     return (
         <div>
             <h1 style={{ fontFamily: 'var(--tw-font-display)', fontSize: 22, margin: '0 0 4px' }}>
                 Внешний вид
             </h1>
-            <p style={{ color: 'var(--tw-text-muted)', fontSize: 14, margin: '0 0 28px' }}>
+            <p style={{ color: 'var(--tw-text-secondary)', fontSize: 14, margin: '0 0 20px' }}>
                 Настройки хранятся в этом браузере и работают без входа.
             </p>
 
-            {/* theme */}
-            <section style={{ marginBottom: 32 }}>
-                <h2
+            <div style={card}>
+                <div
                     style={{
-                        fontSize: 16,
-                        fontWeight: 600,
-                        marginBottom: 12,
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 12,
+                        padding: '14px 16px',
                     }}
                 >
-                    Тема
-                </h2>
-                <div style={{ display: 'flex', gap: 10 }}>
-                    {MODES.map((option) => {
-                        const isActive = mode === option.value
-
-                        return (
+                    <span style={label}>Тема</span>
+                    <span style={{ flex: 1 }} />
+                    <div
+                        role="group"
+                        aria-label="Тема"
+                        style={{
+                            display: 'flex',
+                            gap: 2,
+                            padding: 2,
+                            borderRadius: 9,
+                            background: 'var(--tw-bg-alt)',
+                        }}
+                    >
+                        {MODES.map((option) => (
                             <button
                                 key={option.value}
+                                type="button"
+                                aria-pressed={mode === option.value}
                                 onClick={() => setMode(option.value)}
-                                style={{
-                                    flex: 1,
-                                    padding: '14px 16px',
-                                    borderRadius: 12,
-                                    border: isActive
-                                        ? '2px solid var(--tw-primary)'
-                                        : '1px solid var(--tw-border)',
-                                    background: isActive ? 'var(--tw-tag)' : 'var(--tw-surface)',
-                                    cursor: 'pointer',
-                                    fontFamily: 'var(--tw-font-body)',
-                                    fontSize: 14,
-                                    color: 'var(--tw-text)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 10,
-                                    textAlign: 'left',
-                                }}
+                                style={segment(mode === option.value)}
                             >
-                                <span style={{ fontSize: 20 }}>{option.icon}</span>
-                                <span>
-                                    <span
-                                        style={{
-                                            display: 'block',
-                                            fontWeight: isActive ? 600 : 400,
-                                        }}
-                                    >
-                                        {option.label}
-                                    </span>
-                                    <span
-                                        style={{
-                                            display: 'block',
-                                            fontSize: 12,
-                                            color: 'var(--tw-text-muted)',
-                                            marginTop: 2,
-                                        }}
-                                    >
-                                        {option.hint}
-                                    </span>
-                                </span>
+                                {option.label}
                             </button>
-                        )
-                    })}
+                        ))}
+                    </div>
                 </div>
-            </section>
 
-            {/* palette */}
-            <section style={{ marginBottom: 32 }}>
-                <h2
-                    style={{
-                        fontSize: 16,
-                        fontWeight: 600,
-                        marginBottom: 12,
-                    }}
+                <Expander
+                    title="Палитра"
+                    value={PALETTES[palette].name}
+                    open={open === 'palette'}
+                    onToggle={() => toggle('palette')}
                 >
-                    Палитра
-                </h2>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {(Object.keys(PALETTES) as PaletteKey[]).map((key) => {
-                        const p = PALETTES[key]
-                        const isActive = palette === key
-                        const previewColors = isDark ? p.darkColors : p.colors
-
-                        return (
-                            <button
-                                key={key}
-                                onClick={() => setPalette(key)}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 14,
-                                    padding: '14px 16px',
-                                    borderRadius: 12,
-                                    border: isActive
-                                        ? '2px solid var(--tw-primary)'
-                                        : '1px solid var(--tw-border)',
-                                    background: isActive ? 'var(--tw-tag)' : 'var(--tw-surface)',
-                                    cursor: 'pointer',
-                                    fontFamily: 'var(--tw-font-body)',
-                                    textAlign: 'left',
-                                    color: 'var(--tw-text)',
-                                    width: '100%',
-                                }}
-                            >
-                                {/* color preview dots */}
-                                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                                    {[
-                                        previewColors.primary,
-                                        previewColors.primaryLight,
-                                        previewColors.accent,
-                                        previewColors.bg,
-                                    ].map((color, i) => (
-                                        <div
-                                            key={i}
-                                            style={{
-                                                width: 20,
-                                                height: 20,
-                                                borderRadius: '50%',
-                                                background: color,
-                                                border: '1px solid rgba(0,0,0,0.1)',
-                                            }}
-                                        />
-                                    ))}
-                                </div>
-                                <div>
-                                    <div
-                                        style={{
-                                            fontSize: 14,
-                                            fontWeight: isActive ? 600 : 500,
-                                        }}
-                                    >
-                                        {p.name}
-                                    </div>
-                                    <div
-                                        style={{
-                                            fontSize: 12,
-                                            color: 'var(--tw-text-muted)',
-                                            marginTop: 2,
-                                        }}
-                                    >
-                                        {p.description}
-                                    </div>
-                                </div>
-                            </button>
-                        )
-                    })}
-                </div>
-            </section>
-
-            {/* font */}
-            <section style={{ marginBottom: 32 }}>
-                <h2
-                    style={{
-                        fontSize: 16,
-                        fontWeight: 600,
-                        marginBottom: 12,
-                    }}
-                >
-                    Шрифт
-                </h2>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {(Object.keys(FONT_PAIRS) as FontPairKey[]).map((key) => {
-                        const f = FONT_PAIRS[key]
-                        const isActive = fontPair === key
-
-                        return (
-                            <button
-                                key={key}
-                                onClick={() => setFontPair(key)}
-                                style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 8,
-                                    padding: '14px 16px',
-                                    borderRadius: 12,
-                                    border: isActive
-                                        ? '2px solid var(--tw-primary)'
-                                        : '1px solid var(--tw-border)',
-                                    background: isActive ? 'var(--tw-tag)' : 'var(--tw-surface)',
-                                    cursor: 'pointer',
-                                    textAlign: 'left',
-                                    color: 'var(--tw-text)',
-                                    width: '100%',
-                                }}
-                            >
-                                <div
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+                        {(Object.keys(PALETTES) as PaletteKey[]).map((key) => {
+                            const p = PALETTES[key]
+                            // what the palette looks like in the mode the reader is in now
+                            const colors = isDark ? p.darkColors : p.colors
+                            return (
+                                <button
+                                    key={key}
+                                    type="button"
+                                    aria-pressed={palette === key}
+                                    onClick={() => setPalette(key)}
                                     style={{
+                                        ...choice(palette === key),
                                         display: 'flex',
-                                        justifyContent: 'space-between',
                                         alignItems: 'center',
+                                        gap: 8,
+                                        padding: '7px 10px 7px 8px',
+                                    }}
+                                >
+                                    <span aria-hidden style={{ display: 'flex', flexShrink: 0 }}>
+                                        <span style={dot(colors.primary, false)} />
+                                        <span style={dot(colors.accent, true)} />
+                                    </span>
+                                    {p.name}
+                                </button>
+                            )
+                        })}
+                    </div>
+                    <p style={{ ...note, margin: '10px 0 0' }}>{PALETTES[palette].description}</p>
+                </Expander>
+
+                <Expander
+                    title="Шрифт"
+                    value={FONT_PAIRS[fontPair].name}
+                    open={open === 'fonts'}
+                    onToggle={() => toggle('fonts')}
+                >
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+                        {(Object.keys(FONT_PAIRS) as FontPairKey[]).map((key) => {
+                            const f = FONT_PAIRS[key]
+                            return (
+                                <button
+                                    key={key}
+                                    type="button"
+                                    aria-pressed={fontPair === key}
+                                    onClick={() => setFontPair(key)}
+                                    style={{
+                                        ...choice(fontPair === key),
+                                        flex: '1 1 150px',
+                                        minWidth: 0,
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'flex-start',
+                                        gap: 4,
+                                        padding: '10px 12px',
                                     }}
                                 >
                                     <span
                                         style={{
-                                            fontSize: 14,
-                                            fontWeight: isActive ? 600 : 500,
-                                            fontFamily: 'var(--tw-font-body)',
+                                            fontFamily: f.display,
+                                            fontSize: 19,
+                                            lineHeight: 1.1,
                                         }}
                                     >
                                         {f.name}
                                     </span>
-                                    <span
-                                        style={{
-                                            fontSize: 12,
-                                            color: 'var(--tw-text-muted)',
-                                            fontFamily: 'var(--tw-font-body)',
-                                        }}
-                                    >
+                                    <span style={{ ...note, fontFamily: f.body, fontWeight: 400 }}>
                                         {f.description}
                                     </span>
-                                </div>
-                                {/* Font preview */}
-                                <div>
-                                    <div
-                                        style={{
-                                            fontFamily: f.display,
-                                            fontSize: 22,
-                                            lineHeight: 1.2,
-                                            marginBottom: 4,
-                                        }}
-                                    >
-                                        Заголовок новости
-                                    </div>
-                                    <div
-                                        style={{
-                                            fontFamily: f.body,
-                                            fontSize: 14,
-                                            color: 'var(--tw-text-secondary)',
-                                            lineHeight: 1.5,
-                                        }}
-                                    >
-                                        Основной текст статьи выглядит так. Алькарас продолжает
-                                        впечатлять теннисный мир.
-                                    </div>
-                                </div>
-                            </button>
-                        )
-                    })}
-                </div>
-            </section>
+                                </button>
+                            )
+                        })}
+                    </div>
+                </Expander>
+            </div>
+        </div>
+    )
+}
+
+function Expander({
+    title,
+    value,
+    open,
+    onToggle,
+    children,
+}: {
+    title: string
+    value: string
+    open: boolean
+    onToggle: () => void
+    children: React.ReactNode
+}) {
+    return (
+        <div style={{ padding: '14px 16px', borderTop: '1px solid var(--tw-border)' }}>
+            <button
+                type="button"
+                aria-expanded={open}
+                onClick={onToggle}
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    width: '100%',
+                    padding: 0,
+                    border: 'none',
+                    background: 'none',
+                    font: 'inherit',
+                    color: 'var(--tw-text)',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                }}
+            >
+                <span style={label}>{title}</span>
+                <span style={{ flex: 1 }} />
+                <span style={{ fontSize: 14, color: 'var(--tw-text-secondary)' }}>{value}</span>
+                <span aria-hidden style={{ fontSize: 13, color: 'var(--tw-text-muted)' }}>
+                    {open ? '\u25B4' : '\u25BE'}
+                </span>
+            </button>
+            {open && children}
         </div>
     )
 }
