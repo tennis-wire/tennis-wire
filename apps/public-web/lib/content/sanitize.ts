@@ -1,5 +1,7 @@
 import sanitizeHtml from 'sanitize-html'
 
+import { EMBED_HOSTS } from './embeds'
+
 // What the editor emits (editorial-ui: TipTap StarterKit, Image, Youtube and the two embeds of
 // its own), and nothing it does not. The source is staff, but a staff account is one phishing
 // away, and a script on this page would talk to the proxy with the reader's session.
@@ -46,7 +48,7 @@ const OPTIONS: sanitizeHtml.IOptions = {
         div: ['telegram-embed', 'video-embed', 'poll-embed'],
     },
     allowedSchemes: ['http', 'https', 'mailto'],
-    allowedIframeHostnames: ['www.youtube.com', 'www.youtube-nocookie.com', 't.me'],
+    allowedIframeHostnames: EMBED_HOSTS,
     // A frame from anywhere else loses its src above and would stay as an empty box. So does a
     // picture pasted into the editor before it had uploads: a data: URL, dropped with its scheme.
     exclusiveFilter: (frame) =>
