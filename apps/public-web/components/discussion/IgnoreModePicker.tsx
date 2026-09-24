@@ -106,3 +106,25 @@ export default function IgnoreModePicker({
         </div>
     )
 }
+
+// The picker on a panel of its own, where it opens in a list or on a page rather than in a menu
+export function PickerPanel({ children }: { children: React.ReactNode }) {
+    return (
+        <div style={{ background: 'var(--tw-bg-alt)', borderRadius: 10, padding: '14px 16px' }}>
+            <div
+                aria-hidden
+                style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    color: 'var(--tw-text-secondary)',
+                    marginBottom: 10,
+                }}
+            >
+                {strings.ignoreMode}
+            </div>
+            {children}
+        </div>
+    )
+}

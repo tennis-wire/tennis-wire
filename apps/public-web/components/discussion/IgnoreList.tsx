@@ -8,11 +8,12 @@ import { listBlocks, removeBlock, setBlock } from '@/lib/discussion/endpoints'
 import { initial, reduce, type Failure, type Reason, type Row } from '@/lib/discussion/ignoreList'
 import type { BlockMode } from '@/lib/discussion/modes'
 
-import IgnoreModePicker from './IgnoreModePicker'
+import IgnoreModePicker, { PickerPanel } from './IgnoreModePicker'
+import ModeBadge from './ModeBadge'
 import { PersonFace, PersonName } from './Person'
 import { formatDay } from './format'
 import { strings } from './strings'
-import { action, linkButton, muted } from './styles'
+import { linkButton, muted } from './styles'
 
 const status = (error: unknown) => (error instanceof DiscussionError ? error.status : null)
 
@@ -25,8 +26,20 @@ function reasonOf(error: unknown): Reason {
 const text: React.CSSProperties = { ...muted, fontSize: 14, margin: 0 }
 
 const item: React.CSSProperties = {
-    padding: '14px 0',
-    borderBottom: '1px solid var(--tw-border)',
+    padding: '16px 0',
+    borderTop: '1px solid var(--tw-border)',
+}
+
+const change: React.CSSProperties = { ...linkButton, fontSize: 14, fontWeight: 600 }
+const lift: React.CSSProperties = {
+    ...linkButton,
+    fontSize: 14,
+    color: 'var(--tw-text-secondary)',
+}
+
+// The hint reads on after the date, so it starts in lower case
+function lowerFirst(text: string): string {
+    return text.charAt(0).toLowerCase() + text.slice(1)
 }
 
 export default function IgnoreList() {
@@ -119,7 +132,14 @@ export default function IgnoreList() {
 
     return (
         <div>
-            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+            <ul
+                style={{
+                    listStyle: 'none',
+                    margin: 0,
+                    padding: 0,
+                    borderBottom: '1px solid var(--tw-border)',
+                }}
+            >
                 {state.rows.map((row) => (
                     <IgnoreRow
                         key={row.block.blockedId}
@@ -172,23 +192,50 @@ function IgnoreRow({ row, editing, onEdit, onCancel, onSave, onLift }: RowProps)
 
     return (
         <li style={item}>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                 <PersonFace user={block.user} />
-                <div style={{ minWidth: 0, flex: '1 1 160px' }}>
-                    <PersonName user={block.user} />
-                    <div style={{ ...muted, marginTop: 2 }}>
+                <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                        <PersonName user={block.user} />
+                        {!lifted && <ModeBadge mode={block.mode} />}
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--tw-text-secondary)', marginTop: 3 }}>
                         {lifted
                             ? strings.notIgnoring
-                            : `${strings.modes[block.mode]} · ${strings.ignoringSince(formatDay(block.createdAt))}`}
+                            : `${strings.ignoringSince(formatDay(block.createdAt))} \u2014 ${lowerFirst(strings.modeHints[block.mode])}`}
                     </div>
+
+                    {/* The choice opens under the row, not in a menu: the list is where the reader
+                        came to look at modes */}
+                    {editing ? (
+                        <div style={{ marginTop: 12 }}>
+                            <PickerPanel>
+                                <IgnoreModePicker
+                                    initial={block.mode}
+                                    confirmLabel={strings.save}
+                                    busy={busy}
+                                    failure={inPicker ? failed : null}
+                                    onConfirm={onSave}
+                                    onCancel={onCancel}
+                                />
+                            </PickerPanel>
+                        </div>
+                    ) : (
+                        failed &&
+                        !inPicker && (
+                            <p role="alert" style={{ ...muted, margin: '6px 0 0' }}>
+                                {failed}
+                            </p>
+                        )
+                    )}
                 </div>
 
                 {!editing && (
-                    <div style={{ display: 'flex', gap: 16 }}>
+                    <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
                         {lifted ? (
                             <button
                                 type="button"
-                                style={action}
+                                style={change}
                                 disabled={busy}
                                 onClick={() => onSave(block.mode)}
                             >
@@ -198,18 +245,13 @@ function IgnoreRow({ row, editing, onEdit, onCancel, onSave, onLift }: RowProps)
                             <>
                                 <button
                                     type="button"
-                                    style={action}
+                                    style={change}
                                     disabled={busy}
                                     onClick={onEdit}
                                 >
                                     {strings.changeMode}
                                 </button>
-                                <button
-                                    type="button"
-                                    style={action}
-                                    disabled={busy}
-                                    onClick={onLift}
-                                >
+                                <button type="button" style={lift} disabled={busy} onClick={onLift}>
                                     {strings.unignore}
                                 </button>
                             </>
@@ -217,26 +259,6 @@ function IgnoreRow({ row, editing, onEdit, onCancel, onSave, onLift }: RowProps)
                     </div>
                 )}
             </div>
-
-            {editing ? (
-                <div style={{ margin: '10px 0 0 48px' }}>
-                    <IgnoreModePicker
-                        initial={block.mode}
-                        confirmLabel={strings.save}
-                        busy={busy}
-                        failure={inPicker ? failed : null}
-                        onConfirm={onSave}
-                        onCancel={onCancel}
-                    />
-                </div>
-            ) : (
-                failed &&
-                !inPicker && (
-                    <p role="alert" style={{ ...muted, margin: '6px 0 0 48px' }}>
-                        {failed}
-                    </p>
-                )
-            )}
         </li>
     )
 }
