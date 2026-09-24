@@ -19,7 +19,7 @@ import ReactionBar from './ReactionBar'
 import RestrictionPlate from './RestrictionPlate'
 import { formatWhen } from './format'
 import { strings } from './strings'
-import { action, linkButton, muted } from './styles'
+import { action, blankFace, linkButton, muted, signInLink } from './styles'
 
 // What every comment on the page shares: who is reading, what is open, and the handlers
 export type Ctx = {
@@ -67,18 +67,16 @@ type Props = {
     ctx: Ctx
 }
 
-const card: React.CSSProperties = {
-    padding: '14px 0',
-    borderTop: '1px solid var(--tw-border)',
-}
+// No rule between comments: the space above each one and the thread down the rail keep them
+// apart. A reply sits closer to its parent than one comment to the next.
+const card = (top: number): React.CSSProperties => ({ paddingTop: top })
 
-const highlighted: React.CSSProperties = {
-    ...card,
+const highlighted = (top: number): React.CSSProperties => ({
     background: 'color-mix(in srgb, var(--tw-accent-soft) 35%, transparent)',
     margin: '0 -12px',
-    padding: '14px 12px',
+    padding: `${top}px 12px 12px`,
     borderRadius: 6,
-}
+})
 
 // A comment is a rail and a column: the author's circle on the left, everything he wrote on the
 // right. Where replies are drawn under it, a thread runs down the rail past them, so the eye can
@@ -114,15 +112,6 @@ const byline: React.CSSProperties = {
     gap: 10,
     alignItems: 'center',
     minHeight: 24,
-}
-
-// Nobody to draw: a placeholder is not signed
-const blank: React.CSSProperties = {
-    width: 36,
-    height: 36,
-    flexShrink: 0,
-    borderRadius: '50%',
-    border: '1px dashed var(--tw-border)',
 }
 
 const notice: React.CSSProperties = {
@@ -175,13 +164,21 @@ export default function CommentItem({ node, inline, ctx }: Props) {
     const own = ctx.userId !== null && comment.author?.id === ctx.userId
     const editing = ctx.editing === comment.id
     // a line down to a button would say there is a thread where there is only an offer to load one
-    const threaded = (replying && readable) || (node.replies?.length ?? 0) > 0
+    const threaded = (replying && readable && ctx.signedIn) || (node.replies?.length ?? 0) > 0
+    const top = inline ? 18 : 14
 
     return (
-        <div id={elementId(comment)} style={ctx.highlight === comment.id ? highlighted : card}>
+        <div
+            id={elementId(comment)}
+            style={ctx.highlight === comment.id ? highlighted(top) : card(top)}
+        >
             <div style={row}>
                 <div style={rail}>
-                    {collapsed || !readable ? <span style={blank} /> : authorFace(comment.author)}
+                    {collapsed || !readable ? (
+                        <span style={blankFace} />
+                    ) : (
+                        authorFace(comment.author)
+                    )}
                     {threaded && <span style={thread} />}
                 </div>
                 <div style={column}>
@@ -246,13 +243,24 @@ export default function CommentItem({ node, inline, ctx }: Props) {
                                         onReact={ctx.onReact}
                                     />
                                     <p style={{ margin: '10px 0 0' }}>
-                                        <button
-                                            type="button"
-                                            style={action}
-                                            onClick={() => ctx.onOpenReply(comment.id)}
-                                        >
-                                            {strings.reply}
-                                        </button>
+                                        {/* Someone signed out gets the way in where the button
+                                            stood, not under it */}
+                                        {replying && !ctx.signedIn ? (
+                                            <span style={muted}>
+                                                {strings.signInToReply} &middot;{' '}
+                                                <a href={loginHere()} style={signInLink}>
+                                                    {strings.signIn}
+                                                </a>
+                                            </span>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                style={action}
+                                                onClick={() => ctx.onOpenReply(comment.id)}
+                                            >
+                                                {strings.reply}
+                                            </button>
+                                        )}
                                     </p>
                                 </>
                             )}
@@ -269,11 +277,11 @@ export default function CommentItem({ node, inline, ctx }: Props) {
                             </Placeholder>
                         </>
                     )}
-                    {replying && readable && (
+                    {replying && readable && ctx.signedIn && (
                         <div style={{ marginTop: 8 }}>
-                            {ctx.signedIn && ctx.restriction ? (
+                            {ctx.restriction ? (
                                 <RestrictionPlate until={ctx.restriction.until} />
-                            ) : ctx.signedIn ? (
+                            ) : (
                                 <ComposeForm
                                     draftKey={ctx.draftKeyFor(comment.id)}
                                     placeholder={strings.yourReply}
@@ -285,13 +293,6 @@ export default function CommentItem({ node, inline, ctx }: Props) {
                                     onParentDeleted={ctx.onPromote}
                                     onSessionExpired={ctx.onSessionExpired}
                                 />
-                            ) : (
-                                <p style={{ ...muted, margin: 0 }}>
-                                    {strings.signInToReply} ·{' '}
-                                    <a href={loginHere()} style={{ color: 'var(--tw-primary)' }}>
-                                        {strings.signIn}
-                                    </a>
-                                </p>
                             )}
                         </div>
                     )}

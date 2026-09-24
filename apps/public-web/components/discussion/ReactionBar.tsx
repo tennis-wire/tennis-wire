@@ -25,7 +25,8 @@ const row: React.CSSProperties = {
     margin: '10px 0 0',
 }
 
-const chip = (held: boolean, live: boolean): React.CSSProperties => ({
+// A chip that leads to the login is quieter than one that takes a tap: it only shows the count
+const chip = (held: boolean, live: boolean, quiet: boolean): React.CSSProperties => ({
     font: 'inherit',
     fontSize: 13,
     lineHeight: 1.2,
@@ -36,8 +37,8 @@ const chip = (held: boolean, live: boolean): React.CSSProperties => ({
     borderRadius: 14,
     textDecoration: 'none',
     border: `1px solid ${held ? 'var(--tw-primary)' : 'var(--tw-border)'}`,
-    background: held ? 'color-mix(in srgb, var(--tw-primary) 12%, transparent)' : 'transparent',
-    color: held ? 'var(--tw-primary)' : 'var(--tw-text)',
+    background: held ? 'var(--tw-tag)' : 'transparent',
+    color: held ? 'var(--tw-primary)' : quiet ? 'var(--tw-text-muted)' : 'var(--tw-text)',
     cursor: live ? 'pointer' : 'default',
 })
 
@@ -49,6 +50,9 @@ export default function ReactionBar({ comment, canReact, loginHref, onReact }: P
     function put(slot: ReactionSlot, value: string, held: boolean) {
         onReact(comment, slot, held ? null : value)
     }
+
+    // An emoji nobody used is offered only to someone who can put one there
+    const emojiShown = EMOJI.filter(({ key }) => canReact || (comment.emojiCounts[key] ?? 0) > 0)
 
     return (
         <p style={row}>
@@ -69,26 +73,23 @@ export default function ReactionBar({ comment, canReact, loginHref, onReact }: P
                 loginHref={canReact ? undefined : loginHref}
             />
 
-            <span style={{ ...muted, margin: '0 2px' }} aria-hidden>
-                &middot;
-            </span>
+            {emojiShown.length > 0 && (
+                <span style={{ ...muted, margin: '0 2px' }} aria-hidden>
+                    &middot;
+                </span>
+            )}
 
-            {EMOJI.map(({ key, glyph, label }) => {
-                const count = comment.emojiCounts[key] ?? 0
-                // An emoji nobody used is offered only to someone who can put one there
-                if (count === 0 && !canReact) return null
-                return (
-                    <Chip
-                        key={key}
-                        held={emoji === key}
-                        label={label}
-                        glyph={glyph}
-                        count={count}
-                        onClick={canReact ? () => put('emoji', key, emoji === key) : undefined}
-                        loginHref={canReact ? undefined : loginHref}
-                    />
-                )
-            })}
+            {emojiShown.map(({ key, glyph, label }) => (
+                <Chip
+                    key={key}
+                    held={emoji === key}
+                    label={label}
+                    glyph={glyph}
+                    count={comment.emojiCounts[key] ?? 0}
+                    onClick={canReact ? () => put('emoji', key, emoji === key) : undefined}
+                    loginHref={canReact ? undefined : loginHref}
+                />
+            ))}
         </p>
     )
 }
@@ -106,7 +107,11 @@ type ChipProps = {
 // One shape for the three states: a button for someone who may react, a link to the login for
 // someone who is not signed in, and plain text on one's own comment.
 function Chip({ held, label, glyph, count, onClick, loginHref }: ChipProps) {
-    const style = chip(held, onClick !== undefined || loginHref !== undefined)
+    const style = chip(
+        held,
+        onClick !== undefined || loginHref !== undefined,
+        !onClick && !!loginHref
+    )
     const inside = (
         <>
             <span aria-hidden>{glyph}</span>
