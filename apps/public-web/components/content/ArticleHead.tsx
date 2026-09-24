@@ -48,7 +48,6 @@ export default function ArticleHead({ article }: { article: Article }) {
             )}
             <h1
                 style={{
-                    fontFamily: 'var(--tw-font-display)',
                     fontSize: 36,
                     lineHeight: 1.15,
                     margin: '0 0 12px',

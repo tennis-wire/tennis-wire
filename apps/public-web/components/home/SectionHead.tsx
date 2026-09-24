@@ -21,9 +21,7 @@ export default function SectionHead({
                 marginBottom: gap,
             }}
         >
-            <h2 style={{ fontFamily: 'var(--tw-font-display)', fontSize: 24, margin: 0 }}>
-                {title}
-            </h2>
+            <h2 style={{ fontSize: 24, margin: 0 }}>{title}</h2>
             <Link href={href} style={{ fontSize: 14, fontWeight: 600, color: 'var(--tw-primary)' }}>
                 {more}
             </Link>

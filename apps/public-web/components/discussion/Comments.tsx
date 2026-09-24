@@ -27,7 +27,6 @@ const section: React.CSSProperties = {
 }
 
 const heading: React.CSSProperties = {
-    fontFamily: 'var(--tw-font-display)',
     fontSize: 24,
     margin: '0 0 20px',
 }

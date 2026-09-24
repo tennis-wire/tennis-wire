@@ -53,8 +53,8 @@ export default function MaterialsGrid() {
                             }}
                         />
                         <div
+                            className="tw-display"
                             style={{
-                                fontFamily: 'var(--tw-font-display)',
                                 fontSize: 19,
                                 lineHeight: 1.25,
                             }}

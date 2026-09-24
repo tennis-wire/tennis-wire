@@ -60,8 +60,8 @@ export default function Header() {
             >
                 <Link
                     href="/"
+                    className="tw-display"
                     style={{
-                        fontFamily: 'var(--tw-font-display)',
                         fontSize: 25,
                         fontWeight: 700,
                         letterSpacing: '-0.01em',

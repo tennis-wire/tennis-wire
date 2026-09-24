@@ -65,9 +65,7 @@ export default function AppearancePage() {
 
     return (
         <div>
-            <h1 style={{ fontFamily: 'var(--tw-font-display)', fontSize: 22, margin: '0 0 4px' }}>
-                Внешний вид
-            </h1>
+            <h1 style={{ fontSize: 22, margin: '0 0 4px' }}>Внешний вид</h1>
             <p style={{ color: 'var(--tw-text-secondary)', fontSize: 14, margin: '0 0 20px' }}>
                 Настройки хранятся в этом браузере и работают без входа.
             </p>

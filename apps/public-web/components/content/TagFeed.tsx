@@ -80,9 +80,7 @@ export default async function TagFeed({
             >
                 {KIND[tag.type]}
             </p>
-            <h1 style={{ fontFamily: 'var(--tw-font-display)', fontSize: 32, margin: '0 0 8px' }}>
-                {tag.name}
-            </h1>
+            <h1 style={{ fontSize: 32, margin: '0 0 8px' }}>{tag.name}</h1>
             {tag.description && (
                 <p style={{ color: 'var(--tw-text-secondary)', fontSize: 16, margin: '0 0 16px' }}>
                     {tag.description}

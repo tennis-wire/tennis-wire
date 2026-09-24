@@ -23,7 +23,6 @@ export default function HeroNews() {
                 </div>
                 <h2
                     style={{
-                        fontFamily: 'var(--tw-font-display)',
                         fontSize: 44,
                         lineHeight: 1.08,
                         letterSpacing: '-0.015em',

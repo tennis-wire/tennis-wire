@@ -104,7 +104,16 @@ export default function NicknameForm({
 
     return (
         <section>
-            <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 6px' }}>Имя</h2>
+            <h2
+                style={{
+                    fontFamily: 'var(--tw-font-body)',
+                    fontSize: 16,
+                    fontWeight: 600,
+                    margin: '0 0 6px',
+                }}
+            >
+                Имя
+            </h2>
             <p style={{ ...hint, margin: '0 0 14px' }}>
                 {chosen
                     ? `Сейчас вас видят как ${displayName}.`
