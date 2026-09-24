@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
+import { popoverPanel, usePopover } from '@/components/ui/popover'
 import { loginHere } from '@/lib/auth/loginHref'
 import { DiscussionError } from '@/lib/discussion/api'
 import type { BlockMode } from '@/lib/discussion/modes'
@@ -55,22 +56,12 @@ const toggleStyle: React.CSSProperties = {
     lineHeight: 1,
 }
 
-const overlay: React.CSSProperties = { position: 'fixed', inset: 0, zIndex: 10 }
-
 const popover: React.CSSProperties = {
-    position: 'absolute',
-    top: '100%',
+    ...popoverPanel,
     right: 0,
-    marginTop: 6,
-    padding: 6,
     minWidth: 230,
-    background: 'var(--tw-surface)',
-    border: '1px solid var(--tw-border)',
-    borderRadius: 10,
-    boxShadow: 'var(--tw-card-shadow)',
     fontSize: 14,
     textAlign: 'left',
-    zIndex: 20,
 }
 
 // No background: the class gives one under the pointer, and an inline one would win over it
@@ -123,7 +114,6 @@ export default function CommentMenu({
 }: Props) {
     const { setSession } = useReaderSession()
     const [panel, setPanel] = useState<Panel>({ kind: 'closed' })
-    const toggle = useRef<HTMLButtonElement>(null)
     // what this device already sent; the menu is client-only, so the read is safe here
     const [reported, setReported] = useState(() => wasReported(comment.id))
     const { author } = comment
@@ -134,10 +124,12 @@ export default function CommentMenu({
     // The panel shuts and the keyboard goes back to the dots it hangs off, instead of falling to
     // the top of the document. Where the comment changes under the reader — a removal, a new
     // ignore — the menu goes with it and there is no longer anything here to stand on.
+    const dismiss = useCallback(() => setPanel({ kind: 'closed' }), [])
+    const { root, trigger, panelId } = usePopover<HTMLSpanElement>(panel.kind !== 'closed', dismiss)
     const close = useCallback(() => {
-        setPanel({ kind: 'closed' })
-        toggle.current?.focus()
-    }, [])
+        dismiss()
+        trigger.current?.focus()
+    }, [dismiss, trigger])
 
     function signedOut() {
         onSessionExpired()
@@ -214,24 +206,15 @@ export default function CommentMenu({
         }
     }
 
-    useEffect(() => {
-        if (panel.kind === 'closed') return
-        const onKey = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') close()
-        }
-        document.addEventListener('keydown', onKey)
-        return () => document.removeEventListener('keydown', onKey)
-    }, [panel.kind, close])
-
     return (
-        <span style={anchor}>
+        <span ref={root} style={anchor}>
             <button
-                ref={toggle}
+                ref={trigger}
                 type="button"
                 style={toggleStyle}
                 aria-label={strings.actions}
-                aria-haspopup="menu"
                 aria-expanded={panel.kind !== 'closed'}
+                aria-controls={panelId}
                 onClick={() =>
                     setPanel(panel.kind === 'closed' ? { kind: 'menu' } : { kind: 'closed' })
                 }
@@ -240,211 +223,200 @@ export default function CommentMenu({
             </button>
 
             {panel.kind !== 'closed' && (
-                <>
-                    <span style={overlay} onClick={close} />
-                    <div
-                        role="menu"
-                        style={panel.kind === 'ignore' ? { ...popover, minWidth: 290 } : popover}
-                    >
-                        {panel.kind === 'menu' &&
-                            (own ? (
-                                <>
-                                    {onEdit && (
-                                        <button
-                                            type="button"
-                                            role="menuitem"
-                                            className="tw-menu-item"
-                                            style={item}
-                                            onClick={() => {
-                                                setPanel({ kind: 'closed' })
-                                                onEdit()
-                                            }}
-                                        >
-                                            {strings.edit}
-                                        </button>
-                                    )}
-                                    <button
-                                        type="button"
-                                        role="menuitem"
-                                        className="tw-menu-item"
-                                        style={danger}
-                                        onClick={() =>
-                                            setPanel({ kind: 'remove', busy: false, failed: false })
-                                        }
-                                    >
-                                        {strings.remove}
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    <button
-                                        type="button"
-                                        role="menuitem"
-                                        className="tw-menu-item"
-                                        style={item}
-                                        disabled={reported}
-                                        onClick={openReport}
-                                    >
-                                        {reported ? strings.reported : strings.report}
-                                    </button>
-                                    {/* no author, no id to ignore by: user-service had no profile */}
-                                    {author && (
-                                        <button
-                                            type="button"
-                                            role="menuitem"
-                                            className="tw-menu-item"
-                                            style={item}
-                                            onClick={openIgnore}
-                                        >
-                                            {ignoring
-                                                ? strings.ignoredAs(strings.modes.soft)
-                                                : strings.ignore}
-                                        </button>
-                                    )}
-                                </>
-                            ))}
-
-                        {panel.kind === 'remove' && (
+                <div
+                    id={panelId}
+                    style={panel.kind === 'ignore' ? { ...popover, minWidth: 290 } : popover}
+                >
+                    {panel.kind === 'menu' &&
+                        (own ? (
                             <>
-                                <p style={note}>
-                                    {strings.confirmRemove}
-                                    {comment.replyCount > 0 && ` ${strings.confirmRemoveReplies}`}
-                                </p>
-                                <p style={row}>
-                                    <button
-                                        type="button"
-                                        className="tw-menu-item"
-                                        style={danger}
-                                        disabled={panel.busy}
-                                        onClick={remove}
-                                    >
-                                        {panel.busy
-                                            ? strings.sending
-                                            : panel.failed
-                                              ? strings.retry
-                                              : strings.remove}
-                                    </button>
+                                {onEdit && (
                                     <button
                                         type="button"
                                         className="tw-menu-item"
                                         style={item}
-                                        disabled={panel.busy}
-                                        onClick={close}
-                                    >
-                                        {strings.cancel}
-                                    </button>
-                                </p>
-                                {panel.failed && (
-                                    <p style={{ ...note, ...muted }}>{strings.removeFailed}</p>
-                                )}
-                            </>
-                        )}
-
-                        {panel.kind === 'sign-in' && (
-                            <p style={{ ...note, ...muted }}>
-                                {panel.to === 'report'
-                                    ? strings.signInToReport
-                                    : strings.signInToIgnore}{' '}
-                                ·{' '}
-                                <a href={loginHere()} style={{ color: 'var(--tw-primary)' }}>
-                                    {strings.signIn}
-                                </a>
-                            </p>
-                        )}
-
-                        {panel.kind === 'report' && (
-                            <>
-                                <p style={{ ...note, ...muted }}>{strings.reportReason}</p>
-                                {REPORT_REASONS.map((reason) => (
-                                    <button
-                                        key={reason}
-                                        type="button"
-                                        role="menuitem"
-                                        className="tw-menu-item"
-                                        style={{
-                                            ...item,
-                                            fontWeight: panel.reason === reason ? 600 : 400,
+                                        onClick={() => {
+                                            setPanel({ kind: 'closed' })
+                                            onEdit()
                                         }}
-                                        disabled={panel.busy}
-                                        onClick={() => report(reason)}
                                     >
-                                        {strings.reasons[reason]}
+                                        {strings.edit}
                                     </button>
-                                ))}
-                                {panel.busy && (
-                                    <p style={{ ...note, ...muted }}>{strings.sending}</p>
                                 )}
-                                {panel.failure === 'network' && panel.reason && (
-                                    <p style={{ ...note, ...muted }}>
-                                        {strings.reportFailed}{' '}
-                                        <button
-                                            type="button"
-                                            style={linkButton}
-                                            onClick={() => report(chosen(panel))}
-                                        >
-                                            {strings.retry}
-                                        </button>
-                                    </p>
-                                )}
-                                {panel.failure === 'rate' && (
-                                    <p style={{ ...note, ...muted }}>{strings.tooManyReports}</p>
-                                )}
-                                {panel.failure === 'removed' && (
-                                    <p style={{ ...note, ...muted }}>{strings.alreadyRemoved}</p>
-                                )}
+                                <button
+                                    type="button"
+                                    className="tw-menu-item"
+                                    style={danger}
+                                    onClick={() =>
+                                        setPanel({ kind: 'remove', busy: false, failed: false })
+                                    }
+                                >
+                                    {strings.remove}
+                                </button>
                             </>
-                        )}
-
-                        {panel.kind === 'reported' && (
+                        ) : (
                             <>
-                                <p style={{ ...note, ...muted }}>{strings.reported}</p>
-                                {/* not offered on a comment the reader already collapsed: he ignores
-                                    that author as it is */}
-                                {author && !ignoring && (
+                                <button
+                                    type="button"
+                                    className="tw-menu-item"
+                                    style={item}
+                                    disabled={reported}
+                                    onClick={openReport}
+                                >
+                                    {reported ? strings.reported : strings.report}
+                                </button>
+                                {/* no author, no id to ignore by: user-service had no profile */}
+                                {author && (
                                     <button
                                         type="button"
-                                        role="menuitem"
                                         className="tw-menu-item"
                                         style={item}
                                         onClick={openIgnore}
                                     >
-                                        {strings.ignoreAuthor}
+                                        {ignoring
+                                            ? strings.ignoredAs(strings.modes.soft)
+                                            : strings.ignore}
                                     </button>
                                 )}
                             </>
-                        )}
+                        ))}
 
-                        {panel.kind === 'ignore' && author && (
-                            <div style={{ padding: '4px 10px 8px' }}>
-                                <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 600 }}>
-                                    {ignoring
-                                        ? strings.ignoringWhom(nameOf(author))
-                                        : strings.ignoreWhom(nameOf(author))}
+                    {panel.kind === 'remove' && (
+                        <>
+                            <p style={note}>
+                                {strings.confirmRemove}
+                                {comment.replyCount > 0 && ` ${strings.confirmRemoveReplies}`}
+                            </p>
+                            <p style={row}>
+                                <button
+                                    type="button"
+                                    className="tw-menu-item"
+                                    style={danger}
+                                    disabled={panel.busy}
+                                    onClick={remove}
+                                >
+                                    {panel.busy
+                                        ? strings.sending
+                                        : panel.failed
+                                          ? strings.retry
+                                          : strings.remove}
+                                </button>
+                                <button
+                                    type="button"
+                                    className="tw-menu-item"
+                                    style={item}
+                                    disabled={panel.busy}
+                                    onClick={close}
+                                >
+                                    {strings.cancel}
+                                </button>
+                            </p>
+                            {panel.failed && (
+                                <p style={{ ...note, ...muted }}>{strings.removeFailed}</p>
+                            )}
+                        </>
+                    )}
+
+                    {panel.kind === 'sign-in' && (
+                        <p style={{ ...note, ...muted }}>
+                            {panel.to === 'report'
+                                ? strings.signInToReport
+                                : strings.signInToIgnore}{' '}
+                            ·{' '}
+                            <a href={loginHere()} style={{ color: 'var(--tw-primary)' }}>
+                                {strings.signIn}
+                            </a>
+                        </p>
+                    )}
+
+                    {panel.kind === 'report' && (
+                        <>
+                            <p style={{ ...note, ...muted }}>{strings.reportReason}</p>
+                            {REPORT_REASONS.map((reason) => (
+                                <button
+                                    key={reason}
+                                    type="button"
+                                    className="tw-menu-item"
+                                    style={{
+                                        ...item,
+                                        fontWeight: panel.reason === reason ? 600 : 400,
+                                    }}
+                                    disabled={panel.busy}
+                                    onClick={() => report(reason)}
+                                >
+                                    {strings.reasons[reason]}
+                                </button>
+                            ))}
+                            {panel.busy && <p style={{ ...note, ...muted }}>{strings.sending}</p>}
+                            {panel.failure === 'network' && panel.reason && (
+                                <p style={{ ...note, ...muted }}>
+                                    {strings.reportFailed}{' '}
+                                    <button
+                                        type="button"
+                                        style={linkButton}
+                                        onClick={() => report(chosen(panel))}
+                                    >
+                                        {strings.retry}
+                                    </button>
                                 </p>
-                                <IgnoreModePicker
-                                    initial="soft"
-                                    confirmLabel={ignoring ? strings.save : strings.ignore}
-                                    busy={panel.busy}
-                                    failure={panel.failure}
-                                    onConfirm={(mode) => ignore(author.id, mode)}
-                                    onCancel={close}
-                                />
-                                {ignoring && (
-                                    <p style={{ margin: '10px 0 0' }}>
-                                        <button
-                                            type="button"
-                                            style={linkButton}
-                                            disabled={panel.busy}
-                                            onClick={() => unignore(author.id)}
-                                        >
-                                            {strings.unignore}
-                                        </button>
-                                    </p>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </>
+                            )}
+                            {panel.failure === 'rate' && (
+                                <p style={{ ...note, ...muted }}>{strings.tooManyReports}</p>
+                            )}
+                            {panel.failure === 'removed' && (
+                                <p style={{ ...note, ...muted }}>{strings.alreadyRemoved}</p>
+                            )}
+                        </>
+                    )}
+
+                    {panel.kind === 'reported' && (
+                        <>
+                            <p style={{ ...note, ...muted }}>{strings.reported}</p>
+                            {/* not offered on a comment the reader already collapsed: he ignores
+                                    that author as it is */}
+                            {author && !ignoring && (
+                                <button
+                                    type="button"
+                                    className="tw-menu-item"
+                                    style={item}
+                                    onClick={openIgnore}
+                                >
+                                    {strings.ignoreAuthor}
+                                </button>
+                            )}
+                        </>
+                    )}
+
+                    {panel.kind === 'ignore' && author && (
+                        <div style={{ padding: '4px 10px 8px' }}>
+                            <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 600 }}>
+                                {ignoring
+                                    ? strings.ignoringWhom(nameOf(author))
+                                    : strings.ignoreWhom(nameOf(author))}
+                            </p>
+                            <IgnoreModePicker
+                                initial="soft"
+                                confirmLabel={ignoring ? strings.save : strings.ignore}
+                                busy={panel.busy}
+                                failure={panel.failure}
+                                onConfirm={(mode) => ignore(author.id, mode)}
+                                onCancel={close}
+                            />
+                            {ignoring && (
+                                <p style={{ margin: '10px 0 0' }}>
+                                    <button
+                                        type="button"
+                                        style={linkButton}
+                                        disabled={panel.busy}
+                                        onClick={() => unignore(author.id)}
+                                    >
+                                        {strings.unignore}
+                                    </button>
+                                </p>
+                            )}
+                        </div>
+                    )}
+                </div>
             )}
         </span>
     )
