@@ -14,7 +14,7 @@ import RestrictionPlate from './RestrictionPlate'
 import SortPicker from './SortPicker'
 import { formatWhen } from './format'
 import { strings } from './strings'
-import { action, linkButton, muted } from './styles'
+import { action, blankFace, linkButton, muted, signInLink } from './styles'
 import { rootedId, useDiscussion } from './useDiscussion'
 
 type Props = { subjectType: string; subjectId: string }
@@ -32,14 +32,15 @@ const heading: React.CSSProperties = {
     margin: '0 0 20px',
 }
 
-// Stands where the form would be, so the block does not start with a line of fine print
+// Stands where the form would be, so the block does not start with a line of fine print. The
+// empty circle is where the reader's own would be.
 const invitation: React.CSSProperties = {
-    margin: 0,
+    display: 'flex',
+    gap: 12,
+    alignItems: 'center',
     padding: '14px 16px',
-    border: '1px solid var(--tw-border)',
     borderRadius: 10,
-    fontSize: 14,
-    color: 'var(--tw-text-secondary)',
+    background: 'var(--tw-bg-alt)',
 }
 
 // The chain that led to the comment being read: quoted, so it does not read as the thread itself
@@ -270,12 +271,22 @@ function Body({ discussion, ctx, sessionKnown, sessionExpired, draftKey }: BodyP
                             onSessionExpired={ctx.onSessionExpired}
                         />
                     ) : (
-                        <p style={invitation}>
-                            {sessionExpired ? strings.sessionExpired : strings.signInToComment} ·{' '}
-                            <a href={loginHere()} style={{ color: 'var(--tw-primary)' }}>
-                                {strings.signIn}
-                            </a>
-                        </p>
+                        <div style={invitation}>
+                            <span style={blankFace} />
+                            <p
+                                style={{
+                                    margin: 0,
+                                    fontSize: 15,
+                                    color: 'var(--tw-text-secondary)',
+                                }}
+                            >
+                                {sessionExpired ? strings.sessionExpired : strings.signInToComment}{' '}
+                                &middot;{' '}
+                                <a href={loginHere()} style={signInLink}>
+                                    {strings.signIn}
+                                </a>
+                            </p>
+                        </div>
                     )}
                 </div>
             )}

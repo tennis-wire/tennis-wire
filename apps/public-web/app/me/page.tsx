@@ -1,13 +1,13 @@
 'use client'
 
-import Link from 'next/link'
-import { useEffect, useState } from 'react'
-
-import Avatar from '@/components/Avatar'
+import AvatarForm from '@/components/auth/AvatarForm'
+import DeleteAccount from '@/components/auth/DeleteAccount'
+import NicknameForm from '@/components/auth/NicknameForm'
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
-import { countByAuthor } from '@/lib/discussion/endpoints'
+import { strings } from '@/components/discussion/strings'
+import { loginHere } from '@/lib/auth/loginHref'
 
-const muted: React.CSSProperties = { color: 'var(--tw-text-muted)', fontSize: 14 }
+const secondary: React.CSSProperties = { color: 'var(--tw-text-secondary)', fontSize: 14 }
 
 const full = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 
@@ -15,78 +15,90 @@ const row: React.CSSProperties = {
     display: 'flex',
     justifyContent: 'space-between',
     gap: 16,
-    padding: '14px 0',
+    padding: '12px 0',
     borderTop: '1px solid var(--tw-border)',
     fontSize: 15,
 }
 
-// What the rest of the site sees. Nothing is changed from here: deleting the account and changing
-// the name live one tab over, and the reader is told where.
+const box: React.CSSProperties = {
+    padding: '24px 28px 32px',
+    maxWidth: 620,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 28,
+}
+
+// What the rest of the site sees, changed where it is shown: the photo and the name are edited
+// here, and the account ends here too
 export default function ProfilePage() {
     const { session } = useReaderSession()
-    const authorId = session?.authenticated ? session.userId : null
-    const [count, setCount] = useState<number | null>(null)
 
-    useEffect(() => {
-        if (!authorId) return
-        let live = true
-        countByAuthor(authorId)
-            .then((answer) => {
-                if (live) setCount(answer.count)
-            })
-            // a count that did not come leaves the dash in place
-            .catch(() => undefined)
-        return () => {
-            live = false
-        }
-    }, [authorId])
+    if (session === null) return <p style={{ ...secondary, ...box }}>{strings.loading}</p>
 
-    if (session === null) return <p style={{ ...muted, padding: '24px 28px' }}>Загрузка…</p>
-    if (!session.authenticated) return null
+    if (!session.authenticated) {
+        return (
+            <p style={{ ...secondary, ...box }}>
+                Войдите, чтобы управлять аккаунтом &middot;{' '}
+                <a href={loginHere()} style={{ color: 'var(--tw-primary)', fontWeight: 600 }}>
+                    Войти
+                </a>
+            </p>
+        )
+    }
+
+    // Signed in, but user-service did not answer: there is no profile to act on
+    if (session.displayName === null) {
+        return (
+            <p style={{ ...secondary, ...box }}>
+                Не удалось загрузить профиль &middot;{' '}
+                <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        font: 'inherit',
+                        color: 'var(--tw-primary)',
+                        cursor: 'pointer',
+                    }}
+                >
+                    Повторить
+                </button>
+            </p>
+        )
+    }
 
     return (
-        <div style={{ padding: '24px 28px 32px', maxWidth: 560 }}>
-            <h1 style={{ fontFamily: 'var(--tw-font-display)', fontSize: 22, margin: '0 0 4px' }}>
-                Профиль
-            </h1>
-            <p style={{ ...muted, margin: '0 0 20px' }}>Так вас видят другие читатели.</p>
-
-            <div style={{ ...row, borderTop: 'none' }}>
-                <span style={muted}>Имя</span>
-                <span>{session.displayName ?? '—'}</span>
-            </div>
-            <div style={row}>
-                <span style={muted}>На сайте</span>
-                <span>
-                    {session.createdAt ? `с ${full.format(new Date(session.createdAt))}` : '—'}
-                </span>
-            </div>
-            <div style={row}>
-                <span style={muted}>Комментарии</span>
-                {count === null ? (
-                    <span>—</span>
-                ) : (
-                    <Link href="/me/comments" style={{ color: 'var(--tw-primary)' }}>
-                        {count}
-                    </Link>
-                )}
-            </div>
-            <div style={row}>
-                <span style={muted}>Фото</span>
-                {session.avatarUrl ? (
-                    <Avatar name={session.displayName} src={session.avatarUrl} size={36} />
-                ) : (
-                    <span>нет</span>
-                )}
+        <div style={box}>
+            <div>
+                <h1
+                    style={{
+                        fontFamily: 'var(--tw-font-display)',
+                        fontSize: 22,
+                        margin: '0 0 4px',
+                    }}
+                >
+                    Профиль
+                </h1>
+                <p style={{ ...secondary, margin: 0 }}>Так вас видят другие читатели.</p>
             </div>
 
-            <p style={{ ...muted, marginTop: 24 }}>
-                Сменить фото и имя или удалить аккаунт можно в{' '}
-                <Link href="/me/settings/actions" style={{ color: 'var(--tw-primary)' }}>
-                    настройках
-                </Link>
-                .
-            </p>
+            <AvatarForm displayName={session.displayName} avatarLargeUrl={session.avatarLargeUrl} />
+            <NicknameForm displayName={session.displayName} chosen={session.displayNameChosen} />
+
+            <section>
+                <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px' }}>Аккаунт</h2>
+                <div style={row}>
+                    <span style={{ color: 'var(--tw-text-secondary)' }}>На сайте</span>
+                    <span>
+                        {session.createdAt
+                            ? `с ${full.format(new Date(session.createdAt))}`
+                            : '\u2014'}
+                    </span>
+                </div>
+                <DeleteAccount userId={session.userId} />
+            </section>
         </div>
     )
 }

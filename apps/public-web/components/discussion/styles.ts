@@ -20,3 +20,18 @@ export const action: React.CSSProperties = {
     color: 'var(--tw-text-secondary)',
     fontWeight: 500,
 }
+
+// The way in, wherever the reader is asked to sign in first
+export const signInLink: React.CSSProperties = {
+    color: 'var(--tw-primary)',
+    fontWeight: 600,
+}
+
+// Nobody to draw: a placeholder is not signed, and the invitation to sign in has no one yet
+export const blankFace: React.CSSProperties = {
+    width: 36,
+    height: 36,
+    flexShrink: 0,
+    borderRadius: '50%',
+    border: '1px dashed var(--tw-border)',
+}

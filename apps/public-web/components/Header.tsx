@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import Search from '@/components/Search'
 import ReaderMenu from '@/components/auth/ReaderMenu'
+import LiveTicker from '@/components/home/LiveTicker'
 
 const NAV_ITEMS = [
     { label: 'Главная', href: '/' },
@@ -16,6 +17,21 @@ const NAV_ITEMS = [
 ]
 
 const SECTIONS = [{ label: 'Треш-зона', href: '/sections/trash' }]
+
+// The page the reader is on is underlined rather than filled in: the header reads as a line of
+// type, not a row of buttons
+const navLink = (active: boolean): React.CSSProperties => ({
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    paddingBottom: 2,
+    fontSize: 15,
+    fontWeight: active ? 600 : 400,
+    color: active ? 'var(--tw-text)' : 'var(--tw-text-secondary)',
+    borderBottom: `2px solid ${active ? 'var(--tw-primary)' : 'transparent'}`,
+    textDecoration: 'none',
+    whiteSpace: 'nowrap',
+})
 
 export default function Header() {
     const pathname = usePathname()
@@ -36,30 +52,28 @@ export default function Header() {
                     maxWidth: 1200,
                     margin: '0 auto',
                     padding: '0 20px',
-                    height: 56,
+                    height: 64,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 4,
+                    gap: 26,
                 }}
             >
-                {/* Logo */}
                 <Link
                     href="/"
                     style={{
                         fontFamily: 'var(--tw-font-display)',
-                        fontSize: 20,
+                        fontSize: 25,
                         fontWeight: 700,
+                        letterSpacing: '-0.01em',
                         color: 'var(--tw-primary)',
                         textDecoration: 'none',
-                        marginRight: 20,
                         flexShrink: 0,
                     }}
                 >
                     Tennis Wire
                 </Link>
 
-                {/* Nav items */}
-                <nav style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <nav style={{ display: 'flex', gap: 22, alignItems: 'center' }}>
                     {NAV_ITEMS.map((item) => {
                         const isActive =
                             item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
@@ -68,32 +82,17 @@ export default function Header() {
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                style={{
-                                    padding: '6px 12px',
-                                    borderRadius: 8,
-                                    fontSize: 14,
-                                    fontWeight: isActive ? 600 : 400,
-                                    color: isActive
-                                        ? 'var(--tw-primary)'
-                                        : 'var(--tw-text-secondary)',
-                                    background: isActive ? 'var(--tw-tag)' : 'transparent',
-                                    textDecoration: 'none',
-                                    transition: 'all 0.15s ease',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 4,
-                                    whiteSpace: 'nowrap',
-                                }}
+                                aria-current={isActive ? 'page' : undefined}
+                                style={navLink(isActive)}
                             >
                                 {item.label}
                                 {item.live && (
                                     <span
                                         style={{
-                                            width: 6,
-                                            height: 6,
+                                            width: 7,
+                                            height: 7,
                                             borderRadius: '50%',
                                             background: 'var(--tw-live)',
-                                            display: 'inline-block',
                                         }}
                                     />
                                 )}
@@ -101,27 +100,24 @@ export default function Header() {
                         )
                     })}
 
-                    {/* Sections dropdown */}
                     <div style={{ position: 'relative' }}>
                         <button
+                            type="button"
+                            aria-expanded={sectionsOpen}
                             onClick={() => setSectionsOpen(!sectionsOpen)}
                             style={{
-                                padding: '6px 12px',
-                                borderRadius: 8,
-                                fontSize: 14,
-                                fontWeight: 400,
-                                color: 'var(--tw-text-secondary)',
-                                background: 'transparent',
-                                border: 'none',
+                                // first: the shorthand would reset the size set after it
+                                font: 'inherit',
+                                ...navLink(false),
+                                background: 'none',
+                                borderTop: 'none',
+                                borderLeft: 'none',
+                                borderRight: 'none',
+                                padding: '0 0 2px',
                                 cursor: 'pointer',
-                                fontFamily: 'var(--tw-font-body)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                whiteSpace: 'nowrap',
                             }}
                         >
-                            Разделы ▾
+                            Разделы&nbsp;&#9662;
                         </button>
 
                         {sectionsOpen && (
@@ -139,7 +135,7 @@ export default function Header() {
                                         position: 'absolute',
                                         top: '100%',
                                         left: 0,
-                                        marginTop: 4,
+                                        marginTop: 8,
                                         background: 'var(--tw-surface)',
                                         border: '1px solid var(--tw-border)',
                                         borderRadius: 10,
@@ -154,6 +150,7 @@ export default function Header() {
                                             key={section.href}
                                             href={section.href}
                                             onClick={() => setSectionsOpen(false)}
+                                            className="tw-menu-item"
                                             style={{
                                                 display: 'block',
                                                 padding: '8px 12px',
@@ -172,14 +169,16 @@ export default function Header() {
                     </div>
                 </nav>
 
-                {/* Spacer */}
                 <div style={{ flex: 1 }} />
 
-                {/* Search */}
-                <Search />
-
-                <ReaderMenu />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Search />
+                    <ReaderMenu />
+                </div>
             </div>
+
+            {/* The front page only: elsewhere the reader came for something else */}
+            {pathname === '/' && <LiveTicker />}
         </header>
     )
 }

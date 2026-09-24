@@ -4,8 +4,8 @@ import { strings } from './strings'
 
 const text: React.CSSProperties = {
     margin: '6px 0 0',
-    fontSize: 15,
-    lineHeight: 1.5,
+    fontSize: 16,
+    lineHeight: 1.55,
     whiteSpace: 'pre-wrap',
     overflowWrap: 'anywhere',
 }

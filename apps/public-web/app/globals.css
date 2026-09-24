@@ -79,6 +79,16 @@ a:hover {
     outline-offset: 2px;
 }
 
+/* A row of a popover menu lights up under the pointer. The background lives here and not in the
+   inline style, which would win over :hover. */
+.tw-menu-item {
+    background: none;
+}
+
+.tw-menu-item:hover:not(:disabled) {
+    background: var(--tw-bg-alt);
+}
+
 /* Markup this app does not render: the article body arrives from the editor as HTML */
 .tw-article-body {
     font-size: 18px;
@@ -117,9 +127,37 @@ a:hover {
     color: var(--tw-text-secondary);
 }
 
-/* The cabinet: tabs over a column of sections beside the section being read, everything under
-   everything else on a phone. Inline styles cannot hold a media query, and this is the only
-   place that needs one. */
+/* The front page: the paper and its side column, the lead story beside its picture, the three
+   materials in a row. One column each on a phone. */
+.tw-front {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 40px;
+    padding-top: 10px;
+}
+
+.tw-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 400px;
+    gap: 28px;
+    align-items: start;
+}
+
+.tw-trio {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 22px;
+}
+
+@media (max-width: 900px) {
+    .tw-front,
+    .tw-hero,
+    .tw-trio {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* The cabinet's row of tabs: on a phone it scrolls sideways rather than wrapping */
 .tw-tabs {
     display: flex;
     gap: 24px;
@@ -127,30 +165,4 @@ a:hover {
     border-top: 1px solid var(--tw-border);
     border-bottom: 1px solid var(--tw-border);
     overflow-x: auto;
-}
-
-.tw-settings {
-    display: grid;
-    grid-template-columns: 216px 1fr;
-}
-
-.tw-settings-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 18px 14px;
-    border-right: 1px solid var(--tw-border);
-}
-
-@media (max-width: 720px) {
-    .tw-settings {
-        grid-template-columns: 1fr;
-    }
-
-    .tw-settings-nav {
-        flex-direction: row;
-        flex-wrap: wrap;
-        border-right: none;
-        border-bottom: 1px solid var(--tw-border);
-    }
 }

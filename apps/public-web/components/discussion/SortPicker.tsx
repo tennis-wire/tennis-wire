@@ -24,7 +24,7 @@ const chip = (chosen: boolean): React.CSSProperties => ({
     padding: '4px 12px',
     borderRadius: 14,
     border: `1px solid ${chosen ? 'var(--tw-primary)' : 'var(--tw-border)'}`,
-    background: chosen ? 'color-mix(in srgb, var(--tw-primary) 12%, transparent)' : 'transparent',
+    background: chosen ? 'var(--tw-tag)' : 'transparent',
     color: chosen ? 'var(--tw-primary)' : 'var(--tw-text)',
     cursor: chosen ? 'default' : 'pointer',
 })

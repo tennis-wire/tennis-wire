@@ -151,6 +151,7 @@ export const strings = {
         'Вы ещё не писали комментариев. Обсуждение есть под каждой новостью и материалом.',
     articleGone: 'Материал недоступен',
     replyTally: (count: number) => `Ответов: ${count}`,
+    toThread: 'К обсуждению',
 
     // someone else's page
     readerMissing: 'Такой страницы нет',

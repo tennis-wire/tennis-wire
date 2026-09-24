@@ -5,17 +5,19 @@ import IgnoreList from '@/components/discussion/IgnoreList'
 import { strings } from '@/components/discussion/strings'
 import { loginHere } from '@/lib/auth/loginHref'
 
-const muted: React.CSSProperties = { color: 'var(--tw-text-muted)', fontSize: 14 }
+const muted: React.CSSProperties = { color: 'var(--tw-text-secondary)', fontSize: 14 }
 
 export default function IgnorePage() {
     const { session } = useReaderSession()
 
     return (
-        <div>
+        <div style={{ maxWidth: 680 }}>
             <h1 style={{ fontFamily: 'var(--tw-font-display)', fontSize: 22, margin: '0 0 4px' }}>
                 {strings.ignoreList}
             </h1>
-            <p style={{ ...muted, margin: '0 0 20px' }}>{strings.ignoreListAbout}</p>
+            <p style={{ ...muted, margin: '0 0 20px', maxWidth: '60ch' }}>
+                {strings.ignoreListAbout}
+            </p>
 
             {session === null ? (
                 <p style={muted}>{strings.loading}</p>

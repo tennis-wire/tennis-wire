@@ -1,118 +1,67 @@
 import Link from 'next/link'
 
+const HREF = '/news/sinner-australian-open'
+
+const tag: React.CSSProperties = {
+    background: 'var(--tw-tag)',
+    color: 'var(--tw-primary)',
+    fontWeight: 700,
+    padding: '4px 9px',
+    borderRadius: 4,
+}
+
+// The lead story as type first: the headline carries it, the picture stands beside
 export default function HeroNews() {
     return (
-        <Link
-            href="/news/sinner-australian-open"
-            style={{
-                display: 'block',
-                background: 'var(--tw-surface)',
-                border: '1px solid var(--tw-border)',
-                borderRadius: 12,
-                overflow: 'hidden',
-                boxShadow: 'var(--tw-card-shadow)',
-                textDecoration: 'none',
-                color: 'var(--tw-text)',
-            }}
+        <article
+            className="tw-hero"
+            style={{ paddingBottom: 30, borderBottom: '2px solid var(--tw-text)' }}
         >
-            {/* Image placeholder */}
-            <div
-                style={{
-                    height: 220,
-                    background: `linear-gradient(135deg, var(--tw-primary), var(--tw-primary-light))`,
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                    padding: 20,
-                    position: 'relative',
-                }}
-            >
-                <span
-                    style={{
-                        position: 'absolute',
-                        top: 14,
-                        left: 14,
-                        background: 'var(--tw-live)',
-                        color: '#fff',
-                        fontSize: 10,
-                        fontWeight: 700,
-                        padding: '4px 10px',
-                        borderRadius: 4,
-                        textTransform: 'uppercase',
-                        letterSpacing: 1,
-                    }}
-                >
-                    Срочно
-                </span>
-                <div
-                    style={{
-                        position: 'absolute',
-                        inset: 0,
-                        background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)',
-                    }}
-                />
+            <div>
+                <div style={{ fontSize: 13, color: 'var(--tw-text-secondary)', marginBottom: 14 }}>
+                    15 мин назад
+                </div>
                 <h2
                     style={{
-                        position: 'relative',
-                        color: '#fff',
                         fontFamily: 'var(--tw-font-display)',
-                        fontSize: 22,
-                        fontWeight: 700,
-                        lineHeight: 1.3,
-                        margin: 0,
+                        fontSize: 44,
+                        lineHeight: 1.08,
+                        letterSpacing: '-0.015em',
+                        margin: '0 0 16px',
                     }}
                 >
-                    Синнер обыграл Джоковича в финале Australian Open
+                    <Link href={HREF} style={{ color: 'var(--tw-text)', textDecoration: 'none' }}>
+                        Синнер обыграл Джоковича в финале Australian Open
+                    </Link>
                 </h2>
-            </div>
-
-            <div style={{ padding: '14px 20px 18px' }}>
                 <p
                     style={{
-                        fontSize: 14,
+                        fontSize: 18,
+                        lineHeight: 1.5,
                         color: 'var(--tw-text-secondary)',
-                        lineHeight: 1.55,
-                        margin: '0 0 12px',
+                        margin: '0 0 18px',
+                        maxWidth: '52ch',
                     }}
                 >
                     Янник Синнер одержал убедительную победу в финале первого турнира Большого Шлема
                     сезона, подтвердив статус первой ракетки мира.
                 </p>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <span
-                        style={{
-                            background: 'var(--tw-tag)',
-                            color: 'var(--tw-primary)',
-                            fontSize: 11,
-                            fontWeight: 600,
-                            padding: '3px 8px',
-                            borderRadius: 4,
-                        }}
-                    >
-                        ATP
-                    </span>
-                    <span
-                        style={{
-                            background: 'var(--tw-tag)',
-                            color: 'var(--tw-primary)',
-                            fontSize: 11,
-                            fontWeight: 600,
-                            padding: '3px 8px',
-                            borderRadius: 4,
-                        }}
-                    >
-                        Grand Slam
-                    </span>
-                    <span
-                        style={{
-                            fontSize: 11,
-                            color: 'var(--tw-text-muted)',
-                            marginLeft: 'auto',
-                        }}
-                    >
-                        15 мин назад
-                    </span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 13 }}>
+                    <span style={tag}>ATP</span>
+                    <span style={tag}>Grand Slam</span>
                 </div>
             </div>
-        </Link>
+
+            {/* The headline is the link for a keyboard and a screen reader; this is for the mouse */}
+            <Link href={HREF} tabIndex={-1} aria-hidden>
+                <div
+                    style={{
+                        height: 250,
+                        borderRadius: 10,
+                        background: 'linear-gradient(135deg, var(--tw-primary), var(--tw-accent))',
+                    }}
+                />
+            </Link>
+        </article>
     )
 }
