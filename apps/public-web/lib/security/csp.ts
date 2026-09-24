@@ -51,10 +51,15 @@ export function originOf(value: string | undefined): string | null {
     }
 }
 
+// The media bucket's origin for this stand, or null when MEDIA_ORIGIN does not give one
+export function mediaOrigin(): string | null {
+    return originOf(process.env.MEDIA_ORIGIN)
+}
+
 export function pagePolicy(): string {
     return contentSecurityPolicy({
         dev: process.env.NODE_ENV === 'development',
-        media: originOf(process.env.MEDIA_ORIGIN),
+        media: mediaOrigin(),
         keycloak: originOf(process.env.KEYCLOAK_ISSUER),
     })
 }

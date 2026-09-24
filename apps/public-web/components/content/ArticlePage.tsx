@@ -4,6 +4,7 @@ import Comments from '@/components/discussion/Comments'
 import { fetchArticle, type ArticleType } from '@/lib/content/articles'
 import { splitPolls } from '@/lib/content/polls'
 import { sanitizeArticle } from '@/lib/content/sanitize'
+import { mediaOrigin } from '@/lib/security/csp'
 
 import ArticleHead from './ArticleHead'
 import EditArticleLink from './EditArticleLink'
@@ -20,7 +21,7 @@ export default async function ArticlePage({ slug, type }: { slug: string; type: 
             <EditArticleLink articleId={article.id} />
             <ArticleHead article={article} />
             <div className="tw-article-body">
-                {splitPolls(sanitizeArticle(article.content)).map((piece, i) =>
+                {splitPolls(sanitizeArticle(article.content, mediaOrigin())).map((piece, i) =>
                     'pollId' in piece ? (
                         <PollWidget
                             key={piece.pollId}
