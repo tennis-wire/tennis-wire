@@ -52,13 +52,42 @@ function upstreamReturns(body = '[]') {
     return fetchMock
 }
 
-type RequestOptions = { method?: string; cookie?: string; headers?: Record<string, string> }
+type RequestOptions = {
+    method?: string
+    cookie?: string
+    headers?: Record<string, string>
+    body?: BodyInit
+}
 
 function request(url: string, options: RequestOptions = {}) {
     const headers = new Headers(options.headers)
     if (!headers.has('x-forwarded-for')) headers.set('x-forwarded-for', '10.0.0.1, 203.0.113.7')
     if (options.cookie) headers.set('cookie', `tw_session=${options.cookie}`)
-    return new NextRequest(url, { method: options.method ?? 'GET', headers })
+    return new NextRequest(url, {
+        method: options.method ?? 'GET',
+        headers,
+        body: options.body,
+        duplex: 'half',
+    })
+}
+
+function write(path: string, body: BodyInit, headers: Record<string, string> = {}) {
+    return request(`http://localhost:3000${path}`, {
+        method: 'POST',
+        cookie: 'signed-in',
+        headers: { origin: 'http://localhost:3000', ...headers },
+        body,
+    })
+}
+
+// A body with no Content-Length, as a chunked request arrives
+function chunked(size: number): ReadableStream<Uint8Array> {
+    return new ReadableStream({
+        start(controller) {
+            for (let sent = 0; sent < size; sent += 1024) controller.enqueue(new Uint8Array(1024))
+            controller.close()
+        },
+    })
 }
 
 beforeEach(() => {
@@ -186,6 +215,78 @@ describe('proxy', () => {
 
         expect(response.status).toBe(401)
         expect(response.cookies.get('tw_session')?.value).toBe('')
+        expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('turns an anonymous write away without reading its body', async () => {
+        const fetchMock = upstreamReturns()
+        const anonymous = request('http://localhost:3000/api/discussion/comments', {
+            method: 'POST',
+            headers: { origin: 'http://localhost:3000' },
+            body: '{"body":"hi"}',
+        })
+
+        const response = await proxy(anonymous, '/api/discussion/')
+
+        expect(response.status).toBe(401)
+        expect(await response.json()).toEqual({ code: 'SIGN_IN_REQUIRED' })
+        expect(anonymous.bodyUsed).toBe(false)
+        expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('sends the body on as it came', async () => {
+        const fetchMock = upstreamReturns()
+
+        await proxy(write('/api/discussion/comments', '{"body":"hi"}'), '/api/discussion/')
+
+        const sent = fetchMock.mock.calls[0]![1]!.body as Uint8Array
+        expect(new TextDecoder().decode(sent)).toBe('{"body":"hi"}')
+    })
+
+    it('refuses a body said to be too large before reading it', async () => {
+        const fetchMock = upstreamReturns()
+        const large = write('/api/discussion/comments', 'x', { 'content-length': '16385' })
+
+        const response = await proxy(large, '/api/discussion/')
+
+        expect(response.status).toBe(413)
+        expect(await response.json()).toEqual({ code: 'PAYLOAD_TOO_LARGE' })
+        expect(large.bodyUsed).toBe(false)
+        expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('stops reading a body without a length once it is too large', async () => {
+        const fetchMock = upstreamReturns()
+
+        const response = await proxy(
+            write('/api/discussion/comments', chunked(32 * 1024)),
+            '/api/discussion/'
+        )
+
+        expect(response.status).toBe(413)
+        expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('takes a photo on the avatar path only', async () => {
+        const fetchMock = upstreamReturns()
+        const photo = () => chunked(1024 * 1024)
+
+        expect((await proxy(write('/api/users/me/avatar', photo()), '/api/users/')).status).toBe(
+            200
+        )
+        expect((await proxy(write('/api/users/me', photo()), '/api/users/')).status).toBe(413)
+        expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('refuses an avatar over 6 MB', async () => {
+        const fetchMock = upstreamReturns()
+
+        const response = await proxy(
+            write('/api/users/me/avatar', 'x', { 'content-length': String(6 * 1024 * 1024 + 1) }),
+            '/api/users/'
+        )
+
+        expect(response.status).toBe(413)
         expect(fetchMock).not.toHaveBeenCalled()
     })
 })
