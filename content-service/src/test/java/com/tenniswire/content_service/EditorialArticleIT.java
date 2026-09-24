@@ -207,6 +207,28 @@ class EditorialArticleIT {
     }
 
     @Test
+    void aCoverFromTheMediaBucketIsKept() throws Exception {
+        var cover = "http://localhost:9000/media/2026/09/" + UUID.randomUUID() + ".png";
+        var request = Map.of("type", "article", "title", "Covered", "coverImageUrl", cover);
+
+        submit(author, request)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.working.coverImageUrl").value(cover));
+    }
+
+    @Test
+    void aCoverFromAnywhereElseIsRefused() throws Exception {
+        for (var cover : List.of("https://elsewhere.example/a.png", "javascript:alert(1)")) {
+            var request = Map.of("type", "article", "title", "Covered", "coverImageUrl", cover);
+
+            submit(author, request)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("FOREIGN_MEDIA"))
+                    .andExpect(jsonPath("$.violations[0].field").value("coverImageUrl"));
+        }
+    }
+
+    @Test
     void aSlugSetByHandBelongsToOneArticle() throws Exception {
         var request = Map.of("type", "news", "title", "By hand", "slug", "by-hand-" + UUID.randomUUID());
 

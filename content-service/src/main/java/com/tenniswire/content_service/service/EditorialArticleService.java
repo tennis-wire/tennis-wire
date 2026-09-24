@@ -4,6 +4,7 @@ import static com.tenniswire.content_service.repository.ArticleSpecification.has
 import static com.tenniswire.content_service.repository.ArticleSpecification.ownedBy;
 import static com.tenniswire.content_service.repository.ArticleSpecification.titleContains;
 
+import com.tenniswire.content_service.config.MediaProperties;
 import com.tenniswire.content_service.dto.TagResponse;
 import com.tenniswire.content_service.dto.editorial.CreateArticleRequest;
 import com.tenniswire.content_service.dto.editorial.EditorialArticleResponse;
@@ -18,6 +19,7 @@ import com.tenniswire.content_service.entity.ArticleType;
 import com.tenniswire.content_service.entity.Tag;
 import com.tenniswire.content_service.exception.ConflictException;
 import com.tenniswire.content_service.exception.ForbiddenException;
+import com.tenniswire.content_service.exception.ForeignMediaException;
 import com.tenniswire.content_service.exception.PublishValidationException;
 import com.tenniswire.content_service.exception.ResourceNotFoundException;
 import com.tenniswire.content_service.exception.UnknownTagException;
@@ -61,18 +63,22 @@ public class EditorialArticleService {
     private final TagRepository tagRepository;
     private final SlugGenerator slugGenerator;
     private final JsonMapper jsonMapper;
+    // What every URL MediaService hands out starts with
+    private final String mediaPrefix;
 
     public EditorialArticleService(
             ArticleRepository articleRepository,
             ArticleEditRepository editRepository,
             TagRepository tagRepository,
             SlugGenerator slugGenerator,
-            JsonMapper jsonMapper) {
+            JsonMapper jsonMapper,
+            MediaProperties mediaProperties) {
         this.articleRepository = articleRepository;
         this.editRepository = editRepository;
         this.tagRepository = tagRepository;
         this.slugGenerator = slugGenerator;
         this.jsonMapper = jsonMapper;
+        this.mediaPrefix = mediaProperties.publicBaseUrl().toString().replaceAll("/+$", "") + "/";
     }
 
     // -- The caller's own lists --
@@ -365,7 +371,7 @@ public class EditorialArticleService {
 
     // -- Fields --
 
-    private static EditPayload payload(
+    private EditPayload payload(
             String title,
             String subtitle,
             String content,
@@ -377,10 +383,19 @@ public class EditorialArticleService {
                 title,
                 blankToNull(subtitle),
                 content,
-                blankToNull(coverImageUrl),
+                uploadedHere("coverImageUrl", blankToNull(coverImageUrl)),
                 blankToNull(sourceUrl),
                 blankToNull(sourceName),
                 tagIds == null ? List.of() : List.copyOf(tagIds));
+    }
+
+    // The site loads pictures from the bucket alone: any other URL would be a broken box there, and
+    // one with another scheme would be worse
+    private String uploadedHere(String field, String url) {
+        if (url != null && !url.startsWith(mediaPrefix)) {
+            throw new ForeignMediaException(field);
+        }
+        return url;
     }
 
     private EditPayload payloadOf(ArticleEdit edit) {
