@@ -13,7 +13,7 @@ npm run dev
 
 Проверки те же, что в CI: `npx prettier . --check`, `npm run lint`, `npm test`, `npm run build`.
 Тесты — vitest в node, без DOM: правила прокси и методы его маршрута, маршруты входа и callback,
-редьюсеры дерева и игнор-листа, черновики, нормализация текста, шаги удаления аккаунта.
+редьюсеры дерева и игнор-листа, черновики, нормализация текста, шаги удаления аккаунта, CSP.
 
 ## Где что
 
@@ -23,13 +23,16 @@ npm run dev
   `app/api/discussion/[...path]` и `app/api/users/[...path]` — BFF-прокси в gateway;
   `app/api/public/articles/by-ids` — тоже прокси, но на один путь: остальной публичный API читается
   на сервере.
+- `proxy.ts` в корне — proxy самого Next (бывший `middleware`): ставит CSP на страницы, политика
+  в `lib/security/csp.ts`. Не путать с `lib/gateway/proxy.ts` — BFF-прокси в gateway.
+  `instrumentation.ts` — при старте сервера пишет warning, если `MEDIA_ORIGIN` не задан.
 - `lib/auth`, `lib/gateway` — кука сессии, обновление токена, прокси с allowlist заголовков,
-  лимит анонимных чтений; `lib/auth/deletion.ts` — ссылка подтверждения входа и метка последнего
+  лимитом тела и анонимных чтений; `lib/auth/deletion.ts` — ссылка подтверждения входа и метка последнего
   шага удаления.
 - `lib/avatar.ts` — правила кропа фото и тексты ошибок загрузки; `components/Avatar` — кружок с фото
   или инициалом.
 - `lib/content` — статья из `content-service`: `fetchArticle` (серверный `fetch` в gateway,
-  ISR минута) и `sanitizeArticle`.
+  ISR минута), `sanitizeArticle` и `embeds.ts` — хосты фреймов, общие для санитайзера и CSP.
 - `lib/discussion` — клиент обсуждений без React: `api.ts` (`read` и `write`), `queue.ts`,
   `endpoints.ts`, `tree.ts` (состояние островка и редьюсер), `ignoreList.ts` (состояние
   игнор-листа), `modes.ts` (режимы игнора), `compose.ts` (правила текста), `drafts.ts`,
@@ -65,6 +68,35 @@ npm run dev
 
 Файлы шрифтов по-прежнему подтягиваются `<link>`-ом после монтирования — при непечатной паре
 остаётся FOUT.
+
+## Заголовки и CSP
+
+На всех ответах, из `next.config.ts`: `X-Content-Type-Options: nosniff`, `Referrer-Policy:
+strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, `Permissions-Policy` без камеры,
+микрофона и геолокации; `X-Powered-By` убран.
+
+CSP — только на страницах, из `proxy.ts`. В `next.config.ts` ей не место: заголовки оттуда
+фиксируются при сборке, а в политике хосты медиа и Keycloak того стенда, на котором приложение
+запущено. `/api/**` в matcher не входит: там JSON, а `proxy.ts` на этих путях заставил бы Next
+буферизовать тело каждого запроса.
+
+Политика сразу enforce и без nonce: nonce читается на каждом запросе, это делает страницы
+динамическими и снимает ISR. Отсюда `script-src 'self' 'unsafe-inline'` — payload Next и
+boot-скрипт темы инлайновые; `'unsafe-eval'` только в `next dev`. От XSS в теле статьи защищает
+санитайзер, CSP держит остальное:
+
+- скрипты и стили только свои; шрифты — с Google Fonts, пока пары тянутся оттуда (`theme/fonts.ts`);
+- картинки и видео — свои и с `MEDIA_ORIGIN` (origin бакета, путь отбрасывается; без переменной —
+  только свои, и при старте в логе warning). Картинка или видео по чужому URL в теле статьи на сайте не покажутся;
+- фреймы — `www.youtube.com`, `www.youtube-nocookie.com`, `t.me`, тот же список, что у
+  санитайзера. Telegram-embed — готовый `iframe` из редактора, своего скрипта не грузит;
+- `form-action` — свой origin и Keycloak из `KEYCLOAK_ISSUER`: форма выхода уходит туда
+  303-редиректом, а Chrome проверяет `form-action` и на редиректах — без Keycloak выход
+  блокируется;
+- `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'none'`, `connect-src 'self'`.
+
+HSTS — при деплое, на ingress. После правок, затрагивающих внешние ресурсы: `npm run build &&
+npm start`, страница статьи с эмбедами, консоль браузера — нарушения видны там как `Refused to ...`.
 
 ## Личный кабинет
 
