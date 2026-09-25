@@ -25,6 +25,10 @@ CSP. Компонентные — в jsdom с testing-library, включают�
   `app/api/discussion/[...path]` и `app/api/users/[...path]` — BFF-прокси в gateway;
   `app/api/public/articles/by-ids` — тоже прокси, но на один путь: остальной публичный API читается
   на сервере.
+  `app/not-found.tsx` — и для адреса, которому ничего не отвечает, и для `notFound()` из статьи,
+  тега или профиля; `app/error.tsx` — ошибка страницы под шапкой, с кнопкой повтора и кодом из
+  лога сервера (`digest`); `app/global-error.tsx` — если упал сам layout: без темы и шрифтов,
+  своими цветами. Иконка (`app/icon.svg`, `app/favicon.ico`) — та же, что у editorial-ui.
 - `proxy.ts` в корне — proxy самого Next (бывший `middleware`): ставит CSP на страницы, политика
   в `lib/security/csp.ts`. Не путать с `lib/gateway/proxy.ts` — BFF-прокси в gateway.
   `instrumentation.ts` — при старте сервера пишет warning, если `MEDIA_ORIGIN` не задан.
