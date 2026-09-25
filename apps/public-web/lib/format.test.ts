@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatShort } from './format'
+import { formatMonthYear, formatShort } from './format'
 
 // Local time on both sides: the words follow the reader's calendar, not UTC
 function at(year: number, month: number, date: number, hour: number, minute: number): string {
@@ -23,5 +23,11 @@ describe('formatShort', () => {
     it('counts calendar days, not hours: just before midnight is yesterday a minute later', () => {
         const justAfter = new Date(2026, 2, 21, 0, 1)
         expect(formatShort(at(2026, 3, 20, 23, 59), justAfter)).toBe('вчера в 23:59')
+    })
+})
+
+describe('formatMonthYear', () => {
+    it('gives the month in the genitive a phrase needs', () => {
+        expect(formatMonthYear(at(2026, 9, 15, 12, 0))).toBe('сентября 2026 г.')
     })
 })

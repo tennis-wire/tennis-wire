@@ -11,7 +11,7 @@ import type { BlockMode } from '@/lib/discussion/modes'
 import IgnoreModePicker, { PickerPanel } from './IgnoreModePicker'
 import ModeBadge from './ModeBadge'
 import { PersonFace, PersonName } from './Person'
-import { formatDay } from './format'
+import { formatDay } from '@/lib/format'
 import { strings } from './strings'
 import { linkButton, muted } from './styles'
 

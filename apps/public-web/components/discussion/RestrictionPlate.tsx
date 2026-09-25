@@ -3,7 +3,7 @@
 import Avatar from '@/components/Avatar'
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
 
-import { formatUntil } from './format'
+import { formatUntil } from '@/lib/format'
 import { strings } from './strings'
 
 type Props = {

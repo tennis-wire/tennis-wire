@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-import { formatDay } from '@/components/discussion/format'
+import LocalDay from '@/components/LocalDay'
 import type { Article } from '@/lib/content/articles'
 import { tagHref } from '@/lib/content/tags'
 
@@ -68,7 +68,7 @@ export default function ArticleHead({ article }: { article: Article }) {
                 </p>
             )}
             <div style={meta}>
-                <time dateTime={article.publishedAt}>{formatDay(article.publishedAt)}</time>
+                <LocalDay iso={article.publishedAt} />
                 {article.readingTime != null && article.readingTime > 0 && (
                     <span>{readingTime(article.readingTime)}</span>
                 )}

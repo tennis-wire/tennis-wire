@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 import Avatar from '@/components/Avatar'
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
 import { countByAuthor } from '@/lib/discussion/endpoints'
+import { formatMonthYear } from '@/lib/format'
 
 // One row of tabs. Appearance is kept by the browser rather than the account, so the cabinet
 // opens for a stranger too, with that one tab in it.
@@ -16,17 +17,6 @@ const TABS = [
     { href: '/me/settings/appearance', label: 'Внешний вид', account: false },
     { href: '/me/settings/ignore', label: 'Игнор-лист', account: true },
 ]
-
-// Month and year only, but in the genitive the phrase needs. Intl gives that form of the month
-// only next to a day, so the date is formatted with one and the day left out
-const dated = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
-
-function since(iso: string): string {
-    const parts = dated.formatToParts(new Date(iso))
-    const part = (type: Intl.DateTimeFormatPartTypes) =>
-        parts.find((p) => p.type === type)?.value ?? ''
-    return `с ${part('month')} ${part('year')} г.`
-}
 
 function commentsWord(count: number): string {
     const last = count % 10
@@ -108,7 +98,7 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
                     <div style={{ fontSize: 14, color: 'var(--tw-text-secondary)', marginTop: 3 }}>
                         {signedIn
                             ? createdAt
-                                ? since(createdAt)
+                                ? `с ${formatMonthYear(createdAt)}`
                                 : 'ваш аккаунт и настройки'
                             : 'настройки этого браузера'}
                     </div>

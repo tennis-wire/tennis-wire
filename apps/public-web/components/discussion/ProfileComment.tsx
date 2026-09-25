@@ -6,7 +6,7 @@ import { articleHref, type ArticleRef } from '@/lib/content/refs'
 import type { Comment } from '@/lib/discussion/types'
 
 import CommentBody, { placeholder } from './CommentBody'
-import { formatShort, formatWhen } from './format'
+import { formatShort, formatWhen } from '@/lib/format'
 import { strings } from './strings'
 import { action, muted } from './styles'
 import { hashFor } from './useDiscussion'

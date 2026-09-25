@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-import { formatDay } from '@/components/discussion/format'
+import LocalDay from '@/components/LocalDay'
 import { articleHref, type ArticleSummary } from '@/lib/content/articles'
 
 const KIND: Record<ArticleSummary['type'], string> = { news: 'Новость', article: 'Материал' }
@@ -58,9 +58,7 @@ export default function ArticleList({ articles }: { articles: ArticleSummary[] }
                                 marginTop: 6,
                             }}
                         >
-                            <time dateTime={article.publishedAt}>
-                                {formatDay(article.publishedAt)}
-                            </time>
+                            <LocalDay iso={article.publishedAt} />
                             {slash}
                             <span>{KIND[article.type]}</span>
                         </div>

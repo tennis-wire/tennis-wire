@@ -15,11 +15,9 @@ const until = new Intl.DateTimeFormat('ru-RU', {
 })
 
 // A day without the hour, for what the hour says nothing about
-const day = new Intl.DateTimeFormat('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-})
+const DAY = { day: 'numeric', month: 'long', year: 'numeric' } as const
+const day = new Intl.DateTimeFormat('ru-RU', DAY)
+const dayInUtc = new Intl.DateTimeFormat('ru-RU', { ...DAY, timeZone: 'UTC' })
 
 export function formatWhen(iso: string): string {
     return dateTime.format(new Date(iso))
@@ -31,6 +29,21 @@ export function formatUntil(iso: string): string {
 
 export function formatDay(iso: string): string {
     return day.format(new Date(iso))
+}
+
+// What the server writes for a day it draws: it cannot know the reader's zone. LocalDay puts the
+// reader's own day in its place once the page is his.
+export function formatDayInUtc(iso: string): string {
+    return dayInUtc.format(new Date(iso))
+}
+
+// Month and year in the genitive a phrase needs ("с сентября 2026 г."). Intl gives that form
+// only next to a day, so the day is formatted and left out.
+export function formatMonthYear(iso: string): string {
+    const parts = day.formatToParts(new Date(iso))
+    const part = (type: Intl.DateTimeFormatPartTypes) =>
+        parts.find((p) => p.type === type)?.value ?? ''
+    return `${part('month')} ${part('year')} г.`
 }
 
 const clock = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' })
