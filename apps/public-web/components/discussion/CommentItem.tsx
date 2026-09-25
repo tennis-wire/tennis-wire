@@ -17,7 +17,7 @@ import ComposeForm from './ComposeForm'
 import EditForm from './EditForm'
 import ReactionBar from './ReactionBar'
 import RestrictionPlate from './RestrictionPlate'
-import { formatWhen } from './format'
+import { formatWhen } from '@/lib/format'
 import { strings } from './strings'
 import { action, blankFace, linkButton, muted, signInLink } from './styles'
 

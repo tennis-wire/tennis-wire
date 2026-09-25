@@ -10,6 +10,7 @@ import { strings } from '@/components/discussion/strings'
 import { linkButton, muted } from '@/components/discussion/styles'
 import { NetworkError } from '@/lib/discussion/api'
 import type { BlockMode } from '@/lib/discussion/modes'
+import { formatDay } from '@/lib/format'
 import { fetchReader, type Reader } from '@/lib/readers'
 
 import ReaderIgnore from './ReaderIgnore'
@@ -20,7 +21,6 @@ type State =
     | { kind: 'failed'; offline: boolean }
     | { kind: 'ready'; reader: Reader }
 
-const since = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 const text: React.CSSProperties = { ...muted, fontSize: 14, margin: 0 }
 
 export default function ReaderPage({ id }: { id: string }) {
@@ -102,7 +102,7 @@ export default function ReaderPage({ id }: { id: string }) {
                         {reader.displayName}
                     </h1>
                     <p style={{ ...text, color: 'var(--tw-text-secondary)', marginTop: 4 }}>
-                        {strings.readerSince(since.format(new Date(reader.createdAt)))} ·{' '}
+                        {strings.readerSince(formatDay(reader.createdAt))} ·{' '}
                         {strings.commentTally(reader.commentCount)}
                     </p>
                 </div>

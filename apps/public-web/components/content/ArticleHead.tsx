@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-import { formatDay } from '@/components/discussion/format'
+import { formatDay } from '@/lib/format'
 import type { Article } from '@/lib/content/articles'
 import { tagHref } from '@/lib/content/tags'
 

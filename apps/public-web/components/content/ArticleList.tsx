@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-import { formatDay } from '@/components/discussion/format'
+import { formatDay } from '@/lib/format'
 import { articleHref, type ArticleSummary } from '@/lib/content/articles'
 
 const KIND: Record<ArticleSummary['type'], string> = { news: 'Новость', article: 'Материал' }

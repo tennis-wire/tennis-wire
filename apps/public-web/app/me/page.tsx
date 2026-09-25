@@ -6,10 +6,9 @@ import NicknameForm from '@/components/auth/NicknameForm'
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
 import { strings } from '@/components/discussion/strings'
 import { loginHere } from '@/lib/auth/loginHref'
+import { formatDay } from '@/lib/format'
 
 const secondary: React.CSSProperties = { color: 'var(--tw-text-secondary)', fontSize: 14 }
-
-const full = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 
 const row: React.CSSProperties = {
     display: 'flex',
@@ -100,9 +99,7 @@ export default function ProfilePage() {
                 <div style={row}>
                     <span style={{ color: 'var(--tw-text-secondary)' }}>На сайте</span>
                     <span>
-                        {session.createdAt
-                            ? `с ${full.format(new Date(session.createdAt))}`
-                            : '\u2014'}
+                        {session.createdAt ? `с ${formatDay(session.createdAt)}` : '\u2014'}
                     </span>
                 </div>
                 <DeleteAccount userId={session.userId} />
