@@ -49,7 +49,6 @@ const tab = (active: boolean): React.CSSProperties => ({
     fontSize: 15,
     fontWeight: active ? 600 : 400,
     color: active ? 'var(--tw-text)' : 'var(--tw-text-secondary)',
-    textDecoration: 'none',
     whiteSpace: 'nowrap',
     borderBottom: `2px solid ${active ? 'var(--tw-primary)' : 'transparent'}`,
 })
@@ -110,7 +109,6 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
                             marginLeft: 'auto',
                             textAlign: 'right',
                             color: 'var(--tw-text)',
-                            textDecoration: 'none',
                         }}
                     >
                         <div style={{ fontSize: 22, fontWeight: 700 }}>{count}</div>

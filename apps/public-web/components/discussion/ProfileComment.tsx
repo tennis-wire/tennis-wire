@@ -14,7 +14,6 @@ import { hashFor } from './useDiscussion'
 const caption: React.CSSProperties = {
     fontSize: 13,
     color: 'var(--tw-text-secondary)',
-    textDecoration: 'none',
 }
 
 const meta: React.CSSProperties = {
@@ -29,7 +28,6 @@ const meta: React.CSSProperties = {
 const toThread: React.CSSProperties = {
     color: 'var(--tw-primary)',
     fontWeight: 600,
-    textDecoration: 'none',
 }
 
 type Props = {

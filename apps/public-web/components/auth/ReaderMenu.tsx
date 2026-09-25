@@ -50,7 +50,6 @@ const item: React.CSSProperties = {
     fontSize: 14,
     color: 'var(--tw-text)',
     textAlign: 'left',
-    textDecoration: 'none',
     cursor: 'pointer',
 }
 

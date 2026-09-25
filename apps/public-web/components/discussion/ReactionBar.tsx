@@ -34,7 +34,6 @@ const chip = (held: boolean, live: boolean, quiet: boolean): React.CSSProperties
     gap: 4,
     padding: '4px 10px',
     borderRadius: 14,
-    textDecoration: 'none',
     border: `1px solid ${held ? 'var(--tw-primary)' : 'var(--tw-border)'}`,
     background: held ? 'var(--tw-tag)' : 'transparent',
     color: held ? 'var(--tw-primary)' : quiet ? 'var(--tw-text-muted)' : 'var(--tw-text)',

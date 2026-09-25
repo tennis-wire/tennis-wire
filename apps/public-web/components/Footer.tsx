@@ -40,7 +40,6 @@ export default function Footer() {
                             style={{
                                 fontSize: 13,
                                 color: 'var(--tw-text-muted)',
-                                textDecoration: 'none',
                             }}
                         >
                             {item.label}

@@ -15,7 +15,6 @@ const more: React.CSSProperties = {
     fontSize: 14,
     fontWeight: 600,
     color: 'var(--tw-primary)',
-    textDecoration: 'none',
 }
 
 export function TournamentWidget() {
@@ -96,7 +95,6 @@ export function TrashZone() {
                 padding: 16,
                 borderRadius: 10,
                 background: 'var(--tw-live-bg)',
-                textDecoration: 'none',
             }}
         >
             <div

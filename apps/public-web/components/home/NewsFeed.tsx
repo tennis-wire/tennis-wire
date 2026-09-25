@@ -53,7 +53,6 @@ export default function NewsFeed() {
                             padding: '16px 0',
                             borderTop: '1px solid var(--tw-border)',
                             color: 'var(--tw-text)',
-                            textDecoration: 'none',
                         }}
                     >
                         <div

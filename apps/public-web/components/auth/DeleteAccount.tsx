@@ -33,7 +33,6 @@ const quiet: React.CSSProperties = {
     color: 'var(--tw-live)',
     cursor: 'pointer',
     display: 'inline-block',
-    textDecoration: 'none',
 }
 
 const danger: React.CSSProperties = {

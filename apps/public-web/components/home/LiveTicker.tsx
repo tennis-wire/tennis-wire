@@ -55,7 +55,7 @@ export default function LiveTicker() {
                         )}
                         <Link
                             href={`/live/${match.id}`}
-                            style={{ color: 'var(--tw-text-secondary)', textDecoration: 'none' }}
+                            style={{ color: 'var(--tw-text-secondary)' }}
                         >
                             <strong style={{ color: 'var(--tw-text)' }}>{match.player1}</strong>{' '}
                             {match.score} {match.player2}
@@ -65,10 +65,7 @@ export default function LiveTicker() {
 
                 <span style={{ flex: 1 }} />
 
-                <Link
-                    href="/live"
-                    style={{ color: 'var(--tw-primary)', fontWeight: 600, textDecoration: 'none' }}
-                >
+                <Link href="/live" style={{ color: 'var(--tw-primary)', fontWeight: 600 }}>
                     Все матчи
                 </Link>
             </div>

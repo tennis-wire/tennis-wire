@@ -29,7 +29,7 @@ export default function HeroNews() {
                         margin: '0 0 16px',
                     }}
                 >
-                    <Link href={HREF} style={{ color: 'var(--tw-text)', textDecoration: 'none' }}>
+                    <Link href={HREF} style={{ color: 'var(--tw-text)' }}>
                         Синнер обыграл Джоковича в финале Australian Open
                     </Link>
                 </h2>
