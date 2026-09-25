@@ -28,7 +28,6 @@ const option: React.CSSProperties = {
 }
 
 const confirm: React.CSSProperties = {
-    font: 'inherit',
     fontSize: 14,
     padding: '6px 14px',
     borderRadius: 7,

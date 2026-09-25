@@ -53,6 +53,14 @@ a {
     text-decoration: none;
 }
 
+/* Browsers give form controls a font of their own rather than the page's */
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
 a:hover {
     color: var(--tw-primary-dark);
 }

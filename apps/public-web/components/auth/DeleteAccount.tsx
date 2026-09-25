@@ -25,7 +25,6 @@ const hint: React.CSSProperties = {
 }
 
 const quiet: React.CSSProperties = {
-    font: 'inherit',
     fontSize: 14,
     padding: '7px 14px',
     borderRadius: 7,
@@ -47,7 +46,6 @@ const cancel: React.CSSProperties = {
     background: 'none',
     border: 'none',
     padding: 0,
-    font: 'inherit',
     fontSize: 14,
     color: 'var(--tw-text-secondary)',
     cursor: 'pointer',

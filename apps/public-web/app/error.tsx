@@ -5,7 +5,6 @@ import Link from 'next/link'
 import PageNotice, { noticeActions, noticeLink, noticeText } from '@/components/PageNotice'
 
 const button: React.CSSProperties = {
-    font: 'inherit',
     fontSize: 14,
     padding: '9px 18px',
     borderRadius: 7,

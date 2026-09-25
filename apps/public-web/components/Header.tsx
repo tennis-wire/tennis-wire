@@ -136,8 +136,6 @@ function SectionsMenu() {
                 aria-controls={panelId}
                 onClick={() => setOpen(!open)}
                 style={{
-                    // first: the shorthand would reset the size set after it
-                    font: 'inherit',
                     ...navLink(false),
                     background: 'none',
                     borderTop: 'none',

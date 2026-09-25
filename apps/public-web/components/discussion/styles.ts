@@ -7,7 +7,6 @@ export const linkButton: React.CSSProperties = {
     background: 'none',
     border: 'none',
     padding: 0,
-    font: 'inherit',
     fontSize: 13,
     color: 'var(--tw-primary)',
     cursor: 'pointer',

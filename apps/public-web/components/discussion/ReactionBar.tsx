@@ -27,7 +27,6 @@ const row: React.CSSProperties = {
 
 // A chip that leads to the login is quieter than one that takes a tap: it only shows the count
 const chip = (held: boolean, live: boolean, quiet: boolean): React.CSSProperties => ({
-    font: 'inherit',
     fontSize: 13,
     lineHeight: 1.2,
     display: 'inline-flex',
