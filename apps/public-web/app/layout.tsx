@@ -29,7 +29,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                                 maxWidth: 1200,
                                 margin: '0 auto',
                                 padding: '24px 20px',
-                                minHeight: 'calc(100vh - 180px)',
+                                flex: 1,
+                                width: '100%',
                             }}
                         >
                             {children}
