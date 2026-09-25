@@ -181,7 +181,6 @@ export default function Search() {
                         background: 'transparent',
                         color: 'var(--tw-text)',
                         fontSize: 14,
-                        fontFamily: 'var(--tw-font-body)',
                         outline: 'none',
                         transition: 'border-color 0.15s',
                     }}
@@ -218,7 +217,6 @@ export default function Search() {
                                     background:
                                         i === highlightIndex ? 'var(--tw-bg-alt)' : 'transparent',
                                     cursor: 'pointer',
-                                    fontFamily: 'var(--tw-font-body)',
                                     fontSize: 13,
                                     color: 'var(--tw-text)',
                                     textAlign: 'left',

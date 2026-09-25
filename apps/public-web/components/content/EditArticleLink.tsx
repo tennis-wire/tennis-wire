@@ -22,7 +22,6 @@ export default function EditArticleLink({ articleId }: { articleId: string }) {
                     border: '1px solid var(--tw-primary)',
                     borderRadius: 6,
                     padding: '4px 12px',
-                    textDecoration: 'none',
                 }}
             >
                 Редактировать

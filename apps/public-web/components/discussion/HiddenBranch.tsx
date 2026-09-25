@@ -166,7 +166,7 @@ export default function HiddenBranch({ blockedIds, onChanged, onBack, onSessionE
             )}
 
             <p style={{ margin: '16px 0 0', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                <Link href="/me/settings/ignore" style={{ ...linkButton, textDecoration: 'none' }}>
+                <Link href="/me/settings/ignore" style={linkButton}>
                     {strings.wholeIgnoreList}
                 </Link>
                 <button type="button" style={linkButton} onClick={onBack}>

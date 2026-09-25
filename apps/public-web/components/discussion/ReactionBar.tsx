@@ -27,7 +27,6 @@ const row: React.CSSProperties = {
 
 // A chip that leads to the login is quieter than one that takes a tap: it only shows the count
 const chip = (held: boolean, live: boolean, quiet: boolean): React.CSSProperties => ({
-    font: 'inherit',
     fontSize: 13,
     lineHeight: 1.2,
     display: 'inline-flex',
@@ -35,7 +34,6 @@ const chip = (held: boolean, live: boolean, quiet: boolean): React.CSSProperties
     gap: 4,
     padding: '4px 10px',
     borderRadius: 14,
-    textDecoration: 'none',
     border: `1px solid ${held ? 'var(--tw-primary)' : 'var(--tw-border)'}`,
     background: held ? 'var(--tw-tag)' : 'transparent',
     color: held ? 'var(--tw-primary)' : quiet ? 'var(--tw-text-muted)' : 'var(--tw-text)',

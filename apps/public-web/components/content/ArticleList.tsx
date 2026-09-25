@@ -23,7 +23,6 @@ export default function ArticleList({ articles }: { articles: ArticleSummary[] }
                         padding: '16px 0',
                         borderTop: '1px solid var(--tw-border)',
                         color: 'var(--tw-text)',
-                        textDecoration: 'none',
                     }}
                 >
                     <div style={{ flex: 1, minWidth: 0 }}>

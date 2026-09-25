@@ -12,7 +12,6 @@ const field: React.CSSProperties = {
     width: '100%',
     maxWidth: 300,
     padding: '9px 12px',
-    font: 'inherit',
     fontSize: 15,
     color: 'var(--tw-text)',
     background: 'var(--tw-surface)',
@@ -21,7 +20,6 @@ const field: React.CSSProperties = {
 }
 
 const button: React.CSSProperties = {
-    font: 'inherit',
     fontSize: 14,
     padding: '9px 18px',
     borderRadius: 7,

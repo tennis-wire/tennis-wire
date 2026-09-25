@@ -57,7 +57,6 @@ export default function ProfilePage() {
                         background: 'none',
                         border: 'none',
                         padding: 0,
-                        font: 'inherit',
                         color: 'var(--tw-primary)',
                         cursor: 'pointer',
                     }}

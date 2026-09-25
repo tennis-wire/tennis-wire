@@ -53,7 +53,6 @@ const row = (held: boolean, interactive: boolean): React.CSSProperties => ({
     borderRadius: 6,
     background: 'var(--tw-surface)',
     color: 'var(--tw-text)',
-    font: 'inherit',
     fontSize: 15,
     textAlign: 'left',
     cursor: interactive ? 'pointer' : 'default',
@@ -216,7 +215,6 @@ const retryStyle: React.CSSProperties = {
     background: 'none',
     border: 'none',
     padding: 0,
-    font: 'inherit',
     color: 'var(--tw-primary)',
     cursor: 'pointer',
 }

@@ -24,7 +24,6 @@ const label: React.CSSProperties = { fontSize: 15, fontWeight: 600 }
 const note: React.CSSProperties = { fontSize: 13, color: 'var(--tw-text-secondary)' }
 
 const segment = (chosen: boolean): React.CSSProperties => ({
-    font: 'inherit',
     fontSize: 14,
     padding: '7px 14px',
     border: 'none',
@@ -37,7 +36,6 @@ const segment = (chosen: boolean): React.CSSProperties => ({
 })
 
 const choice = (chosen: boolean): React.CSSProperties => ({
-    font: 'inherit',
     fontSize: 14,
     color: 'var(--tw-text)',
     fontWeight: chosen ? 600 : 400,
@@ -219,7 +217,6 @@ function Expander({
                     padding: 0,
                     border: 'none',
                     background: 'none',
-                    font: 'inherit',
                     color: 'var(--tw-text)',
                     textAlign: 'left',
                     cursor: 'pointer',

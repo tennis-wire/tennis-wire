@@ -2,8 +2,14 @@
     box-sizing: border-box;
 }
 
+/* A column, so that main takes what the header and the footer leave and a short page still has
+   its footer at the bottom */
 body {
     margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
     font-family: var(--tw-font-body);
     background: var(--tw-bg);
     color: var(--tw-text);
@@ -53,6 +59,14 @@ a {
     text-decoration: none;
 }
 
+/* Browsers give form controls a font of their own rather than the page's */
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
 a:hover {
     color: var(--tw-primary-dark);
 }
@@ -81,8 +95,13 @@ a:hover {
     line-height: 1.6;
 }
 
+/* In running text a link is underlined: against the body text primary falls under the 3:1
+   contrast that would let colour alone mark it, in five of the six palette and mode pairs */
 .tw-article-body a {
     color: var(--tw-primary);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.15em;
 }
 
 /* The editor has no button for h1, but a pasted text can bring one: it reads as h2, not as a

@@ -34,7 +34,6 @@ const field: React.CSSProperties = {
     width: '100%',
     minHeight: 64,
     padding: 0,
-    font: 'inherit',
     fontSize: 15,
     lineHeight: 1.5,
     color: 'var(--tw-text)',
@@ -55,7 +54,6 @@ const footer: React.CSSProperties = {
 }
 
 const button: React.CSSProperties = {
-    font: 'inherit',
     fontSize: 14,
     fontWeight: 600,
     padding: '6px 16px',

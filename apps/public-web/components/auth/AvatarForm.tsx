@@ -17,7 +17,6 @@ import {
 import { useReaderSession } from './ReaderSessionProvider'
 
 const button: React.CSSProperties = {
-    font: 'inherit',
     fontSize: 14,
     padding: '9px 18px',
     borderRadius: 7,
@@ -43,7 +42,6 @@ const outline: React.CSSProperties = {
 }
 
 const plain: React.CSSProperties = {
-    font: 'inherit',
     fontSize: 14,
     padding: '9px 4px',
     border: 'none',

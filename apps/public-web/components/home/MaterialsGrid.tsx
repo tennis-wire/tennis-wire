@@ -40,7 +40,6 @@ export default function MaterialsGrid() {
                             flexDirection: 'column',
                             gap: 10,
                             color: 'var(--tw-text)',
-                            textDecoration: 'none',
                         }}
                     >
                         <div

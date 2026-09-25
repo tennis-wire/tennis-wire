@@ -47,11 +47,9 @@ const item: React.CSSProperties = {
     padding: '8px 12px',
     borderRadius: 6,
     border: 'none',
-    font: 'inherit',
     fontSize: 14,
     color: 'var(--tw-text)',
     textAlign: 'left',
-    textDecoration: 'none',
     cursor: 'pointer',
 }
 

@@ -138,7 +138,7 @@ export function AuthorName({ author }: { author?: Author }) {
         return <span style={{ ...name, color: 'var(--tw-text-muted)' }}>{strings.restricted}</span>
     const own = session?.authenticated === true && session.userId === author.id
     return (
-        <Link href={own ? '/me' : `/u/${author.id}`} style={{ ...name, textDecoration: 'none' }}>
+        <Link href={own ? '/me' : `/u/${author.id}`} style={name}>
             {author.displayName}
         </Link>
     )

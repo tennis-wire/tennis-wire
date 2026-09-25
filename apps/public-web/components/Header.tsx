@@ -30,7 +30,6 @@ const navLink = (active: boolean): React.CSSProperties => ({
     fontWeight: active ? 600 : 400,
     color: active ? 'var(--tw-text)' : 'var(--tw-text-secondary)',
     borderBottom: `2px solid ${active ? 'var(--tw-primary)' : 'transparent'}`,
-    textDecoration: 'none',
     whiteSpace: 'nowrap',
 })
 
@@ -68,7 +67,6 @@ export default function Header() {
                         fontWeight: 700,
                         letterSpacing: '-0.01em',
                         color: 'var(--tw-primary)',
-                        textDecoration: 'none',
                         flexShrink: 0,
                     }}
                 >
@@ -136,8 +134,6 @@ function SectionsMenu() {
                 aria-controls={panelId}
                 onClick={() => setOpen(!open)}
                 style={{
-                    // first: the shorthand would reset the size set after it
-                    font: 'inherit',
                     ...navLink(false),
                     background: 'none',
                     borderTop: 'none',
@@ -168,7 +164,6 @@ function SectionsMenu() {
                                 borderRadius: 6,
                                 fontSize: 14,
                                 color: 'var(--tw-text)',
-                                textDecoration: 'none',
                             }}
                         >
                             {section.label}

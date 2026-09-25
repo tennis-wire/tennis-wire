@@ -25,7 +25,6 @@ const side: React.CSSProperties = {
 
 // Not ignored yet: one plain button, nothing about modes until the reader asks
 const button: React.CSSProperties = {
-    font: 'inherit',
     fontSize: 14,
     padding: '9px 16px',
     borderRadius: 7,

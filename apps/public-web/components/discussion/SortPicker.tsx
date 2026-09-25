@@ -19,7 +19,6 @@ const row: React.CSSProperties = {
 }
 
 const chip = (chosen: boolean): React.CSSProperties => ({
-    font: 'inherit',
     fontSize: 13,
     padding: '4px 12px',
     borderRadius: 14,
