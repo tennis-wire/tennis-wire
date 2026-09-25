@@ -42,7 +42,7 @@ const pill = (active: boolean): React.CSSProperties => ({
     borderRadius: 999,
     fontSize: 14,
     fontWeight: 600,
-    color: active ? 'var(--tw-surface)' : 'var(--tw-text-secondary)',
+    color: active ? 'var(--tw-on-primary)' : 'var(--tw-text-secondary)',
     background: active ? 'var(--tw-primary)' : 'var(--tw-tag)',
 })
 

@@ -40,7 +40,7 @@ const quiet: React.CSSProperties = {
 const danger: React.CSSProperties = {
     ...quiet,
     background: 'var(--tw-live)',
-    color: '#fff',
+    color: 'var(--tw-on-live)',
 }
 
 const cancel: React.CSSProperties = {

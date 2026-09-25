@@ -26,9 +26,31 @@ const VARIABLES: Record<keyof PaletteColors, string> = {
 
 const KEYS = Object.keys(VARIABLES) as (keyof PaletteColors)[]
 
+const WHITE = '#FFFFFF'
+const DARK = '#111111'
+
+// WCAG relative luminance of a #RRGGBB colour
+function luminance(hex: string): number {
+    const channel = (at: number) => {
+        const c = parseInt(hex.slice(at, at + 2), 16) / 255
+        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+    }
+    return 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5)
+}
+
+// Text on a filled button, white or near-black, whichever stands out more: white on the light
+// palettes, dark on the dark ones, whose primary is light
+export function textOn(background: string): string {
+    const fill = luminance(background) + 0.05
+    const onWhite = (luminance(WHITE) + 0.05) / fill
+    const onDark = fill / (luminance(DARK) + 0.05)
+    return onWhite >= onDark ? WHITE : DARK
+}
+
 function rule(selector: string, colors: PaletteColors, scheme: 'light' | 'dark'): string {
     const body = KEYS.map((key) => `${VARIABLES[key]}:${colors[key]}`).join(';')
-    return `${selector}{${body};color-scheme:${scheme}}`
+    const on = `--tw-on-primary:${textOn(colors.primary)};--tw-on-live:${textOn(colors.live)}`
+    return `${selector}{${body};${on};color-scheme:${scheme}}`
 }
 
 function fonts(selector: string, key: FontPairKey): string {

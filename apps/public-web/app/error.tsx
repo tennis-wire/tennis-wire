@@ -11,7 +11,7 @@ const button: React.CSSProperties = {
     borderRadius: 7,
     border: '1px solid var(--tw-primary)',
     background: 'var(--tw-primary)',
-    color: '#fff',
+    color: 'var(--tw-on-primary)',
     cursor: 'pointer',
 }
 
