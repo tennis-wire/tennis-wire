@@ -369,12 +369,43 @@ To see what a client would issue for someone: admin console, Clients →
 `public-web` → Client scopes → Evaluate, pick the user, Generated access token.
 `GatewayKeycloakIT` pins the same through a real code flow.
 
+#### Login theme
+
+Every page Keycloak draws for the realm — sign-in, registration, password reset,
+email verification, errors, logout — uses the `tennis-wire` theme in
+`docker/keycloak/themes/tennis-wire/login`, mounted into the container. It
+changes how the pages look, not what the flow does. `parent=base`, so a page
+the theme does not override still works and is styled by `css/login.css`
+through the `kc*` classes in `theme.properties` and plain element selectors.
+Overridden are only `template.ftl` (the frame: brand panel, or on registration
+the panel with what an account gives), `login.ftl` and `login-verify-email.ftl`.
+
+- The look is the site's default, Court Green with Editorial Classic, copied
+  from `apps/public-web/theme/palettes.ts`: Keycloak serves these pages itself
+  and cannot see the palette a reader chose on the site. Light or dark follows
+  the device. The fonts are self-hosted in the theme, latin and cyrillic.
+- The pages are in Russian by default (`defaultLocale: ru`), with English
+  texts in `messages_en.properties` for the English site; the language
+  switcher is not drawn. Texts the site needs to read differently from
+  Keycloak's own Russian are overridden in `messages_ru.properties`.
+- "Back to the site" and the wordmark link to the client's `baseUrl`, set for
+  `public-web` and `editorial-ui`; a client without one gets neither link.
+- The Telegram tile is drawn as "coming" until the realm has an identity
+  provider with the alias `telegram`; then it is a real button, with no change
+  to the theme.
+
+`start-dev` does not cache themes, so an edit shows on the next page load
+without a restart. A realm setting (`loginTheme`, locales, `baseUrl`) needs the
+recreate above. A deployed Keycloak has to get the theme some other way — a
+mount or an image that copies it into `/opt/keycloak/themes` — and a production
+build caches it.
+
 #### Lockout and events
 
 Brute-force detection is on with Keycloak's defaults: 30 failed passwords within
 12 hours lock the account for a minute, growing to 15; two failures less than a
 second apart lock it for a minute straight away. A locked account sees the usual
-"Invalid username or password". A fixture locked while testing is released on
+wrong-credentials message. A fixture locked while testing is released on
 its page in the admin console (Temporarily locked), or by recreating the
 container.
 
