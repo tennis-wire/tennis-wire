@@ -64,6 +64,8 @@ services:
     command: ["start-dev", "--import-realm"]
     volumes:
       - ./docker/keycloak/import:/opt/keycloak/data/import:ro
+      # The login pages' look; start-dev reads it without caching, so edits show on reload
+      - ./docker/keycloak/themes/tennis-wire:/opt/keycloak/themes/tennis-wire:ro
     healthcheck:
       # The image ships no curl or wget; health lives on management port 9000.
       test:

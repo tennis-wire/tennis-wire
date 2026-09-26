@@ -1,0 +1,768 @@
+/* The site's default look, Court Green with Editorial Classic, copied from
+   apps/public-web/theme/palettes.ts and fonts.ts: these pages are served by Keycloak and cannot
+   read a reader's own choice from the site. Light or dark follows the device. */
+
+@font-face {
+    font-family: 'TW Display';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 100 900;
+    src: url(../fonts/display-cyrillic.woff2) format('woff2');
+    unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+    font-family: 'TW Display';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 100 900;
+    src: url(../fonts/display-latin.woff2) format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+        U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: 'TW Body';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 200 900;
+    src: url(../fonts/body-cyrillic.woff2) format('woff2');
+    unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+    font-family: 'TW Body';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 200 900;
+    src: url(../fonts/body-latin-ext.woff2) format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+        U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+        U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+    font-family: 'TW Body';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 200 900;
+    src: url(../fonts/body-latin.woff2) format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+        U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+    --tw-bg: #f7f5f0;
+    --tw-bg-alt: #edeae3;
+    --tw-surface: #ffffff;
+    --tw-primary: #1b6b3a;
+    --tw-on-primary: #ffffff;
+    --tw-text: #1a1a1a;
+    --tw-text-secondary: #5c5c5c;
+    --tw-text-muted: #8a8a8a;
+    --tw-border: #d9d5cc;
+    --tw-live: #dc2626;
+    --tw-live-bg: #fef2f2;
+    --tw-tag: #edf5f0;
+    --tw-font-display: 'TW Display', Georgia, serif;
+    --tw-font-body: 'TW Body', system-ui, sans-serif;
+    /* The brand panel keeps the light palette's greens in both modes: white type needs them. The
+       shade along the bottom keeps the lead readable where the gradient turns to gold. */
+    --tw-brand: linear-gradient(to top, rgb(0 0 0 / 0.42), rgb(0 0 0 / 0) 50%),
+        linear-gradient(150deg, #0f4d28, #1b6b3a 55%, #e8a838);
+    color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --tw-bg: #111111;
+        --tw-bg-alt: #1a1a1a;
+        --tw-surface: #222222;
+        --tw-primary: #3da65e;
+        --tw-on-primary: #111111;
+        --tw-text: #f0ede6;
+        --tw-text-secondary: #a0a0a0;
+        --tw-text-muted: #7a7a7a;
+        --tw-border: #333333;
+        --tw-live: #ef4444;
+        --tw-live-bg: #2a1515;
+        --tw-tag: #1a2e20;
+        color-scheme: dark;
+    }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    min-height: 100%;
+}
+
+body {
+    font: 16px/1.5 var(--tw-font-body);
+    color: var(--tw-text);
+    background: var(--tw-bg);
+    -webkit-font-smoothing: antialiased;
+}
+
+a {
+    color: var(--tw-primary);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+:focus-visible {
+    outline: 2px solid var(--tw-primary);
+    outline-offset: 2px;
+}
+
+/* Frame: a brand panel beside the form; registration swaps them and puts what an account gives in
+   the panel */
+
+.tw-frame {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: minmax(320px, 440px) minmax(0, 1fr);
+}
+
+.tw-registering .tw-frame {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);
+}
+
+.tw-registering .tw-brand {
+    display: none;
+}
+
+.tw-brand {
+    background: var(--tw-brand);
+    color: #ffffff;
+    padding: 36px 40px;
+    display: flex;
+    flex-direction: column;
+}
+
+.tw-brand-space {
+    flex: 1;
+}
+
+.tw-wordmark {
+    font-family: var(--tw-font-display);
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: inherit;
+}
+
+.tw-brand .tw-wordmark,
+.tw-brand-back {
+    color: #ffffff;
+}
+
+.tw-brand-lead {
+    margin: 0;
+    max-width: 34ch;
+    font-size: 17px;
+    line-height: 1.5;
+    opacity: 0.92;
+}
+
+.tw-brand-back {
+    margin-top: 32px;
+    font-size: 14px;
+    font-weight: 400;
+    opacity: 0.85;
+}
+
+.tw-benefits {
+    background: var(--tw-bg-alt);
+    border-left: 1px solid var(--tw-border);
+    padding: 36px 40px;
+    display: flex;
+    flex-direction: column;
+}
+
+.tw-benefits-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.tw-benefits .tw-wordmark {
+    font-size: 24px;
+    color: var(--tw-primary);
+}
+
+.tw-benefits-back {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--tw-text-secondary);
+}
+
+.tw-benefits-title {
+    margin: 0 0 18px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--tw-text-secondary);
+}
+
+.tw-benefits-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: benefit;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.tw-benefits-list li {
+    counter-increment: benefit;
+    position: relative;
+    padding-left: 44px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.tw-benefits-list li::before {
+    content: counter(benefit);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--tw-primary);
+    color: var(--tw-on-primary);
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tw-benefits-list strong {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.tw-benefits-list span {
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--tw-text-secondary);
+}
+
+.tw-main {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+.tw-card {
+    width: 100%;
+    max-width: 380px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Card content */
+
+.tw-card h1 {
+    font-family: var(--tw-font-display);
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.1;
+    margin: 0 0 8px;
+}
+
+.tw-card-header {
+    margin-bottom: 24px;
+}
+
+.tw-subtitle,
+.tw-info-first,
+.tw-lead {
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--tw-text-secondary);
+    margin: 0;
+}
+
+.tw-info-first {
+    margin: -24px 0 24px;
+}
+
+.tw-lead {
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.tw-lead strong {
+    color: var(--tw-text);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.tw-muted {
+    font-size: 14px;
+    color: var(--tw-text-secondary);
+    margin: 0 0 22px;
+}
+
+.tw-card p {
+    margin-top: 0;
+}
+
+.tw-attempted {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    font-size: 15px;
+    color: var(--tw-text-secondary);
+}
+
+.tw-attempted a {
+    font-size: 14px;
+}
+
+#kc-info:not(.tw-info-first) {
+    margin-top: 20px;
+    font-size: 14px;
+    color: var(--tw-text-secondary);
+}
+
+/* The way back to sign-in on the reset page goes under the button, as a secondary step */
+[data-page-id='login-login-reset-password'] .tw-form-settings {
+    display: flex;
+    flex-direction: column;
+}
+
+[data-page-id='login-login-reset-password'] #kc-form-options {
+    order: 2;
+    margin-top: 16px;
+    text-align: center;
+}
+
+/* The verification page says in its own words what the warning above it would repeat */
+[data-page-id='login-login-verify-email'] .tw-alert-warning {
+    display: none;
+}
+
+/* The registration page draws its own way back to sign-in under the title */
+.tw-registering #kc-form-options {
+    display: none;
+}
+
+.tw-mail-mark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    margin-bottom: 22px;
+    border-radius: 14px;
+    background: var(--tw-tag);
+    color: var(--tw-primary);
+}
+
+.tw-mail-mark svg {
+    width: 28px;
+    height: 28px;
+}
+
+/* Sign in with a service */
+
+.tw-social {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.tw-social-tile {
+    height: 44px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--tw-text);
+    background: var(--tw-surface);
+    border: 1px solid var(--tw-border);
+    border-radius: 10px;
+}
+
+a.tw-social-tile:hover {
+    border-color: var(--tw-text-secondary);
+    text-decoration: none;
+}
+
+.tw-social-busy {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.tw-social-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.tw-social-letter {
+    border-radius: 50%;
+    background: var(--tw-tag);
+    color: var(--tw-primary);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tw-social-soon {
+    color: var(--tw-text-muted);
+    cursor: default;
+}
+
+.tw-social-soon .tw-social-icon {
+    filter: grayscale(1);
+    opacity: 0.55;
+}
+
+.tw-social-soon small {
+    font-size: 12px;
+    font-weight: 400;
+}
+
+.tw-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 22px 0;
+    font-size: 13px;
+    color: var(--tw-text-muted);
+}
+
+.tw-divider::before,
+.tw-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--tw-border);
+}
+
+/* Fields, also for the pages this theme leaves to base */
+
+.tw-card form {
+    margin: 0;
+}
+
+.tw-field,
+.tw-card .form-group {
+    margin-bottom: 16px;
+}
+
+.tw-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.tw-card label,
+.tw-label {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.tw-label-link {
+    font-size: 13px;
+}
+
+/* Every field is required on these pages, so the marks and the note would only add noise */
+.tw-card .required,
+.tw-card .subtitle {
+    display: none;
+}
+
+.tw-card input[type='text'],
+.tw-card input[type='email'],
+.tw-card input[type='password'],
+.tw-card input[type='tel'],
+.tw-card input[type='number'],
+.tw-card input[type='date'],
+.tw-card input:not([type]),
+.tw-card select,
+.tw-card textarea {
+    display: block;
+    width: 100%;
+    height: 44px;
+    padding: 0 14px;
+    font-size: 15px;
+    color: var(--tw-text);
+    background: var(--tw-surface);
+    border: 1px solid var(--tw-border);
+    border-radius: 10px;
+}
+
+.tw-card textarea {
+    height: auto;
+    min-height: 88px;
+    padding: 10px 14px;
+}
+
+.tw-card input:focus,
+.tw-card select:focus,
+.tw-card textarea:focus {
+    outline: none;
+    border-color: var(--tw-primary);
+    box-shadow: 0 0 0 1px var(--tw-primary);
+}
+
+.tw-card input[aria-invalid='true'] {
+    border-color: var(--tw-live);
+    box-shadow: 0 0 0 1px var(--tw-live);
+}
+
+.tw-field-error,
+.tw-card .kc-feedback-text {
+    display: block;
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--tw-live);
+}
+
+.tw-hint {
+    display: block;
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--tw-text-secondary);
+}
+
+.tw-input-group {
+    position: relative;
+}
+
+.tw-input-group input {
+    padding-right: 84px !important;
+}
+
+/* The reveal button shows its own label: passwordVisibility.js swaps aria-label between
+   "show" and "hide", and the text follows it */
+.tw-reveal {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 44px;
+    padding: 0 14px;
+    background: none;
+    border: 0;
+    border-radius: 0 10px 10px 0;
+    font-size: 13px;
+    color: var(--tw-text-secondary);
+    cursor: pointer;
+}
+
+.tw-reveal i {
+    display: none;
+}
+
+.tw-reveal::after {
+    content: attr(aria-label);
+}
+
+.tw-reveal:hover {
+    color: var(--tw-text);
+}
+
+.tw-remember label,
+.tw-card .checkbox label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 400;
+    font-size: 14px;
+}
+
+.tw-card input[type='checkbox'],
+.tw-card input[type='radio'] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--tw-primary);
+}
+
+.tw-form-settings,
+.tw-form-options {
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+
+.tw-form-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+/* Buttons: base templates use inputs, buttons and links with these classes, some with none */
+
+.tw-button,
+.tw-card input[type='submit'],
+.tw-card button[type='submit'] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 46px;
+    padding: 0 18px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 10px;
+    border: 1px solid var(--tw-primary);
+    background: var(--tw-primary);
+    color: var(--tw-on-primary);
+    cursor: pointer;
+    text-decoration: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.tw-button:hover,
+.tw-card input[type='submit']:hover,
+.tw-card button[type='submit']:hover {
+    filter: brightness(1.08);
+    text-decoration: none;
+}
+
+.tw-button-secondary,
+.tw-card .tw-button-secondary {
+    background: var(--tw-surface);
+    color: var(--tw-text);
+    border-color: var(--tw-border);
+}
+
+.tw-button-secondary:hover {
+    filter: none;
+    border-color: var(--tw-text-secondary);
+}
+
+.tw-card input[type='submit']:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+/* Messages */
+
+.tw-alert {
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    font-size: 14px;
+    line-height: 1.45;
+    border-radius: 10px;
+    border: 1px solid var(--tw-border);
+    background: var(--tw-surface);
+}
+
+.tw-alert-error {
+    border-color: var(--tw-live);
+    background: var(--tw-live-bg);
+    color: var(--tw-text);
+}
+
+.tw-alert-success,
+.tw-alert-info {
+    border-color: var(--tw-primary);
+    background: var(--tw-tag);
+}
+
+.tw-alert-warning {
+    border-color: #e8a838;
+}
+
+.tw-card .instruction {
+    font-size: 15px;
+    color: var(--tw-text-secondary);
+}
+
+.tw-card ul {
+    padding-left: 20px;
+}
+
+/* Phone: the panel shrinks to a strip above the form, and registration's reasons go under it */
+
+@media (max-width: 860px) {
+    .tw-frame,
+    .tw-registering .tw-frame {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto 1fr auto;
+    }
+
+    .tw-brand,
+    .tw-registering .tw-brand {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px 20px;
+    }
+
+    .tw-brand .tw-wordmark {
+        font-size: 22px;
+    }
+
+    .tw-brand-space,
+    .tw-brand-lead {
+        display: none;
+    }
+
+    .tw-brand-back {
+        margin: 0;
+    }
+
+    .tw-main {
+        align-items: flex-start;
+        padding: 28px 20px 40px;
+    }
+
+    .tw-benefits {
+        border-left: 0;
+        border-top: 1px solid var(--tw-border);
+        padding: 24px 20px 32px;
+    }
+
+
+    .tw-benefits .tw-brand-space {
+        display: none;
+    }
+
+    .tw-benefits-top {
+        display: none;
+    }
+
+    .tw-card h1 {
+        font-size: 28px;
+    }
+}
