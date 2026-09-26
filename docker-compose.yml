@@ -145,7 +145,7 @@ services:
   # No volume by design: messages are as ephemeral as the Keycloak H2 store.
   # The image ships its own healthcheck; nothing here depends on this service.
   mailpit:
-    image: axllent/mailpit:v1.31.1
+    image: axllent/mailpit:v1.31.2
     container_name: tw-mailpit
     ports:
       - "127.0.0.1:1025:1025"   # SMTP
