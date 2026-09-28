@@ -4,6 +4,7 @@ export interface CreatePoll {
     question: string
     options: string[]
     closesAt: string | null
+    multipleChoice: boolean
 }
 
 export interface PollOption {
@@ -17,6 +18,7 @@ export interface Poll {
     question: string
     closesAt: string | null
     closed: boolean
+    multipleChoice: boolean
     voteCount: number
     options: PollOption[]
 }

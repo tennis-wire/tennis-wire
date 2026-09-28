@@ -1,5 +1,6 @@
 import { createTheme } from '@mui/material'
 import { alpha } from '@mui/material/styles'
+import type {} from '@mui/x-date-pickers/themeAugmentation'
 import type { PaletteColors } from './palettes'
 import type { FontPair } from './fonts'
 import { RADIUS, TINT } from './tokens'
@@ -159,6 +160,43 @@ export function createAppTheme(colors: PaletteColors, fontPair: FontPair, isDark
                         '& .MuiInputLabel-root': {
                             fontFamily: fontPair.body,
                         },
+                    },
+                },
+            },
+            // The date pickers draw their own field, which the TextField rules above do not reach
+            MuiPickersOutlinedInput: {
+                styleOverrides: {
+                    root: {
+                        fontFamily: fontPair.body,
+                        '& .MuiPickersOutlinedInput-notchedOutline': {
+                            borderColor: colors.border,
+                        },
+                        '&:hover .MuiPickersOutlinedInput-notchedOutline': {
+                            borderColor: colors.primaryLight,
+                        },
+                        '&.Mui-focused .MuiPickersOutlinedInput-notchedOutline': {
+                            borderColor: colors.primary,
+                        },
+                        '&.Mui-error .MuiPickersOutlinedInput-notchedOutline': {
+                            borderColor: colors.live,
+                        },
+                    },
+                },
+            },
+            MuiPickersTextField: {
+                styleOverrides: {
+                    root: {
+                        '& .MuiInputLabel-root': {
+                            fontFamily: fontPair.body,
+                        },
+                    },
+                },
+            },
+            MuiPickersCalendarHeader: {
+                styleOverrides: {
+                    // "сентябрь 2026" is how the Russian locale names the month
+                    label: {
+                        textTransform: 'capitalize',
                     },
                 },
             },
