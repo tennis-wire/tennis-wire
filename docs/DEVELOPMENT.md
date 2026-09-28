@@ -562,8 +562,16 @@ The request itself wants a recent login: `auth_time` in the token no older than
 `user.deletion.login-max-age` (5 minutes), otherwise 401
 `REAUTHENTICATION_REQUIRED` with an RFC 9470 `WWW-Authenticate` challenge. A token
 without `auth_time` counts as an old login. The site sends the reader through
-`/api/auth/login?prompt=login` right before the last button, so a `curl` against
-this endpoint needs a token from a login that recent too.
+`/api/auth/login?prompt=login` right before the last button.
+
+Staff are refused before that, with 409 `STAFF_ACCOUNT`: a `/staff/...` group in
+the `groups` claim, or no `groups` claim at all. Only `public-web` and `mobile`
+map groups, so a `dev-cli` token gets 409 whoever it belongs to; deleting one's
+own account is tried from the site, as `reader`. `DELETE /api/users/{id}`
+(`admin`) wants the same recent login, which a fresh `dev` token from `dev-cli`
+has, and asks Keycloak for the target's groups before writing anything: 409
+`STAFF_ACCOUNT` for staff, 503 when Keycloak does not answer or does not know the
+account.
 
 ### Transcription service
 
