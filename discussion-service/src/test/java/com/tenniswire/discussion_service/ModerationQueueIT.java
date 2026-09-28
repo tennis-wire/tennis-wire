@@ -126,17 +126,6 @@ class ModerationQueueIT {
     }
 
     @Test
-    void aBotRemovalIsRecordedUnsigned() {
-        var comment = comment();
-
-        commentService.hideByBot(comment);
-
-        var stored = comments.findById(comment).orElseThrow();
-        assertThat(stored.hiddenSource()).isEqualTo(Comment.HIDDEN_BY_BOT);
-        assertThat(stored.hiddenBy()).isNull();
-    }
-
-    @Test
     void aCommentLeftStandingComesBackOnlyAfterAnEdit() {
         var comment = comment();
         var reader = UUID.randomUUID();
@@ -226,7 +215,7 @@ class ModerationQueueIT {
     void aCardCarriesTheAuthorsNameEvenWhileHeIsBanned() {
         var comment = comment();
         // The author's record, written while he could still write: the ban below stops him.
-        commentService.hideByBot(comment());
+        commentService.hideByModerator(comment(), moderator);
         reportService.report(UUID.randomUUID(), comment, "spam");
         restrictionService.restrictCommenting(author, moderator, Instant.now().plus(Duration.ofHours(2)), "flood");
         when(profiles.profiles(any())).thenReturn(Map.of(author, new AuthorProfile(author, "loud-one", null)));
@@ -239,9 +228,9 @@ class ModerationQueueIT {
         assertThat(entry.author().displayName()).isEqualTo("loud-one");
         assertThat(entry.author().restriction()).isNotNull();
         assertThat(entry.author().restriction().expiresAt()).isNotNull();
-        assertThat(entry.author().removedByBot().total()).isEqualTo(1);
-        assertThat(entry.author().removedByBot().last30Days()).isEqualTo(1);
-        assertThat(entry.author().removedByModerator().total()).isZero();
+        assertThat(entry.author().removedByModerator().total()).isEqualTo(1);
+        assertThat(entry.author().removedByModerator().last30Days()).isEqualTo(1);
+        assertThat(entry.author().removedByBot().total()).isZero();
     }
 
     @Test

@@ -243,13 +243,6 @@ public class CommentService {
         hide(findOrThrow(commentId), Comment.HIDDEN_BY_MODERATOR, moderatorId);
     }
 
-    /** Removal by the classifier. It has no reader profile, so the row records only that it acted. */
-    public void hideByBot(UUID commentId) {
-        treeLock.hold(commentId);
-        comments.lockCounters(commentId);
-        hide(findOrThrow(commentId), Comment.HIDDEN_BY_BOT, null);
-    }
-
     // One page of top-level comments, oldest first. A limit outside the allowed range is brought
     // into it rather than refused: a limit is a request for how much, not a claim about the world,
     // and no client is served by a 400 where 200 rows would do.
