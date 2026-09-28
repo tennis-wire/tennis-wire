@@ -59,12 +59,19 @@ class GatewayKeycloakIT {
     private static final String USERS_ME = "/api/users/me";
     private static final String SOMEONES_ACCOUNT = "/api/users/8f1d9c4e-3a2b-4c5d-9e6f-0a1b2c3d4e5f";
 
-    // The clients readers sign in through. Neither allows the password grant, so their tokens come
-    // only from the code flow, which signInThroughTheBrowser runs the way a browser would. The app is
-    // a public client: no secret. Its callback is never followed, only matched against the realm.
-    private static final ReaderClient SITE =
-            new ReaderClient("public-web", "dev-public-web-secret", "http://localhost:3000/api/auth/callback/keycloak");
-    private static final ReaderClient APP = new ReaderClient("mobile", "", "tenniswire://auth");
+    // The clients people sign in through. None allows the password grant, so their tokens come only
+    // from the code flow, which signInThroughTheBrowser runs the way a browser would. The app and the
+    // editor are public clients: no secret. A callback is never followed, only matched against the
+    // realm. The editor has no offline_access scope, and asking for it would be refused as invalid_scope
+    private static final BrowserClient SITE = new BrowserClient(
+            "public-web",
+            "dev-public-web-secret",
+            "http://localhost:3000/api/auth/callback/keycloak",
+            "openid offline_access");
+    private static final BrowserClient APP =
+            new BrowserClient("mobile", "", "tenniswire://auth", "openid offline_access");
+    private static final BrowserClient EDITOR =
+            new BrowserClient("editorial-ui", "", "http://localhost:5173/auth/callback", "openid");
 
     private static final Pattern LOGIN_FORM_ACTION = Pattern.compile("<form[^>]*action=\"([^\"]+)\"");
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -188,6 +195,37 @@ class GatewayKeycloakIT {
     }
 
     @Test
+    void theFixturesTakeTheirRolesFromTheirGroups() {
+        assertThat(roles(passwordClaims("reader", "reader"))).contains("user").doesNotContain("staff");
+        assertThat(roles(passwordClaims("author", "author")))
+                .contains("user", "staff", "author")
+                .doesNotContain("chief-editor");
+        assertThat(roles(passwordClaims("moderator", "moderator"))).contains("user", "staff", "moderator");
+        assertThat(roles(passwordClaims("dev", "dev"))).contains("user", "staff", "admin", "chief-editor");
+    }
+
+    @Test
+    void anAdminSignedInToTheEditorKeepsTheStaffRolesOnly() {
+        var access = claims(signInThroughTheBrowser(EDITOR, "dev", "dev"), "access_token");
+
+        assertThat(roles(access))
+                .contains("user", "author", "chief-editor", "moderator", "admin")
+                .doesNotContain("staff");
+        assertThat(access.path("resource_access").has("realm-management")).isFalse();
+    }
+
+    @Test
+    void theEditorTokenOfAnAdminCannotUseTheAdminApi() {
+        // The same person through dev-cli is let in, so realm-admin did arrive with /staff/admins
+        assertThat(adminApiStatus(passwordToken("dev", "dev"))).isEqualTo(200);
+
+        var editorToken = signInThroughTheBrowser(EDITOR, "dev", "dev")
+                .path("access_token")
+                .asText();
+        assertThat(adminApiStatus(editorToken)).isEqualTo(403);
+    }
+
+    @Test
     void readerTokenIsForbidden() {
         client.get()
                 .uri(EDITORIAL)
@@ -246,11 +284,31 @@ class GatewayKeycloakIT {
     }
 
     private static String passwordToken(String clientId, String username, String password) {
-        return accessToken(Map.of(
+        return passwordTokens(clientId, username, password).path("access_token").asText();
+    }
+
+    // dev-cli has the full scope, so these are every role the account holds
+    private static JsonNode passwordClaims(String username, String password) {
+        return claims(passwordTokens(CLI, username, password), "access_token");
+    }
+
+    private static JsonNode passwordTokens(String clientId, String username, String password) {
+        return tokens(Map.of(
                 "grant_type", "password",
                 "client_id", clientId,
                 "username", username,
                 "password", password));
+    }
+
+    private static int adminApiStatus(String token) {
+        var users = URI.create(
+                KEYCLOAK.getAuthServerUrl().replaceAll("/+$", "") + "/admin/realms/" + REALM + "/users?max=1");
+        return browse(
+                        HttpRequest.newBuilder(users)
+                                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                                .GET(),
+                        new HashMap<>())
+                .statusCode();
     }
 
     private static String clientCredentialsToken() {
@@ -292,15 +350,15 @@ class GatewayKeycloakIT {
     // The login page, the form posted back, and the code from the redirect exchanged for tokens.
     // Cookies are carried by hand: Keycloak marks them Secure, and the JDK's cookie handler will not
     // send those over plain http, which is all the container speaks.
-    private static JsonNode signInThroughTheBrowser(ReaderClient reader, String username, String password) {
+    private static JsonNode signInThroughTheBrowser(BrowserClient app, String username, String password) {
         var verifier = randomToken();
         var cookies = new HashMap<String, String>();
 
         var authorize = new LinkedHashMap<String, String>();
-        authorize.put("client_id", reader.id());
+        authorize.put("client_id", app.id());
         authorize.put("response_type", "code");
-        authorize.put("scope", "openid offline_access");
-        authorize.put("redirect_uri", reader.callback());
+        authorize.put("scope", app.scope());
+        authorize.put("redirect_uri", app.callback());
         authorize.put("code_challenge", challengeOf(verifier));
         authorize.put("code_challenge_method", "S256");
         var loginPage = browse(
@@ -326,11 +384,11 @@ class GatewayKeycloakIT {
         var exchange = new LinkedHashMap<String, String>();
         exchange.put("grant_type", "authorization_code");
         exchange.put("code", queryParameter(callback, "code"));
-        exchange.put("redirect_uri", reader.callback());
+        exchange.put("redirect_uri", app.callback());
         exchange.put("code_verifier", verifier);
-        exchange.put("client_id", reader.id());
-        if (!reader.secret().isEmpty()) {
-            exchange.put("client_secret", reader.secret());
+        exchange.put("client_id", app.id());
+        if (!app.secret().isEmpty()) {
+            exchange.put("client_secret", app.secret());
         }
         return tokens(exchange);
     }
@@ -410,5 +468,5 @@ class GatewayKeycloakIT {
         return "Bearer " + token;
     }
 
-    private record ReaderClient(String id, String secret, String callback) {}
+    private record BrowserClient(String id, String secret, String callback, String scope) {}
 }
