@@ -28,7 +28,6 @@ class SigningKeys(Protocol):
 @dataclass(frozen=True, slots=True)
 class Principal:
     sub: str
-    username: str | None
     roles: frozenset[str]
 
 
@@ -57,10 +56,8 @@ class TokenVerifier:
         except (PyJWKClientError, jwt.InvalidTokenError) as exc:
             raise TokenRejectedError(str(exc)) from exc
 
-        username = claims.get("preferred_username")
         return Principal(
             sub=claims["sub"],
-            username=username if isinstance(username, str) else None,
             roles=_realm_roles(claims),
         )
 

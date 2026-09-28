@@ -103,7 +103,6 @@ async def transcribe_url(
     job = TranscriptionJob(
         id=job_id,
         owner_sub=author.sub,
-        owner_username=author.username,
         source_url=str(request.url),
         language=request.language,
         enable_diarization=request.enable_diarization,
@@ -111,7 +110,7 @@ async def transcribe_url(
 
     await job_storage.create(job)
     await arq.enqueue_job(TRANSCRIBE_TASK_NAME, job_id)
-    logger.info("Job created", job_id=job_id, owner=author.username, source="url")
+    logger.info("Job created", job_id=job_id, owner=author.sub, source="url")
 
     return JobCreatedResponse(
         job_id=job_id,
@@ -187,7 +186,6 @@ async def transcribe_file(
     job = TranscriptionJob(
         id=job_id,
         owner_sub=author.sub,
-        owner_username=author.username,
         source_file=s3_key,
         language=language,
         enable_diarization=enable_diarization,
@@ -195,7 +193,7 @@ async def transcribe_file(
 
     await job_storage.create(job)
     await arq.enqueue_job(TRANSCRIBE_TASK_NAME, job_id)
-    logger.info("Job created", job_id=job_id, owner=author.username, source="file")
+    logger.info("Job created", job_id=job_id, owner=author.sub, source="file")
 
     return JobCreatedResponse(
         job_id=job_id,
