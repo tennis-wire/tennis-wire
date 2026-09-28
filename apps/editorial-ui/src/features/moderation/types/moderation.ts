@@ -17,7 +17,6 @@ export interface QueueAuthor {
     avatarUrl: string | null
     restriction: ActiveRestriction | null
     removedByModerator: RemovalCounts
-    removedByBot: RemovalCounts
 }
 
 export interface QueueEntry {

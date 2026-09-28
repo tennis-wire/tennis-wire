@@ -9,7 +9,6 @@ import com.tenniswire.discussion_service.client.AuthorProfile;
 import com.tenniswire.discussion_service.client.AuthorProfileClient;
 import com.tenniswire.discussion_service.controller.moderation.ModerationQueueResponses;
 import com.tenniswire.discussion_service.dto.moderation.QueueEntryResponse;
-import com.tenniswire.discussion_service.entity.Comment;
 import com.tenniswire.discussion_service.entity.Report;
 import com.tenniswire.discussion_service.entity.ReportResolution;
 import com.tenniswire.discussion_service.exception.ResolutionNotApplicableException;
@@ -111,7 +110,6 @@ class ModerationQueueIT {
             assertThat(r.reporterHash()).isNull();
         });
         var stored = comments.findById(comment).orElseThrow();
-        assertThat(stored.hiddenSource()).isEqualTo(Comment.HIDDEN_BY_MODERATOR);
         assertThat(stored.hiddenBy()).isEqualTo(moderator);
     }
 
@@ -123,17 +121,6 @@ class ModerationQueueIT {
         commentService.hideByModerator(comment, moderator);
 
         assertThat(mine(queue.open(0, 200), comment)).isEmpty();
-    }
-
-    @Test
-    void aBotRemovalIsRecordedUnsigned() {
-        var comment = comment();
-
-        commentService.hideByBot(comment);
-
-        var stored = comments.findById(comment).orElseThrow();
-        assertThat(stored.hiddenSource()).isEqualTo(Comment.HIDDEN_BY_BOT);
-        assertThat(stored.hiddenBy()).isNull();
     }
 
     @Test
@@ -174,7 +161,6 @@ class ModerationQueueIT {
         var counts = countsFor(author);
         assertThat(counts.removedByModerator().total()).isEqualTo(1);
         assertThat(counts.removedByModerator().last30Days()).isEqualTo(1);
-        assertThat(counts.removedByBot().total()).isZero();
     }
 
     @Test
@@ -226,7 +212,7 @@ class ModerationQueueIT {
     void aCardCarriesTheAuthorsNameEvenWhileHeIsBanned() {
         var comment = comment();
         // The author's record, written while he could still write: the ban below stops him.
-        commentService.hideByBot(comment());
+        commentService.hideByModerator(comment(), moderator);
         reportService.report(UUID.randomUUID(), comment, "spam");
         restrictionService.restrictCommenting(author, moderator, Instant.now().plus(Duration.ofHours(2)), "flood");
         when(profiles.profiles(any())).thenReturn(Map.of(author, new AuthorProfile(author, "loud-one", null)));
@@ -239,9 +225,8 @@ class ModerationQueueIT {
         assertThat(entry.author().displayName()).isEqualTo("loud-one");
         assertThat(entry.author().restriction()).isNotNull();
         assertThat(entry.author().restriction().expiresAt()).isNotNull();
-        assertThat(entry.author().removedByBot().total()).isEqualTo(1);
-        assertThat(entry.author().removedByBot().last30Days()).isEqualTo(1);
-        assertThat(entry.author().removedByModerator().total()).isZero();
+        assertThat(entry.author().removedByModerator().total()).isEqualTo(1);
+        assertThat(entry.author().removedByModerator().last30Days()).isEqualTo(1);
     }
 
     @Test

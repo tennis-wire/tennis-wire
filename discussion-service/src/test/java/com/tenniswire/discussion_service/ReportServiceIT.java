@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.tenniswire.discussion_service.entity.BlockMode;
-import com.tenniswire.discussion_service.entity.Comment;
 import com.tenniswire.discussion_service.exception.CommentAlreadyRemovedException;
 import com.tenniswire.discussion_service.exception.ForbiddenException;
 import com.tenniswire.discussion_service.exception.ResourceNotFoundException;
@@ -220,10 +219,8 @@ class ReportServiceIT {
 
     private void removeByModeration(UUID commentId) {
         var comment = comments.findById(commentId).orElseThrow();
-        comments.saveAndFlush(comment.deletedAt(Instant.now())
-                .hiddenAt(Instant.now())
-                .hiddenSource(Comment.HIDDEN_BY_MODERATOR)
-                .hiddenBy(UUID.randomUUID()));
+        comments.saveAndFlush(
+                comment.deletedAt(Instant.now()).hiddenAt(Instant.now()).hiddenBy(UUID.randomUUID()));
     }
 
     private long openReportsOn(UUID commentId) {

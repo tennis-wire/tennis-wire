@@ -462,7 +462,7 @@ model {
   tennisService.identity.identityOidc -> tennisService.identity.identityDb 'Realm data'
 
   // --- Moderation bot -> API Gateway ---
-  tennisService.moderationBot -> tennisService.apiGateway 'Жалобы и снятие комментариев (/api/discussion/moderation/**)'
+  tennisService.moderationBot -> tennisService.apiGateway 'Жалобы классификатора (POST /api/discussion/moderation/reports)'
 
   // --- Client Apps -> API Gateway ---
   // Браузер в gateway не ходит: только в свой origin, дальше запрос собирает сервер Next.js.

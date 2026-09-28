@@ -55,6 +55,9 @@ public class SecurityConfig {
                         .hasRole(Roles.AUTHOR)
                         .pathMatchers(HttpMethod.PUT, "/api/discussion/polls/*/closing")
                         .hasRole(Roles.AUTHOR)
+                        // Removal is signed by a person; the bot only files reports.
+                        .pathMatchers(HttpMethod.DELETE, "/api/discussion/moderation/comments/*")
+                        .hasRole(Roles.MODERATOR)
                         .pathMatchers("/api/discussion/moderation/**")
                         .hasAnyRole(Roles.MODERATOR, Roles.MODERATOR_BOT)
                         .pathMatchers("/api/discussion/**")

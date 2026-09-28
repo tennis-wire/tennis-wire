@@ -240,14 +240,7 @@ public class CommentService {
     public void hideByModerator(UUID commentId, UUID moderatorId) {
         treeLock.hold(commentId);
         comments.lockCounters(commentId);
-        hide(findOrThrow(commentId), Comment.HIDDEN_BY_MODERATOR, moderatorId);
-    }
-
-    /** Removal by the classifier. It has no reader profile, so the row records only that it acted. */
-    public void hideByBot(UUID commentId) {
-        treeLock.hold(commentId);
-        comments.lockCounters(commentId);
-        hide(findOrThrow(commentId), Comment.HIDDEN_BY_BOT, null);
+        hide(findOrThrow(commentId), moderatorId);
     }
 
     // One page of top-level comments, oldest first. A limit outside the allowed range is brought
@@ -455,7 +448,7 @@ public class CommentService {
         }
     }
 
-    private void hide(Comment comment, String source, @Nullable UUID moderatorId) {
+    private void hide(Comment comment, UUID moderatorId) {
         if (comment.isHiddenByModeration()) {
             return;
         }
@@ -464,7 +457,7 @@ public class CommentService {
                     "Comment " + comment.id() + " was deleted by its author and is not moderation's to remove");
         }
         var now = Instant.now();
-        comment.deletedAt(now).hiddenAt(now).hiddenSource(source).hiddenBy(moderatorId);
+        comment.deletedAt(now).hiddenAt(now).hiddenBy(moderatorId);
         reactions.wipe(comment);
         // However the comment came down, the queue is done with it - including when it was taken
         // down straight from the comment endpoint, with no card ever opened.

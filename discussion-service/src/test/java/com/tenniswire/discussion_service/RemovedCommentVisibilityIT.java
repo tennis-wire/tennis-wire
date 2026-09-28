@@ -67,21 +67,6 @@ class RemovedCommentVisibilityIT {
     }
 
     @Test
-    void aBotRemovalReadsTheSameAsAModeratorOne() {
-        var comment = commentService
-                .create(alice, "publication", subjectId, "removed")
-                .comment();
-        commentService.reply(bob, comment.id(), "reply");
-
-        commentService.hideByBot(comment.id());
-
-        var listed = commentService
-                .listTopLevel("publication", subjectId, null, null, null, CommentSort.OLDEST)
-                .items();
-        assertThat(listed.getFirst().visibility()).isEqualTo(Visibility.REMOVED);
-    }
-
-    @Test
     void anErasedAuthorLeavesTheRemovalMarkAlone() {
         var comment = commentService
                 .create(alice, "publication", subjectId, "removed")

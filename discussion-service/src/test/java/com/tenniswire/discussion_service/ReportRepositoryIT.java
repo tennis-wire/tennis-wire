@@ -10,6 +10,7 @@ import com.tenniswire.discussion_service.repository.CommentRepository;
 import com.tenniswire.discussion_service.repository.ReportRepository;
 import java.time.Instant;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -97,17 +98,12 @@ class ReportRepositoryIT {
     }
 
     @Test
-    void aRemovalNamesAModeratorUnlessTheBotMadeIt() {
-        assertThatThrownBy(() -> hide(loaded(comment()), Comment.HIDDEN_BY_BOT, UUID.randomUUID()))
-                .isInstanceOf(DataIntegrityViolationException.class);
-        assertThatThrownBy(() -> hide(loaded(comment()), Comment.HIDDEN_BY_MODERATOR, null))
+    void aRemovalAlwaysNamesAModerator() {
+        assertThatThrownBy(() -> hide(loaded(comment()), null)).isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> comments.saveAndFlush(loaded(comment()).hiddenBy(UUID.randomUUID())))
                 .isInstanceOf(DataIntegrityViolationException.class);
 
-        assertThat(hide(loaded(comment()), Comment.HIDDEN_BY_BOT, null).hiddenAt())
-                .isNotNull();
-        assertThat(hide(loaded(comment()), Comment.HIDDEN_BY_MODERATOR, UUID.randomUUID())
-                        .hiddenAt())
-                .isNotNull();
+        assertThat(hide(loaded(comment()), UUID.randomUUID()).hiddenAt()).isNotNull();
     }
 
     /**
@@ -119,17 +115,15 @@ class ReportRepositoryIT {
         var comment = loaded(comment());
         var untouched = comment.updatedAt();
 
-        var hidden = hide(comment, Comment.HIDDEN_BY_MODERATOR, UUID.randomUUID());
+        var hidden = hide(comment, UUID.randomUUID());
 
         assertThat(hidden.updatedAt()).isEqualTo(untouched);
         assertThat(loaded(hidden.id()).updatedAt()).isEqualTo(untouched);
     }
 
-    private Comment hide(Comment comment, String source, UUID moderator) {
-        return comments.saveAndFlush(comment.hiddenAt(Instant.now())
-                .hiddenSource(source)
-                .hiddenBy(moderator)
-                .deletedAt(Instant.now()));
+    private Comment hide(Comment comment, @Nullable UUID moderator) {
+        return comments.saveAndFlush(
+                comment.hiddenAt(Instant.now()).hiddenBy(moderator).deletedAt(Instant.now()));
     }
 
     private UUID comment() {

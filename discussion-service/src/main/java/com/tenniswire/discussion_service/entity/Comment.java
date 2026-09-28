@@ -35,9 +35,6 @@ import org.hibernate.type.SqlTypes;
 @NoArgsConstructor
 public class Comment {
 
-    public static final String HIDDEN_BY_MODERATOR = "moderator";
-    public static final String HIDDEN_BY_BOT = "bot";
-
     // UUIDv7 generated on the JVM so the id is known before the flush; the column keeps
     // DEFAULT uuidv7() for rows inserted outside Hibernate.
     @Id
@@ -107,12 +104,8 @@ public class Comment {
     @Column(name = "hidden_at")
     private Instant hiddenAt;
 
-    // null when the bot removed it: a service account has no reader profile to name
     @Column(name = "hidden_by")
     private UUID hiddenBy;
-
-    @Column(name = "hidden_source")
-    private String hiddenSource;
 
     // When moderation last closed the reports on this comment without removing it. The comment
     // becomes reportable again once edited, and updatedAt is what proves an edit happened: its

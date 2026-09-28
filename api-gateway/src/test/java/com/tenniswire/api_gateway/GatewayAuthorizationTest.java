@@ -177,6 +177,34 @@ class GatewayAuthorizationTest {
     }
 
     @Test
+    void commentRemovalIsAModeratorsAlone() {
+        var hide = "/api/discussion/moderation/comments/" + UUID.randomUUID();
+
+        client.mutateWith(mockJwt().authorities(new SimpleGrantedAuthority("ROLE_moderator-bot")))
+                .delete()
+                .uri(hide)
+                .exchange()
+                .expectStatus()
+                .isForbidden();
+        client.mutateWith(mockJwt().authorities(new SimpleGrantedAuthority("ROLE_moderator")))
+                .delete()
+                .uri(hide)
+                .exchange()
+                .expectStatus()
+                .value(code -> assertThat(code).isNotIn(401, 403));
+    }
+
+    @Test
+    void theBotStillFilesReports() {
+        client.mutateWith(mockJwt().authorities(new SimpleGrantedAuthority("ROLE_moderator-bot")))
+                .post()
+                .uri("/api/discussion/moderation/reports")
+                .exchange()
+                .expectStatus()
+                .value(code -> assertThat(code).isNotIn(401, 403));
+    }
+
+    @Test
     void aReaderStillReachesHisOwnAvatar() {
         client.mutateWith(mockJwt().authorities(new SimpleGrantedAuthority("ROLE_user")))
                 .delete()

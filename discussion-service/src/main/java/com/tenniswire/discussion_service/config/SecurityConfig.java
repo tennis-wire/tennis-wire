@@ -59,8 +59,9 @@ public class SecurityConfig {
                         .hasRole(Roles.MODERATOR)
                         .requestMatchers(HttpMethod.PATCH, "/api/discussion/moderation/reports/**")
                         .hasRole(Roles.MODERATOR)
-                        .requestMatchers("/api/discussion/moderation/**")
-                        .hasAnyRole(Roles.MODERATOR, Roles.MODERATOR_BOT)
+                        // Removal is signed with a reader's user_id, which the bot does not have.
+                        .requestMatchers(HttpMethod.DELETE, "/api/discussion/moderation/comments/*")
+                        .hasRole(Roles.MODERATOR)
                         .requestMatchers("/api/discussion/comments/**", "/api/discussion/blocks/**")
                         .hasRole(Roles.USER)
                         // Fail closed, as in the gateway: a path without a rule is unreachable.

@@ -16,8 +16,6 @@ public class CurrentUser {
     // the two agree in production, but jwt().authorities(...) in tests sets only the authority.
     private static final String READER = "ROLE_" + Roles.USER;
 
-    private static final String MODERATOR = "ROLE_" + Roles.MODERATOR;
-
     private static final String CHIEF_EDITOR = "ROLE_" + Roles.CHIEF_EDITOR;
 
     private final UserIdResolver resolver;
@@ -38,11 +36,6 @@ public class CurrentUser {
 
     public @Nullable UUID idOrNull(@Nullable Jwt jwt) {
         return jwt != null && isReader() ? resolver.resolve(jwt) : null;
-    }
-
-    // Whether a person is acting rather than the classifier: the bot has no reader profile.
-    public boolean isModerator() {
-        return hasAuthority(MODERATOR);
     }
 
     public boolean isChiefEditor() {

@@ -22,8 +22,7 @@ erDiagram
         int reply_count "raw direct replies"
         timestamptz deleted_at "set on any takedown"
         timestamptz hidden_at "taken down by moderation"
-        uuid hidden_by "null for the bot"
-        text hidden_source "moderator | bot"
+        uuid hidden_by "the moderator who took it down"
         timestamptz reports_closed_at
         timestamptz counted_at "violation counted by hand"
         uuid idempotency_key "unique per author"

@@ -64,12 +64,7 @@ public class ModerationController {
     @DeleteMapping("/comments/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void hideComment(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
-        // The bot reaches this too and has no reader profile, so its removals are recorded unsigned.
-        if (currentUser.isModerator()) {
-            commentService.hideByModerator(id, currentUser.id(jwt));
-        } else {
-            commentService.hideByBot(id);
-        }
+        commentService.hideByModerator(id, currentUser.id(jwt));
     }
 
     // The classifier putting a comment in front of a person. Empty like a reader's own filing, and

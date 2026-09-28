@@ -283,9 +283,23 @@ class SecurityConfigTest {
     }
 
     @Test
-    void theBotMayHideComments() throws Exception {
-        mvc.perform(delete("/api/discussion/moderation/comments/" + UUID.randomUUID())
-                        .with(tokenWith("ROLE_moderator-bot")))
+    void onlyAModeratorHidesComments() throws Exception {
+        var hide = "/api/discussion/moderation/comments/" + UUID.randomUUID();
+        when(resolver.resolve(any())).thenReturn(UUID.randomUUID());
+
+        // The bot only files: a removal it made would carry nobody's name.
+        mvc.perform(delete(hide).with(tokenWith("ROLE_moderator-bot"))).andExpect(status().isForbidden());
+        mvc.perform(delete(hide).with(tokenWith("ROLE_user"))).andExpect(status().isForbidden());
+        // The removal is signed, so a moderator without user is refused by the handler, not the chain.
+        mvc.perform(delete(hide).with(tokenWith("ROLE_moderator")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("FORBIDDEN"));
+        // 404: through the chain and into the handler, where the comment does not exist.
+        mvc.perform(delete(hide)
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString()))
+                                .authorities(
+                                        new SimpleGrantedAuthority("ROLE_moderator"),
+                                        new SimpleGrantedAuthority("ROLE_user"))))
                 .andExpect(status().isNotFound());
     }
 
