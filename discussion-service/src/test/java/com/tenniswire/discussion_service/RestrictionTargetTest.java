@@ -58,9 +58,10 @@ class RestrictionTargetTest {
                 .apply(springSecurity())
                 .build();
         when(resolver.resolve(any())).thenReturn(moderator);
-        when(profiles.profiles(any())).thenAnswer(call -> call.<Collection<UUID>>getArgument(0).stream()
-                .filter(bob::equals)
-                .collect(Collectors.toMap(Function.identity(), id -> new AuthorProfile(id, "bob", null))));
+        when(profiles.profiles(any()))
+                .thenAnswer(call -> call.<Collection<UUID>>getArgument(0).stream()
+                        .filter(bob::equals)
+                        .collect(Collectors.toMap(Function.identity(), id -> new AuthorProfile(id, "bob", null))));
     }
 
     @Test

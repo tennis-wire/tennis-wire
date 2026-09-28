@@ -79,9 +79,11 @@ class BlockListTest {
                 .build();
         when(resolver.resolve(any())).thenReturn(viewer);
         var known = Map.of(viewer, "viewer", alice, "alice", bob, "bob");
-        when(profiles.profiles(any())).thenAnswer(call -> call.<Collection<UUID>>getArgument(0).stream()
-                .filter(known::containsKey)
-                .collect(Collectors.toMap(Function.identity(), id -> new AuthorProfile(id, known.get(id), null))));
+        when(profiles.profiles(any()))
+                .thenAnswer(call -> call.<Collection<UUID>>getArgument(0).stream()
+                        .filter(known::containsKey)
+                        .collect(Collectors.toMap(
+                                Function.identity(), id -> new AuthorProfile(id, known.get(id), null))));
     }
 
     @Test

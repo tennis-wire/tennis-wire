@@ -55,20 +55,24 @@ public class KeycloakAdmin {
     }
 
     public void delete(String subject) {
-        call("delete the account", () -> http.delete()
-                .uri("/admin/realms/{realm}/users/{id}", realm, subject)
-                .retrieve()
-                .onStatus(KeycloakAdmin::notFound, ALREADY_GONE)
-                .toBodilessEntity());
+        call(
+                "delete the account",
+                () -> http.delete()
+                        .uri("/admin/realms/{realm}/users/{id}", realm, subject)
+                        .retrieve()
+                        .onStatus(KeycloakAdmin::notFound, ALREADY_GONE)
+                        .toBodilessEntity());
     }
 
     // Full paths. No ALREADY_GONE here: an account that is not there says nothing about whose it was,
     // and whoever asks is deciding whether something irreversible may go ahead.
     public List<String> groupsOf(String subject) {
-        var rows = call("read the groups", () -> http.get()
-                .uri("/admin/realms/{realm}/users/{id}/groups", realm, subject)
-                .retrieve()
-                .body(ROWS));
+        var rows = call(
+                "read the groups",
+                () -> http.get()
+                        .uri("/admin/realms/{realm}/users/{id}/groups", realm, subject)
+                        .retrieve()
+                        .body(ROWS));
         if (rows == null) {
             throw new IdentityProviderUnavailableException("Keycloak answered with no groups for " + subject);
         }
@@ -98,39 +102,51 @@ public class KeycloakAdmin {
     }
 
     private Map<String, Object> read(String subject) {
-        return call("read the account", () -> http.get()
-                .uri("/admin/realms/{realm}/users/{id}", realm, subject)
-                .retrieve()
-                .onStatus(KeycloakAdmin::notFound, ALREADY_GONE)
-                .body(FIELDS));
+        return call(
+                "read the account",
+                () -> http.get()
+                        .uri("/admin/realms/{realm}/users/{id}", realm, subject)
+                        .retrieve()
+                        .onStatus(KeycloakAdmin::notFound, ALREADY_GONE)
+                        .body(FIELDS));
     }
 
     private void update(String subject, Map<String, Object> account) {
-        call("update the account", () -> http.put()
-                .uri("/admin/realms/{realm}/users/{id}", realm, subject)
-                .body(account)
-                .retrieve()
-                .onStatus(KeycloakAdmin::notFound, ALREADY_GONE)
-                .toBodilessEntity());
+        call(
+                "update the account",
+                () -> http.put()
+                        .uri("/admin/realms/{realm}/users/{id}", realm, subject)
+                        .body(account)
+                        .retrieve()
+                        .onStatus(KeycloakAdmin::notFound, ALREADY_GONE)
+                        .toBodilessEntity());
     }
 
     // Disabling does not reach a token already issued, but it does end what the browser is holding.
     private void logout(String subject) {
-        call("end the sessions", () -> http.post()
-                .uri("/admin/realms/{realm}/users/{id}/logout", realm, subject)
-                .retrieve()
-                .onStatus(KeycloakAdmin::notFound, ALREADY_GONE)
-                .toBodilessEntity());
+        call(
+                "end the sessions",
+                () -> http.post()
+                        .uri("/admin/realms/{realm}/users/{id}/logout", realm, subject)
+                        .retrieve()
+                        .onStatus(KeycloakAdmin::notFound, ALREADY_GONE)
+                        .toBodilessEntity());
     }
 
     private void removeCredentials(String subject) {
         for (var credential : rowsOf(subject, "credentials", "read the credentials")) {
             var credentialId = String.valueOf(credential.get("id"));
-            call("remove a credential", () -> http.delete()
-                    .uri("/admin/realms/{realm}/users/{id}/credentials/{credentialId}", realm, subject, credentialId)
-                    .retrieve()
-                    .onStatus(KeycloakAdmin::notFound, ALREADY_GONE)
-                    .toBodilessEntity());
+            call(
+                    "remove a credential",
+                    () -> http.delete()
+                            .uri(
+                                    "/admin/realms/{realm}/users/{id}/credentials/{credentialId}",
+                                    realm,
+                                    subject,
+                                    credentialId)
+                            .retrieve()
+                            .onStatus(KeycloakAdmin::notFound, ALREADY_GONE)
+                            .toBodilessEntity());
         }
     }
 
@@ -138,20 +154,28 @@ public class KeycloakAdmin {
     private void unlinkProviders(String subject) {
         for (var link : rowsOf(subject, "federated-identity", "read the linked providers")) {
             var provider = String.valueOf(link.get("identityProvider"));
-            call("unlink a provider", () -> http.delete()
-                    .uri("/admin/realms/{realm}/users/{id}/federated-identity/{provider}", realm, subject, provider)
-                    .retrieve()
-                    .onStatus(KeycloakAdmin::notFound, ALREADY_GONE)
-                    .toBodilessEntity());
+            call(
+                    "unlink a provider",
+                    () -> http.delete()
+                            .uri(
+                                    "/admin/realms/{realm}/users/{id}/federated-identity/{provider}",
+                                    realm,
+                                    subject,
+                                    provider)
+                            .retrieve()
+                            .onStatus(KeycloakAdmin::notFound, ALREADY_GONE)
+                            .toBodilessEntity());
         }
     }
 
     private List<Map<String, Object>> rowsOf(String subject, String collection, String what) {
-        var rows = call(what, () -> http.get()
-                .uri("/admin/realms/{realm}/users/{id}/{collection}", realm, subject, collection)
-                .retrieve()
-                .onStatus(KeycloakAdmin::notFound, ALREADY_GONE)
-                .body(ROWS));
+        var rows = call(
+                what,
+                () -> http.get()
+                        .uri("/admin/realms/{realm}/users/{id}/{collection}", realm, subject, collection)
+                        .retrieve()
+                        .onStatus(KeycloakAdmin::notFound, ALREADY_GONE)
+                        .body(ROWS));
         return rows == null ? List.of() : rows;
     }
 

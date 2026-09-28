@@ -120,8 +120,11 @@ class GatewayAuthorizationTest {
         var author = through(EDITOR, Roles.AUTHOR);
         var poll = "/api/discussion/polls/" + UUID.randomUUID();
 
-        client.get().uri(poll).exchange().expectStatus().value(code -> assertThat(code)
-                .isNotIn(401, 403));
+        client.get()
+                .uri(poll)
+                .exchange()
+                .expectStatus()
+                .value(code -> assertThat(code).isNotIn(401, 403));
         client.put().uri(poll + "/vote").exchange().expectStatus().isUnauthorized();
         client.mutateWith(author)
                 .put()
