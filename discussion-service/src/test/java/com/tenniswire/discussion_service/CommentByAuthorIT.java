@@ -109,8 +109,9 @@ class CommentByAuthorIT {
         blockService.block(bob, alice, BlockMode.SOFT);
 
         var softened = commentService.listByAuthor(alice, bob, PAGE, null);
-        assertThat(softened.items()).singleElement().satisfies(view -> assertThat(view.visibility())
-                .isEqualTo(Visibility.SOFT_HIDDEN));
+        assertThat(softened.items())
+                .singleElement()
+                .satisfies(view -> assertThat(view.visibility()).isEqualTo(Visibility.SOFT_HIDDEN));
 
         blockService.block(bob, alice, BlockMode.SUBTREE_REMOVAL);
         var removed = commentService.listByAuthor(alice, bob, PAGE, null);

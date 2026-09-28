@@ -170,8 +170,9 @@ class TextExpiryIT {
 
         inTwos.pass();
 
-        assertThat(comments.findAllById(down)).hasSize(5).allSatisfy(c -> assertThat(c.body())
-                .isNull());
+        assertThat(comments.findAllById(down))
+                .hasSize(5)
+                .allSatisfy(c -> assertThat(c.body()).isNull());
     }
 
     @Test
