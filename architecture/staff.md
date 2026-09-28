@@ -176,7 +176,7 @@
 7. **Токен `editorial-ui` без `realm-management`.**
     - `fullScopeAllowed: false`, в `scopeMappings` — `user`, `author`, `chief-editor`, `moderator`, `admin`.
     - Консоль Keycloak ходит через свой `security-admin-console`, ей это не мешает.
-    - Смотрит ли Admin REST API, какому клиенту выдан токен, не проверено (§16). Лечение нужно в любом случае.
+    - Admin REST API берёт роли из access-токена и сверяет их со scope клиента. С полным scope токен `editorial-ui` админ-учётки получал 200 на `GET /admin/realms/tennis-wire/users`, без него — 403. Проверено тестом на 26.7.0 и 26.7.3 (`GatewayKeycloakIT`).
 8. **`admin` удаляет только читателей.**
     - `DELETE /api/users/{id}` требует `recentLogin`, как `/me`.
     - Первой проверкой, до записи в `pending_identity_delete` и strip, — группы цели через admin API. Группа с префиксом `/staff/` → 409 `STAFF_ACCOUNT`.
@@ -375,7 +375,7 @@
 2. `security/public-web/staff-groups` — сайт узнаёт сотрудника по группам:
     - маппер `groups` у `public-web` и `mobile`, `author` убран из scope сайта;
     - флаги `canEdit`/`staff` в сессии, текст на `/me` вместо секции удаления;
-    - `GatewayKeycloakIT`: строку 166 заменить проверкой `groups` с `/staff/`, в 167 добавить `author`. Образец — тест 182.
+    - `GatewayKeycloakIT`, тест `anAdminSignedInOnTheSiteIsAReaderAndAnAuthorThere`: проверку ролей id-токена заменить проверкой `groups` с `/staff/`, в проверку access-токена добавить `author`. Образец — `anAdminSignedInOnTheAppIsAReaderThere`.
 3. `fix/user-service/staff-self-delete` — отказ до `recentLogin`; admin-удаление с `recentLogin` и отказом на сотрудника (§8, п. 8); тесты.
 4. `fix/content-service/tag-rights`
 5. `fix/discussion-service/bot-rights`
@@ -423,7 +423,6 @@
     - Покрывает ли `manage-members` на группе всё, что делает `KeycloakAdmin`: чтение и запись учётки, выход, credentials, federated identity, удаление.
     - Отказывает ли выдача `admin` без `map-role`.
     - Импортируются ли права из realm-JSON. Если нет — создавать через admin API при старте; если и это плохо — пересмотреть один realm.
-- **Admin REST API и клиент токена.** Access-токеном `editorial-ui` админ-учётки — `GET /admin/realms/tennis-wire/users`. Прошло — полный scope у `editorial-ui` отдаёт realm любому XSS в редакции (§8, п. 7). Уверенность средняя, тест — в `chore/keycloak/staff-groups`.
 - **Group Membership mapper при нуле групп:** пустой массив или claim вовсе нет. Во втором случае бывший сотрудник без групп получит 409, runbook возвращает его в `/readers`.
 - **OTP после Google:** запускает ли `OTP Form` в `postBrokerLoginFlow` настройку OTP, если его нет.
 - **Формат админ-событий `jboss-logging`** на 26.7.
