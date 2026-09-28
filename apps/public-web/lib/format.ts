@@ -68,3 +68,11 @@ export function formatShort(iso: string, now: Date = new Date()): string {
     if (at.getFullYear() === now.getFullYear()) return `${dayOfMonth.format(at)} в ${time}`
     return day.format(at)
 }
+
+// When a poll stops taking votes, worded as formatShort words a day: the year only once it is not
+// this one. Built by hand, as there: Intl joins a date and a time with whatever its ICU prefers.
+export function formatDeadline(iso: string, now: Date = new Date()): string {
+    const at = new Date(iso)
+    const date = at.getFullYear() === now.getFullYear() ? dayOfMonth.format(at) : day.format(at)
+    return `${date} в ${clock.format(at)}`
+}

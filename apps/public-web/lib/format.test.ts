@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatMonthYear, formatShort } from './format'
+import { formatDeadline, formatMonthYear, formatShort } from './format'
 
 // Local time on both sides: the words follow the reader's calendar, not UTC
 function at(year: number, month: number, date: number, hour: number, minute: number): string {
@@ -29,5 +29,14 @@ describe('formatShort', () => {
 describe('formatMonthYear', () => {
     it('gives the month in the genitive a phrase needs', () => {
         expect(formatMonthYear(at(2026, 9, 15, 12, 0))).toBe('сентября 2026 г.')
+    })
+})
+
+describe('formatDeadline', () => {
+    const now = new Date(2026, 8, 28, 18, 0)
+
+    it('gives the day, the month and the time, and the year only once it is not this one', () => {
+        expect(formatDeadline(at(2026, 10, 5, 18, 0), now)).toBe('5 октября в 18:00')
+        expect(formatDeadline(at(2027, 1, 2, 9, 30), now)).toBe('2 января 2027 г. в 09:30')
     })
 })
