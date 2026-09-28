@@ -209,6 +209,12 @@ below).
 gateway integration test. ROPC is deprecated in OAuth 2.1; this client must
 never appear in a deployed realm.
 
+Through the gateway its token reaches no staff route, whatever roles it carries:
+the editorial paths, poll writes, moderation and `DELETE /api/users/{id}` take a
+token whose `azp` is `editorial-ui`, and the bot's reports one from
+`moderation-bot`; anything else is 403. The services behind do not look at
+`azp`, so a `curl` with a `dev-cli` token goes to the service port directly.
+
 ```bash
 TOKEN=$(curl -s -d grant_type=password -d client_id=dev-cli \
   -d username=dev -d password=dev \
@@ -569,9 +575,10 @@ the `groups` claim, or no `groups` claim at all. Only `public-web` and `mobile`
 map groups, so a `dev-cli` token gets 409 whoever it belongs to; deleting one's
 own account is tried from the site, as `reader`. `DELETE /api/users/{id}`
 (`admin`) wants the same recent login, which a fresh `dev` token from `dev-cli`
-has, and asks Keycloak for the target's groups before writing anything: 409
-`STAFF_ACCOUNT` for staff, 503 when Keycloak does not answer or does not know the
-account.
+has if sent to user-service on 8092 (the gateway takes only an `editorial-ui`
+token there), and asks Keycloak for the target's groups before writing anything:
+409 `STAFF_ACCOUNT` for staff, 503 when Keycloak does not answer or does not
+know the account.
 
 ### Transcription service
 

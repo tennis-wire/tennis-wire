@@ -5,6 +5,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.delete;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.matching;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
@@ -59,6 +60,7 @@ class GatewayKeycloakIT {
     private static final String EDITORIAL = "/api/editorial/articles";
     private static final String USERS_ME = "/api/users/me";
     private static final String SOMEONES_ACCOUNT = "/api/users/8f1d9c4e-3a2b-4c5d-9e6f-0a1b2c3d4e5f";
+    private static final String REPORTS = "/api/discussion/moderation/reports";
 
     // The clients people sign in through. None allows the password grant, so their tokens come only
     // from the code flow, which signInThroughTheBrowser runs the way a browser would. The app and the
@@ -98,6 +100,7 @@ class GatewayKeycloakIT {
         DOWNSTREAM.stubFor(get(urlPathEqualTo(EDITORIAL)).willReturn(aResponse().withStatus(200)));
         DOWNSTREAM.stubFor(delete(urlPathMatching("/api/users/[^/]+"))
                 .willReturn(aResponse().withStatus(202)));
+        DOWNSTREAM.stubFor(post(urlPathEqualTo(REPORTS)).willReturn(aResponse().withStatus(201)));
     }
 
     @DynamicPropertySource
@@ -123,10 +126,10 @@ class GatewayKeycloakIT {
     }
 
     @Test
-    void authorTokenPassesAndTheHeaderIsRelayed() {
+    void anEditorTokenPassesAndTheHeaderIsRelayed() {
         client.get()
                 .uri(EDITORIAL)
-                .header(HttpHeaders.AUTHORIZATION, bearer(passwordToken("dev", "dev")))
+                .header(HttpHeaders.AUTHORIZATION, bearer(editorToken("dev", "dev")))
                 .exchange()
                 .expectStatus()
                 .isOk();
@@ -152,17 +155,48 @@ class GatewayKeycloakIT {
         // The reader has the role that opens /me, and that is deliberately not enough here.
         client.delete()
                 .uri(SOMEONES_ACCOUNT)
-                .header(HttpHeaders.AUTHORIZATION, bearer(passwordToken("reader", "reader")))
+                .header(HttpHeaders.AUTHORIZATION, bearer(editorToken("reader", "reader")))
                 .exchange()
                 .expectStatus()
                 .isForbidden();
 
         client.delete()
                 .uri(SOMEONES_ACCOUNT)
-                .header(HttpHeaders.AUTHORIZATION, bearer(passwordToken("dev", "dev")))
+                .header(HttpHeaders.AUTHORIZATION, bearer(editorToken("dev", "dev")))
                 .exchange()
                 .expectStatus()
                 .isAccepted();
+    }
+
+    // dev-cli has the full scope: the roles are all there, and azp is what turns the token away
+    @Test
+    void theSamePersonThroughAnotherClientIsRefusedOnStaffRoutes() {
+        var tokens = passwordTokens(CLI, "dev", "dev");
+        assertThat(roles(claims(tokens, "access_token"))).contains("author", "admin");
+        var token = tokens.path("access_token").asText();
+
+        client.get()
+                .uri(EDITORIAL)
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .exchange()
+                .expectStatus()
+                .isForbidden();
+        client.delete()
+                .uri(SOMEONES_ACCOUNT)
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .exchange()
+                .expectStatus()
+                .isForbidden();
+    }
+
+    @Test
+    void theBotFilesReportsWithItsOwnToken() {
+        client.post()
+                .uri(REPORTS)
+                .header(HttpHeaders.AUTHORIZATION, bearer(clientCredentialsToken()))
+                .exchange()
+                .expectStatus()
+                .isCreated();
     }
 
     @Test
@@ -180,7 +214,7 @@ class GatewayKeycloakIT {
                 .doesNotContain("admin", "moderator", "chief-editor", "author", "staff");
         assertThat(groups(access)).contains("/staff/admins");
 
-        // Through dev-cli the same person is let in: deletingSomebodyElsesAccountNeedsAnAdmin
+        // Through the editor the same person is let in: deletingSomebodyElsesAccountNeedsAnAdmin
         client.delete()
                 .uri(SOMEONES_ACCOUNT)
                 .header(
@@ -269,7 +303,7 @@ class GatewayKeycloakIT {
     void readerTokenIsForbidden() {
         client.get()
                 .uri(EDITORIAL)
-                .header(HttpHeaders.AUTHORIZATION, bearer(passwordToken("reader", "reader")))
+                .header(HttpHeaders.AUTHORIZATION, bearer(editorToken("reader", "reader")))
                 .exchange()
                 .expectStatus()
                 .isForbidden();
@@ -321,6 +355,12 @@ class GatewayKeycloakIT {
 
     private static String passwordToken(String username, String password) {
         return passwordToken(CLI, username, password);
+    }
+
+    private static String editorToken(String username, String password) {
+        return signInThroughTheBrowser(EDITOR, username, password)
+                .path("access_token")
+                .asText();
     }
 
     private static String passwordToken(String clientId, String username, String password) {

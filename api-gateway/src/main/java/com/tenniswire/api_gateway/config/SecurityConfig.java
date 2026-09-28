@@ -8,11 +8,16 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.authorization.AuthorityReactiveAuthorizationManager;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.authorization.ReactiveAuthorizationManager;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.authorization.AuthorizationContext;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
@@ -26,6 +31,10 @@ public class SecurityConfig {
         "/api/editorial/**", "/api/ai/**", "/api/translate/**", "/api/transcribe/**"
     };
 
+    // Clients as auth.md names them: the editor people sign in to, and the bot's own
+    private static final String EDITOR = "editorial-ui";
+    private static final String BOT = "moderation-bot";
+
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http.authorizeExchange(exchanges -> exchanges
@@ -38,7 +47,7 @@ public class SecurityConfig {
                         .pathMatchers("/api/public/**")
                         .permitAll()
                         .pathMatchers(EDITORIAL_PATHS)
-                        .hasRole(Roles.AUTHOR)
+                        .access(through(EDITOR, Roles.AUTHOR))
                         // Discussion: reads anonymous, writes need user, moderation
                         // needs a moderator or the bot. The service repeats and refines these.
                         .pathMatchers(HttpMethod.GET, "/api/discussion/comments/**")
@@ -50,16 +59,17 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.GET, "/api/discussion/polls/*")
                         .permitAll()
                         .pathMatchers(HttpMethod.POST, "/api/discussion/polls")
-                        .hasRole(Roles.AUTHOR)
+                        .access(through(EDITOR, Roles.AUTHOR))
                         .pathMatchers(HttpMethod.PATCH, "/api/discussion/polls/*")
-                        .hasRole(Roles.AUTHOR)
+                        .access(through(EDITOR, Roles.AUTHOR))
                         .pathMatchers(HttpMethod.PUT, "/api/discussion/polls/*/closing")
-                        .hasRole(Roles.AUTHOR)
-                        // Removal is signed by a person; the bot only files reports.
-                        .pathMatchers(HttpMethod.DELETE, "/api/discussion/moderation/comments/*")
-                        .hasRole(Roles.MODERATOR)
+                        .access(through(EDITOR, Roles.AUTHOR))
+                        // Filing a report is all the bot does, and the report is the bot's alone.
+                        // Everything else in moderation, removal included, is signed by a person.
+                        .pathMatchers(HttpMethod.POST, "/api/discussion/moderation/reports")
+                        .access(through(BOT, Roles.MODERATOR_BOT))
                         .pathMatchers("/api/discussion/moderation/**")
-                        .hasAnyRole(Roles.MODERATOR, Roles.MODERATOR_BOT)
+                        .access(through(EDITOR, Roles.MODERATOR))
                         .pathMatchers("/api/discussion/**")
                         .hasRole(Roles.USER)
                         // Users: a reader may only ever address themselves. Scoped
@@ -69,11 +79,11 @@ public class SecurityConfig {
                         .hasRole(Roles.USER)
                         // Avatar review. After the /me rule, which keeps /me/avatar the reader's own
                         .pathMatchers(HttpMethod.GET, "/api/users/moderation/avatars")
-                        .hasRole(Roles.MODERATOR)
+                        .access(through(EDITOR, Roles.MODERATOR))
                         .pathMatchers(HttpMethod.PUT, "/api/users/*/avatar/review")
-                        .hasRole(Roles.MODERATOR)
+                        .access(through(EDITOR, Roles.MODERATOR))
                         .pathMatchers(HttpMethod.DELETE, "/api/users/*/avatar")
-                        .hasRole(Roles.MODERATOR)
+                        .access(through(EDITOR, Roles.MODERATOR))
                         // A reader's profile by id, for the page his name under a comment leads
                         // to: open to whoever can read the comment itself.
                         .pathMatchers(HttpMethod.GET, "/api/users/*")
@@ -82,7 +92,7 @@ public class SecurityConfig {
                         // account on a reader's behalf, which is the only way out for someone
                         // banned for good.
                         .pathMatchers(HttpMethod.DELETE, "/api/users/*")
-                        .hasRole(Roles.ADMIN)
+                        .access(through(EDITOR, Roles.ADMIN))
                         // Fail closed: a route without a rule is unreachable, not merely
                         // reachable by anyone who happens to be logged in.
                         .anyExchange()
@@ -94,6 +104,21 @@ public class SecurityConfig {
                 .oauth2ResourceServer(
                         oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
                 .build();
+    }
+
+    // A staff route takes a token only from the client it is meant for. The role still decides;
+    // azp only refuses a token handed to some other client: a site or app token that carries a
+    // staff role by mistake, or a dev-cli one. The services behind do not look at azp.
+    private static ReactiveAuthorizationManager<AuthorizationContext> through(String client, String role) {
+        var hasRole = AuthorityReactiveAuthorizationManager.<AuthorizationContext>hasRole(role);
+        return (authentication, context) -> hasRole.authorize(authentication, context)
+                .flatMap(result -> result.isGranted()
+                        ? authentication.map(caller -> new AuthorizationDecision(issuedTo(caller, client)))
+                        : Mono.just(result));
+    }
+
+    private static boolean issuedTo(Authentication caller, String client) {
+        return caller.getPrincipal() instanceof Jwt jwt && client.equals(jwt.getClaimAsString("azp"));
     }
 
     private Converter<Jwt, Mono<AbstractAuthenticationToken>> jwtAuthenticationConverter() {
