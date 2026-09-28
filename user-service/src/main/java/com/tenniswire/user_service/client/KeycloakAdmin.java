@@ -62,6 +62,27 @@ public class KeycloakAdmin {
                 .toBodilessEntity());
     }
 
+    // Full paths. No ALREADY_GONE here: an account that is not there says nothing about whose it was,
+    // and whoever asks is deciding whether something irreversible may go ahead.
+    public List<String> groupsOf(String subject) {
+        var rows = call("read the groups", () -> http.get()
+                .uri("/admin/realms/{realm}/users/{id}/groups", realm, subject)
+                .retrieve()
+                .body(ROWS));
+        if (rows == null) {
+            throw new IdentityProviderUnavailableException("Keycloak answered with no groups for " + subject);
+        }
+        return rows.stream().map(KeycloakAdmin::pathOf).toList();
+    }
+
+    // A group without a path would read as no staff group at all
+    private static String pathOf(Map<String, Object> group) {
+        if (group.get("path") instanceof String path) {
+            return path;
+        }
+        throw new IdentityProviderUnavailableException("Keycloak listed a group without a path: " + group.get("id"));
+    }
+
     // How long an access token this realm issues stays good. What the erase has to outwait: a token
     // handed out a moment before the account was disabled is a self-contained JWT and goes on being
     // accepted until it expires.

@@ -5,6 +5,7 @@ import com.tenniswire.user_service.dto.ReaderProfileResponse;
 import com.tenniswire.user_service.dto.UpdateProfileRequest;
 import com.tenniswire.user_service.security.CurrentUser;
 import com.tenniswire.user_service.security.RecentLogin;
+import com.tenniswire.user_service.security.StaffAccounts;
 import com.tenniswire.user_service.service.AccountDeletionService;
 import com.tenniswire.user_service.service.AvatarService;
 import com.tenniswire.user_service.service.AvatarUrls;
@@ -36,6 +37,7 @@ public class UserController {
     private final ProfileService profiles;
     private final AccountDeletionService deletions;
     private final RecentLogin recentLogin;
+    private final StaffAccounts staffAccounts;
     private final AvatarService avatars;
     private final AvatarUrls urls;
 
@@ -44,12 +46,14 @@ public class UserController {
             ProfileService profiles,
             AccountDeletionService deletions,
             RecentLogin recentLogin,
+            StaffAccounts staffAccounts,
             AvatarService avatars,
             AvatarUrls urls) {
         this.currentUser = currentUser;
         this.profiles = profiles;
         this.deletions = deletions;
         this.recentLogin = recentLogin;
+        this.staffAccounts = staffAccounts;
         this.avatars = avatars;
         this.urls = urls;
     }
@@ -91,7 +95,9 @@ public class UserController {
     @DeleteMapping("/me")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void delete(@AuthenticationPrincipal Jwt jwt) {
-        // Ahead of resolving the reader: a refused request leaves nothing behind, not even a profile
+        // Ahead of resolving the reader: a refused request leaves nothing behind, not even a profile.
+        // Staff first: sending them through a fresh login would only end in the same refusal.
+        staffAccounts.refuseCaller(jwt);
         recentLogin.require(jwt);
         deletions.request(currentUser.id(jwt));
     }

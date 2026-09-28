@@ -2,8 +2,10 @@ package com.tenniswire.user_service;
 
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.tenniswire.user_service.client.KeycloakAdmin;
+import com.tenniswire.user_service.exception.IdentityProviderUnavailableException;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
 import java.net.URI;
 import java.util.List;
@@ -97,6 +99,39 @@ class KeycloakStripIT {
     @Test
     void theLifespanComesBackFromTheRealmItself() {
         assertThat(admin.accessTokenLifespan()).isPositive();
+    }
+
+    // What refusing to delete a staff account stands on: full paths, readable with manage-users
+    @Test
+    void groupsComeBackAsFullPathsForStaffAndReadersAlike() {
+        assertThat(admin.groupsOf(subjectOf("author"))).containsExactly("/staff/authors");
+        assertThat(admin.groupsOf(subjectOf("dev"))).contains("/staff/admins", "/staff/chief-editors");
+        assertThat(admin.groupsOf(subjectOf("reader"))).containsExactly("/readers");
+    }
+
+    @Test
+    void anAccountCreatedAfterwardsLandsInTheDefaultGroup() {
+        var subject = createReader("new-" + UUID.randomUUID() + "@example.test", "before");
+
+        assertThat(admin.groupsOf(subject)).containsExactly("/readers");
+    }
+
+    // No account says nothing about whose it was, so it is not read as "no staff groups"
+    @Test
+    void groupsOfAnAccountThatIsNotThereAreNotGuessedAt() {
+        var missing = UUID.randomUUID().toString();
+
+        assertThatThrownBy(() -> admin.groupsOf(missing)).isInstanceOf(IdentityProviderUnavailableException.class);
+    }
+
+    private String subjectOf(String username) {
+        var rows = asAdmin()
+                .get()
+                .uri("/admin/realms/{realm}/users?username={username}&exact=true", REALM, username)
+                .retrieve()
+                .body(ROWS);
+        assertThat(rows).as("fixture %s in the realm file", username).hasSize(1);
+        return String.valueOf(requireNonNull(rows).getFirst().get("id"));
     }
 
     private String createReader(String email, String password) {
