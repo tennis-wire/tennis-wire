@@ -3,6 +3,7 @@ package com.tenniswire.content_service.security;
 import com.tenniswire.auth_support.Roles;
 import com.tenniswire.content_service.exception.ForbiddenException;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 // The caller as the editorial rules see him. Staff are identified by the token's subject as is:
@@ -14,10 +15,14 @@ public record Staff(UUID id, String name, boolean chiefEditor) {
     public static Staff of(JwtAuthenticationToken token) {
         var jwt = token.getToken();
         var id = idFrom(jwt.getSubject());
-        var username = jwt.getClaimAsString("preferred_username");
         var chiefEditor =
                 token.getAuthorities().stream().anyMatch(authority -> CHIEF_EDITOR.equals(authority.getAuthority()));
-        return new Staff(id, username == null || username.isBlank() ? id.toString() : username, chiefEditor);
+        // Full name first: the username is the email
+        var name = Stream.of(jwt.getClaimAsString("name"), jwt.getClaimAsString("preferred_username"))
+                .filter(claim -> claim != null && !claim.isBlank())
+                .findFirst()
+                .orElse(id.toString());
+        return new Staff(id, name, chiefEditor);
     }
 
     private static UUID idFrom(String subject) {

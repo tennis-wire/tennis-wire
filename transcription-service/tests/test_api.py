@@ -1,14 +1,17 @@
 """Tests for API endpoints."""
 
 from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from jwt import PyJWK, PyJWKClientConnectionError
+from structlog.testing import CapturingLogger
 
 from tests.conftest import AUTHOR_SUB, FakeJobStorage, TokenFactory
+from transcription.api import routes
 from transcription.api.deps import get_token_verifier
 from transcription.auth import TokenVerifier
 from transcription.config import Settings
@@ -363,7 +366,33 @@ class TestOwnership:
 
         saved = job_storage.jobs[response.json()["job_id"]]
         assert saved.owner_sub == AUTHOR_SUB
-        assert saved.owner_username == "dev"
+
+    @pytest.mark.parametrize(
+        ("path", "request_args"),
+        [
+            ("/api/transcribe/url", {"json": {"url": "https://youtube.com/watch?v=test123"}}),
+            (
+                "/api/transcribe/file",
+                {"files": {"file": ("interview.mp3", b"data", "audio/mpeg")}},
+            ),
+        ],
+        ids=["url", "file"],
+    )
+    def test_new_job_is_logged_by_owner_sub(
+        self,
+        client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+        path: str,
+        request_args: dict[str, Any],
+    ) -> None:
+        # The username is the email: the log names staff by sub, as staff.audit does
+        log = CapturingLogger()
+        monkeypatch.setattr(routes, "logger", log)
+
+        client.post(path, **request_args)
+
+        [created] = [call for call in log.calls if call.args == ("Job created",)]
+        assert created.kwargs["owner"] == AUTHOR_SUB
 
     @pytest.mark.parametrize(
         ("method", "path"),

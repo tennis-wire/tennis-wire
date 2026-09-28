@@ -17,6 +17,7 @@ import com.tenniswire.content_service.entity.Tag;
 import com.tenniswire.content_service.entity.TagType;
 import com.tenniswire.content_service.repository.TagRepository;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,9 +42,9 @@ class EditorialArticleIT {
     private static final String ARTICLES = "/api/editorial/articles";
     private static final String PUBLIC = "/api/public/articles/";
 
-    private final Person author = new Person(UUID.randomUUID(), "anna", false);
-    private final Person other = new Person(UUID.randomUUID(), "oleg", false);
-    private final Person chief = new Person(UUID.randomUUID(), "chief", true);
+    private final Person author = new Person(UUID.randomUUID(), "Anna", false);
+    private final Person other = new Person(UUID.randomUUID(), "Oleg", false);
+    private final Person chief = new Person(UUID.randomUUID(), "Chief", true);
 
     @Autowired
     private TagRepository tags;
@@ -136,7 +137,7 @@ class EditorialArticleIT {
 
         var seen = body(open(chief, id)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.lockedBy").value("anna")));
+                .andExpect(jsonPath("$.lockedBy").value("Anna")));
         save(chief, id, read(seen, "$.version"), "news", "His")
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("LOCKED"));
@@ -294,7 +295,8 @@ class EditorialArticleIT {
         return JsonPath.read(json, path);
     }
 
-    // Staff are told apart by the subject; the name is what a locked article shows to others
+    // Staff are told apart by the subject; the name is what a locked article shows to others. The
+    // username is the email, as in the realm
     private record Person(UUID id, String name, boolean chiefEditor) {
 
         RequestPostProcessor token() {
@@ -303,7 +305,9 @@ class EditorialArticleIT {
                         new SimpleGrantedAuthority("ROLE_author"), new SimpleGrantedAuthority("ROLE_chief-editor")
                     }
                     : new GrantedAuthority[] {new SimpleGrantedAuthority("ROLE_author")};
-            return jwt().jwt(token -> token.subject(id.toString()).claim("preferred_username", name))
+            return jwt().jwt(token -> token.subject(id.toString())
+                            .claim("name", name)
+                            .claim("preferred_username", name.toLowerCase(Locale.ROOT) + "@tennis-wire.local"))
                     .authorities(roles);
         }
     }

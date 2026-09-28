@@ -15,7 +15,6 @@ def test_accepts_a_realm_token(token_verifier: TokenVerifier, make_token: TokenF
     principal = token_verifier.verify(make_token())
 
     assert principal.sub == AUTHOR_SUB
-    assert principal.username == "dev"
     assert principal.roles == {"author"}
 
 

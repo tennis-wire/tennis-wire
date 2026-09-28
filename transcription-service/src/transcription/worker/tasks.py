@@ -63,7 +63,7 @@ async def transcribe(ctx: dict[str, Any], job_id: str) -> dict[str, Any]:
         return {"status": "cancelled"}
 
     # Who holds the worker, for anyone reading the log while a long job runs
-    logger.info("Transcription started", job_id=job_id, owner=job.owner_username)
+    logger.info("Transcription started", job_id=job_id, owner=job.owner_sub)
 
     # Update status
     job.status = JobStatus.DOWNLOADING

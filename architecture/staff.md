@@ -15,11 +15,9 @@
     - Текст проходит через `sanitize-html`: список тегов, `allowedSchemes: http, https, mailto`. Остальное экранирует React.
     - CSP здесь второй линией не является: в `csp.ts` стоит `script-src 'self' 'unsafe-inline'`, внешний скрипт не загрузится, inline — выполнится.
     - `sourceUrl` через sanitizer не идёт: он рендерится в `href` напрямую. Серверная проверка схемы — в бэклоге аудита.
-- **Email читателей живут только в Keycloak**, в БД сервисов их нет. Email сотрудников сейчас попадают:
-    - в `article_edits.owner_name`;
-    - в `transcription-service`: в `owner_username` рядом с владельцем задачи (сам владелец — `sub`) и в лог — API при создании задачи и воркер.
-
-  Уходят вместе с `staff-name` (§4, п. 11).
+- **Email читателей и сотрудников живут только в Keycloak**, в БД и логах сервисов их нет.
+    - `article_edits.owner_name` — claim `name`. Без имени в Keycloak туда попадёт `preferred_username`, то есть email, поэтому имя при заведении обязательно (§6).
+    - `transcription-service` знает владельца задачи только по `sub`, и в лог пишет его же.
 - **Модерация подписана.** `hidden_by`/`hidden_at`, `issued_by`, `lifted_by`, `resolved_by`/`resolved_at`. Засчитанное вручную (`counted_at`) подписано через жалобу: `markCounted` вызывается только из `resolve` с `COUNTED`, и тот же вызов закрывает жалобы с `resolved_by`. Кроме снятий ботом: `hideByBot` передаёт `null` в `hidden_by` и `resolved_by`. После `bot-rights` новых таких снятий не будет.
 - **Сотрудник на сайте — читатель.** У `public-web` и `mobile` `fullScopeAllowed: false`: `admin`, `moderator`, `chief-editor` в их токены не попадают.
 - **Журнал админ-действий Keycloak** включён, 90 дней, без представлений.
@@ -380,7 +378,9 @@
 4. `fix/content-service/tag-rights`
 5. `fix/discussion-service/bot-rights`
 6. `security/api-gateway/staff-client` — `azp`.
-7. `fix/staff-name` — claim `name` с fallback на `preferred_username` в `content-service` (`Staff`) и `transcription-service` (`auth.py`).
+7. `fix/staff-name` — email сотрудника уходит из сервисов:
+    - `content-service`: `Staff.name` из claim `name` с fallback на `preferred_username`;
+    - `transcription-service`: `owner_username` убран, в лог пишется `sub` владельца — он стабилен и склеивается с `actor_sub` в `staff.audit`.
 
 **Рубеж «можно нанимать».** Этап 1 плюс:
 
