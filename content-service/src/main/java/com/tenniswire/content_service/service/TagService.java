@@ -10,8 +10,10 @@ import com.tenniswire.content_service.dto.pub.SectionResponse;
 import com.tenniswire.content_service.entity.Tag;
 import com.tenniswire.content_service.entity.TagType;
 import com.tenniswire.content_service.exception.ConflictException;
+import com.tenniswire.content_service.exception.ForbiddenException;
 import com.tenniswire.content_service.exception.ResourceNotFoundException;
 import com.tenniswire.content_service.repository.TagRepository;
+import com.tenniswire.content_service.security.Staff;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -70,7 +72,10 @@ public class TagService {
         return TagResponse.from(findTagOrThrow(id));
     }
 
-    public TagResponse update(UUID id, UpdateTagRequest request) {
+    public TagResponse update(UUID id, UpdateTagRequest request, Staff staff) {
+        if (!staff.chiefEditor()) {
+            throw new ForbiddenException("Only a chief editor may change a tag");
+        }
         var tag = findTagOrThrow(id);
 
         if (request.name() != null) {
@@ -99,7 +104,10 @@ public class TagService {
         return TagResponse.from(saved);
     }
 
-    public void delete(UUID id) {
+    public void delete(UUID id, Staff staff) {
+        if (!staff.chiefEditor()) {
+            throw new ForbiddenException("Only a chief editor may delete a tag");
+        }
         var tag = findTagOrThrow(id);
         if (tagRepository.isTagUsedByArticles(id)) {
             throw new ConflictException("Cannot delete tag that is used by articles: " + tag.name());

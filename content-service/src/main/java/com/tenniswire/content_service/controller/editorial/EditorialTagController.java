@@ -4,6 +4,7 @@ import com.tenniswire.content_service.dto.TagResponse;
 import com.tenniswire.content_service.dto.editorial.CreateTagRequest;
 import com.tenniswire.content_service.dto.editorial.UpdateTagRequest;
 import com.tenniswire.content_service.entity.TagType;
+import com.tenniswire.content_service.security.Staff;
 import com.tenniswire.content_service.service.TagService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -54,13 +56,14 @@ public class EditorialTagController {
     }
 
     @PatchMapping("/{id}")
-    public TagResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateTagRequest request) {
-        return tagService.update(id, request);
+    public TagResponse update(
+            @PathVariable UUID id, @Valid @RequestBody UpdateTagRequest request, JwtAuthenticationToken token) {
+        return tagService.update(id, request, Staff.of(token));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable UUID id) {
-        tagService.delete(id);
+    public void delete(@PathVariable UUID id, JwtAuthenticationToken token) {
+        tagService.delete(id, Staff.of(token));
     }
 }
