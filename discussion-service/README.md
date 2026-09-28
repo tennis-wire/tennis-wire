@@ -106,7 +106,7 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
 
 | Метод | Путь | Роль | Что |
 |---|---|---|---|
-| DELETE | `/moderation/comments/{id}` | `moderator`, `moderator-bot` | снять комментарий; снятое ботом не подписано |
+| DELETE | `/moderation/comments/{id}` | `moderator` | снять комментарий; бот не может, только жалуется |
 | POST | `/moderation/reports` `{commentId, reason}` | `moderator-bot` | 204, жалоба классификатора; снят модерацией — 409, текста нет — 404, как у читательской |
 | GET | `/moderation/reports?status=open&page=&size=` | `moderator` | очередь, карточка на комментарий, `{items, page, size}`; `size` до 200. Карточку удалённого автором комментария сервис закрывает сам через 30 дней после удаления, вместе с текстом (`expired`) |
 | PATCH | `/moderation/reports/{commentId}` `{resolution}` | `moderator` | 204, закрывает карточку целиком: `hidden` \| `dismissed` \| `counted`. `counted` — только у удалённого автором и пока его текст хранится, иначе 409 `RESOLUTION_NOT_APPLICABLE`. `voided` и `expired` пишет только сам сервис — 400 |
