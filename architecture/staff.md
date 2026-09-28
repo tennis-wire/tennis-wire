@@ -17,10 +17,10 @@
     - `sourceUrl` через sanitizer не идёт: он рендерится в `href` напрямую. Серверная проверка схемы — в бэклоге аудита.
 - **Email читателей живут только в Keycloak**, в БД сервисов их нет. Email сотрудников сейчас попадают:
     - в `article_edits.owner_name`;
-    - во владельца задачи и лог воркера `transcription-service`.
+    - в `transcription-service`: в `owner_username` рядом с владельцем задачи (сам владелец — `sub`) и в лог — API при создании задачи и воркер.
 
   Уходят вместе с `staff-name` (§4, п. 11).
-- **Модерация подписана.** `hidden_by`/`hidden_at`, `issued_by`, `lifted_by`, `resolved_by`/`resolved_at`. Засчитанное вручную (`counted_at`) подписано через жалобу: `markCounted` вызывается только из `resolve` с `COUNTED`, и тот же вызов закрывает жалобы с `resolved_by`.
+- **Модерация подписана.** `hidden_by`/`hidden_at`, `issued_by`, `lifted_by`, `resolved_by`/`resolved_at`. Засчитанное вручную (`counted_at`) подписано через жалобу: `markCounted` вызывается только из `resolve` с `COUNTED`, и тот же вызов закрывает жалобы с `resolved_by`. Кроме снятий ботом: `hideByBot` передаёт `null` в `hidden_by` и `resolved_by`. После `bot-rights` новых таких снятий не будет.
 - **Сотрудник на сайте — читатель.** У `public-web` и `mobile` `fullScopeAllowed: false`: `admin`, `moderator`, `chief-editor` в их токены не попадают.
 - **Журнал админ-действий Keycloak** включён, 90 дней, без представлений.
 
@@ -58,9 +58,12 @@
 | 8 | Кто что сделал в редакции, не записано: у `articles` только владелец и `updated_at`, `log.info` нет. Правка и закрытие опросов не подписаны (у `poll` только `created_by`) | `content-service`, `discussion-service` | `feat/content-service/revisions`, `chore/staff-audit` |
 | 9 | `user-service` с `manage-users` выдаёт `admin` кому угодно (auth.md §11) | realm | `security/keycloak/fgap` |
 | 10 | Выключенный сотрудник работает до 5 минут на живом access-токене | realm, `editorial-ui` | `chore/editorial-ui/short-token` |
-| 11 | В `Staff.name` и во владельце задачи транскрипции — `preferred_username`, а это email | `Staff.java`, `transcription-service/auth.py:60` | `fix/staff-name` |
-| 12 | MFA нет. События Keycloak живут только внутри Keycloak, и `realm-admin` может их выключить | realm | `security/keycloak/staff-otp`, `chore/keycloak/events-to-logs` |
-| 13 | `admin` — composite над всеми ролями | realm | `chore/keycloak/admin-split` |
+| 11 | В `Staff.name` и в `owner_username` задачи транскрипции — `preferred_username`, а это email. Оттуда он попадает в три строки лога транскрипции | `Staff.java`, `transcription-service/auth.py:60`, `models.py:69` | `fix/staff-name` |
+| 12 | MFA нет. `eventsListeners` в realm не задан: штатный `jboss-logging` пишет в stdout только ошибки (WARN), успешные события живут только внутри Keycloak, и `realm-admin` может их выключить | realm | `security/keycloak/staff-otp`, `chore/keycloak/events-to-logs` |
+| 13 | `admin` — composite над `user`, `author`, `moderator`, `chief-editor` | realm | `chore/keycloak/admin-split` |
+| 14 | У `editorial-ui` `fullScopeAllowed` не задан, то есть `true`. После `realm-admin` у `/staff/admins` access-токен админ-учётки в редакции понесёт роли `realm-management`, а токен живёт в браузере: XSS в редакции — захват realm | realm | `chore/keycloak/staff-groups` |
+| 15 | `DELETE /api/users/{id}` (`admin`) не проверяет `recentLogin`, ничего не пишет и удалит учётку сотрудника, хотя её только выключают (§6) | `AdminUserController.delete` | `fix/user-service/staff-self-delete` |
+| 16 | `org.hibernate.orm.jdbc.bind: TRACE` в базовом `application.yaml`: в лог уходят тела комментариев, причины жалоб, текст статей, никнеймы. При retention 90 дней лог переживёт 30-дневное стирание текста и стирание аккаунта | `content-`, `discussion-`, `user-service` | деплой-чеклист (§15) |
 
 ## 5. Роли и группы
 
@@ -170,6 +173,15 @@
 4. **Staff-маршруты только с токеном `editorial-ui`.** Gateway проверяет `azp` на `/api/editorial/**`, `/api/ai/**`, `/api/translate/**`, `/api/transcribe/**`, запись опросов, `/api/discussion/moderation/**`, `/api/users/moderation/**`, `PUT`/`DELETE /api/users/{id}/avatar...` и `DELETE /api/users/{id}`. Бот — `azp=moderation-bot` на `POST /moderation/reports`. После п. 3 `author` в токене сайта нет, и `azp` — вторая линия, а не единственная.
 5. **Бот только жалуется.** `DELETE /moderation/comments/{id}` — только `moderator`.
 6. **Модерация живёт в `editorial-ui`.** `moderator` на сайт не пускаем, иначе права модератора живут в offline-сессии до 180 дней.
+7. **Токен `editorial-ui` без `realm-management`.**
+    - `fullScopeAllowed: false`, в `scopeMappings` — `user`, `author`, `chief-editor`, `moderator`, `admin`.
+    - Консоль Keycloak ходит через свой `security-admin-console`, ей это не мешает.
+    - Смотрит ли Admin REST API, какому клиенту выдан токен, не проверено (§16). Лечение нужно в любом случае.
+8. **`admin` удаляет только читателей.**
+    - `DELETE /api/users/{id}` требует `recentLogin`, как `/me`.
+    - Первой проверкой, до записи в `pending_identity_delete` и strip, — группы цели через admin API. Группа с префиксом `/staff/` → 409 `STAFF_ACCOUNT`.
+    - Проверка закрыта по умолчанию: если Keycloak не ответил, в том числе 403 FGAP на сотрудника вне `/readers`, запрос обрывается ошибкой. Отказ не глотается, как отказ strip в `AccountDeletionService:59-64`.
+    - Проверка остаётся и после FGAP. FGAP — вторая линия, и необратимое он не останавливает: отказ strip глотается, `trace.start` всё равно стирает комментарии в `discussion-service`, а job повторяет strip с `log.error`. Это ошибка конфигурации, которой при первой проверке быть не должно.
 
 ## 9. Журнал и оповещения
 
@@ -185,7 +197,7 @@
 - **Колонки в `user-service` журналом не станут.** `avatar_reviewed_*` перезаписывает следующий разбор, строка `pending_identity_delete` уходит вместе с задачей.
 - **429 на staff-маршрутах.** Своего логгера у gateway нет. Нужен `GlobalFilter`, который оборачивает цепочку и на статусе 429 staff-маршрута пишет ту же строку: `sub` и путь.
 - **Retention стока — 90 дней**, как `adminEventsExpiration`. Это обязательный пункт деплой-чеклиста: минимум — окно отката в 30 дней, а лог дешёвый, и восстановление тегов по нему от запаса только выигрывает. До появления стока у действий из третьей строки таблицы следа нет вовсе. До деплоя сотрудников нет, поэтому это приемлемо.
-- **События Keycloak.** Listener `jboss-logging` с уровнем INFO для успешных событий: вход, неудачный OTP, сброс пароля и OTP, выдача ролей и групп, создание учётки. Админ-события пишутся с `resourcePath` (`users/{id}/groups/{groupId}`): кто кому что выдал, восстанавливается по ID, не по именам. Этого достаточно.
+- **События Keycloak.** Listener `jboss-logging` с уровнем INFO для успешных событий: вход, неудачный OTP, сброс пароля и OTP, выдача ролей и групп, создание учётки. Ошибки (`LOGIN_ERROR`) штатный listener уже пишет на WARN, `events-to-logs` сводится к уровню для успешных. Админ-события пишутся с `resourcePath` (`users/{id}/groups/{groupId}`): кто кому что выдал, восстанавливается по ID, не по именам. Этого достаточно.
 - **Оповещения — один Telegram-канал.** Туда падает:
     - каждая опасная строка `staff.audit`;
     - админ-события Keycloak по ролям, группам, учёткам и credentials;
@@ -262,16 +274,18 @@
 **Действия модератора — «откатить всё, что сделал X с момента T» (`admin`).** Пишется постфактум, если понадобится; окно — 30 дней, пока `TextExpiryJob` не стёр текст. По view из §9:
 
 - **Снятый им комментарий** возвращается.
-    - Снимаются `hidden_*` и `deleted_at`, иначе `TextExpiryJob` сотрёт текст по прежним часам.
-    - Снятые модерацией gravestone'ы не схлопываются (`CommentCollapse:141`), но это проверить тестом.
+    - Снимаются `deleted_at` и `hidden_*`. Часы `TextExpiryJob` идут только от `deleted_at`: не снять его — текст сотрётся по прежним часам. `hidden_*` снимается ради видимости.
+    - Строка снятого комментария остаётся (`CommentCollapse:141`), но из выдачи он уходит (`goesFromView`), а `reply_count` предков уменьшается (`CommentCollapse:107-110`). Откат пересчитывает `reply_count` по цепочке предков, иначе восстановленный комментарий останется невидимым под плейсхолдером с нулём. Проверить тестом.
     - Счётчики снятого у автора считаются на лету по `hidden_at` и `counted_at` и восстановятся сами.
     - Реакции не возвращаются: комментарий приходит с нулём. `hide` вызывает `reactions.wipe`: строки реакций удалены (`ReactionService:133`), их суммы влиты в итоги автора, счётчики комментария обнулены (`AuthorTotals:47`). Итоги автора не трогаем: реакции были настоящими и в его сумме остаются.
 - **Засчитанное им** (жалоба `COUNTED`, `resolved_by` = X) — снимается `counted_at`, `reports_closed_at` — по пункту ниже.
 - **Выданный им бан** снимается с `lifted_by` = `admin`.
 - **Бан, который он заменил,** переиздаётся новой строкой с теми же `capability` и `expires_at`, `issued_by` = `admin`. Историю не переписываем: снятые баны остаются как были (решение moderation-log). `idx_user_restriction_active` не уникальный и не мешает.
+    - Снятый бан освобождает адрес стёртого читателя сам, в течение `recheck` (5 минут, `AccountErasure:138`).
+    - Поэтому заменённый бунтовщиком бан переиздаётся в той же транзакции, что и снятие бана бунтовщика, и раньше него. Иначе проверка, попавшая между двумя шагами, увидит «бана нет», удалит учётку и освободит адрес, который законный бан должен был держать.
 - **Разобранные им жалобы** не переоткрываются, это история.
 - **Колонка `reports_closed_at` снимается** у комментариев, где последнее закрытие жалоб — его `dismissed` или `counted`. Это колонка комментария, не история.
-    - «Последнее закрытие — его» находится точным равенством, не окном: `report.resolved_at = comment.reports_closed_at and report.resolved_by = X`. `markReportsClosed`/`markCounted` и `closeOpen` пишут `current_timestamp` в одной транзакции, а в Postgres это время её начала (ср. комментарий в `ReportRepository:98`).
+    - «Последнее закрытие — его» находится точным равенством, не окном: `report.resolved_at = comment.reports_closed_at and report.resolved_by = X`. `markReportsClosed`/`markCounted` и `closeOpen` пишут `current_timestamp` в одной транзакции (`@Transactional` на `ModerationQueueService:26`), а в Postgres это время её начала. Комментарий в `ReportRepository:98` говорит только «одно решение — одно время», равенство держится на семантике Postgres.
     - Иначе `ReportService.settledAndUnedited` (строка 107) молча глотает новые жалобы, и читательские, и от бота, пока текст не поправят. Двести отклонённых им жалоб — двести необжалуемых комментариев.
     - Колонку ставят `markReportsClosed` (только `dismissed`, `ModerationQueueService:85`) и `markCounted`. Снятие модерацией (`CommentService.hide`) её не трогает.
     - Поэтому у восстановленного комментария `reports_closed_at` остаётся, только если его раньше отклонил честный модератор. Так и должно быть.
@@ -282,7 +296,7 @@
 
 - **Тег** — вручную по строке `staff.audit` (прежние имя и slug).
 - **Черновики уволенного** — передача другому автору, `admin`.
-- **Удаление аккаунта читателя `admin`'ом** необратимо. Оно только у `admin` и попадает в лог.
+- **Удаление аккаунта читателя `admin`'ом** необратимо. Оно только у `admin`, сотрудника не удаляет (§8, п. 8) и пишет строку `staff.audit` (§9).
 - **Последний рубеж** — PITR-бэкапы (§13).
 
 ## 12. Сценарии
@@ -326,6 +340,7 @@
 - **auth.md §3**
     - Маппер `groups` у `public-web` и `mobile`.
     - `access.token.lifespan: 60` у `editorial-ui`.
+    - `fullScopeAllowed: false` и `scopeMappings` у `editorial-ui`.
     - OTP для `staff`.
     - Фикстуры с явными `groups`: учётки из realm-файла default-групп не получают. `reader` → `/readers`, `author` → `/staff/authors`, `moderator` → `/staff/moderators`, `dev` → `/staff/admins` + `/staff/chief-editors`.
 - **auth.md §4**
@@ -338,6 +353,7 @@
     - Staff-маршруты gateway с `order` и лимитами.
     - `groups` — только для отказа.
     - `DELETE /api/users/me` для сотрудника — 409 `STAFF_ACCOUNT` до проверки `auth_time`.
+    - `DELETE /api/users/{id}` — `auth_time`, на сотрудника 409 `STAFF_ACCOUNT` по группам цели.
 - **auth.md §8** — флаг фичи FGAP в compose и при сборке prod-образа.
 - **auth.md §11**
     - Убрать «`manage-users` шире» после `security/keycloak/fgap`.
@@ -355,12 +371,12 @@
 
 **Этап 1 — сейчас, без сотрудников.** Маленькие ветки: цепочка из трёх (1 → 2 → 3, фикстурам нужны группы) и четыре независимых — от цепочки и друг от друга (4–7).
 
-1. `chore/keycloak/staff-groups` — группы, маркер `staff`, фикстуры в группы, `realm-admin` у `/staff/admins`. `admin` остаётся composite.
+1. `chore/keycloak/staff-groups` — группы, маркер `staff`, фикстуры в группы, `realm-admin` у `/staff/admins`, `editorial-ui` без full scope (§8, п. 7). `admin` остаётся composite.
 2. `security/public-web/staff-groups` — сайт узнаёт сотрудника по группам:
     - маппер `groups` у `public-web` и `mobile`, `author` убран из scope сайта;
     - флаги `canEdit`/`staff` в сессии, текст на `/me` вместо секции удаления;
     - `GatewayKeycloakIT`: строку 166 заменить проверкой `groups` с `/staff/`, в 167 добавить `author`. Образец — тест 182.
-3. `fix/user-service/staff-self-delete` — отказ до `recentLogin`, тесты.
+3. `fix/user-service/staff-self-delete` — отказ до `recentLogin`; admin-удаление с `recentLogin` и отказом на сотрудника (§8, п. 8); тесты.
 4. `fix/content-service/tag-rights`
 5. `fix/discussion-service/bot-rights`
 6. `security/api-gateway/staff-client` — `azp`.
@@ -379,6 +395,7 @@
 - `security/keycloak/fgap` — забор, IT (читателя гасит, на сотрудника отказ, выдача `admin` — отказ), флаг фичи в образе;
 - `chore/staff-audit` — логгер `staff.audit` в `content-`, `discussion-`, `user-service`. В минимуме до найма он был, сюда перенесён сознательно: до стока строке некуда падать, а сотрудники появляются не раньше деплоя. Если кто-то появится раньше — ветка уходит в рубеж найма;
 - `chore/keycloak/events-to-logs`;
+- `org.hibernate.orm.jdbc.bind: TRACE` — из базового `application.yaml` в `application-local.yaml` у `content-`, `discussion-`, `user-service`, до появления стока (§4, п. 16);
 - сток логов с retention 90 дней, Telegram-канал;
 - prod-realm из репозитория, роли БД, PITR-бэкапы, версионирование бакета, лимиты провайдеров, break-glass, удаление бутстрап-админа.
 
@@ -405,6 +422,7 @@
     - Покрывает ли `manage-members` на группе всё, что делает `KeycloakAdmin`: чтение и запись учётки, выход, credentials, federated identity, удаление.
     - Отказывает ли выдача `admin` без `map-role`.
     - Импортируются ли права из realm-JSON. Если нет — создавать через admin API при старте; если и это плохо — пересмотреть один realm.
+- **Admin REST API и клиент токена.** Access-токеном `editorial-ui` админ-учётки — `GET /admin/realms/tennis-wire/users`. Прошло — полный scope у `editorial-ui` отдаёт realm любому XSS в редакции (§8, п. 7). Уверенность средняя, тест — в `chore/keycloak/staff-groups`.
 - **Group Membership mapper при нуле групп:** пустой массив или claim вовсе нет. Во втором случае бывший сотрудник без групп получит 409, runbook возвращает его в `/readers`.
 - **OTP после Google:** запускает ли `OTP Form` в `postBrokerLoginFlow` настройку OTP, если его нет.
 - **Формат админ-событий `jboss-logging`** на 26.7.
