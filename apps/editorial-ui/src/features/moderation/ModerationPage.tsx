@@ -209,9 +209,7 @@ function Card({
             </Typography>
             <Typography variant="body2" color="text.secondary">
                 Удалено модерацией: {entry.author.removedByModerator.total} (за 30 дней{' '}
-                {entry.author.removedByModerator.last30Days}), ботом:{' '}
-                {entry.author.removedByBot.total} (за 30 дней {entry.author.removedByBot.last30Days}
-                )
+                {entry.author.removedByModerator.last30Days})
             </Typography>
             <Typography variant="body2" color="text.secondary">
                 Первая жалоба {formatTime(entry.firstReportedAt)}, последняя{' '}
