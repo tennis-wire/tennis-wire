@@ -10,14 +10,12 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.Generated;
 import org.hibernate.generator.EventType;
 
 @Entity
 @Table(name = "poll_vote")
 @IdClass(PollVoteId.class)
-@DynamicUpdate
 @Getter
 @Setter
 @NoArgsConstructor
@@ -31,7 +29,8 @@ public class PollVote {
     @Column(name = "user_id", nullable = false, updatable = false)
     private UUID userId;
 
-    @Column(name = "option_id", nullable = false)
+    @Id
+    @Column(name = "option_id", nullable = false, updatable = false)
     private UUID optionId;
 
     @Column(name = "created_at", nullable = false, updatable = false)

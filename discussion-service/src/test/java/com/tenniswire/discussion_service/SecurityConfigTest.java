@@ -61,7 +61,7 @@ class SecurityConfigTest {
     @Test
     void aPollIsReadByAnyoneMadeByAnAuthorAndVotedOnByAReader() throws Exception {
         var poll = "/api/discussion/polls/" + UUID.randomUUID();
-        var vote = "{\"optionId\":\"" + UUID.randomUUID() + "\"}";
+        var vote = "{\"optionIds\":[\"" + UUID.randomUUID() + "\"]}";
 
         // 404 and not 401: the rule let the request through to a poll that is not there
         mvc.perform(get(poll)).andExpect(status().isNotFound());
@@ -87,6 +87,33 @@ class SecurityConfigTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void aPollOrAVoteOutsideTheRulesIsRefusedBeforeAnythingIsLookedUp() throws Exception {
+        var polls = "/api/discussion/polls";
+        var past = "{\"question\":\"Who wins?\",\"options\":[\"Sinner\",\"Alcaraz\"],"
+                + "\"closesAt\":\"2020-01-01T00:00:00Z\"}";
+
+        mvc.perform(put(polls + "/" + UUID.randomUUID() + "/vote")
+                        .with(tokenWith("ROLE_user"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"optionIds\":[]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.violations[0].field").value("optionIds"));
+        mvc.perform(post(polls)
+                        .with(tokenWith("ROLE_author"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(past))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.violations[0].field").value("closesAt"));
+        mvc.perform(post(polls)
+                        .with(tokenWith("ROLE_author"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"question\":\"Who wins?\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.violations[0].field").value("options"));
+        verifyNoInteractions(resolver);
     }
 
     @Test

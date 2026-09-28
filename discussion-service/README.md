@@ -118,12 +118,12 @@ BASE=http://localhost:8090 discussion-service/scripts/smoke.sh                 #
 
 | Метод | Путь | Роль | Что |
 |---|---|---|---|
-| GET | `/polls/{id}` | аноним | опрос со счётчиками; вошедшему — его выбор |
-| POST | `/polls` | `author` | 201, `created_by` — `sub` токена |
+| GET | `/polls/{id}` | аноним | опрос со счётчиками: `voteCount` — сколько человек проголосовало, у варианта — сколько его выбрало; с `multipleChoice` варианты в сумме больше. Вошедшему — его выбор в `viewerOptionIds` |
+| POST | `/polls` `{question, options, closesAt?, multipleChoice?}` | `author` | 201, `created_by` — `sub` токена. Без `closesAt` — без срока, `closesAt` в прошлом — 400. `multipleChoice` задаётся только при создании |
 | PATCH | `/polls/{id}` | `author`, только создавший, или `chief-editor` | правка формулировок, чужой — 403 `FORBIDDEN` |
 | PUT | `/polls/{id}/closing` `{closesAt}` | как у PATCH | время закрытия, `null` — открыт |
-| PUT | `/polls/{id}/vote` `{optionId}` | `user` | 204, один голос на человека, меняется. Закрыт — 409 `POLL_CLOSED`, под баном — 403 `COMMENTING_RESTRICTED`: голос — та же реакция |
-| DELETE | `/polls/{id}/vote` | `user` | 204, идемпотентно. Работает и под баном |
+| PUT | `/polls/{id}/vote` `{optionIds}` | `user` | 204, весь выбор человека целиком, заменяет прежний. Без `multipleChoice` — ровно один вариант, иначе 400; чужой вариант — 404. Закрыт — 409 `POLL_CLOSED`, под баном — 403 `COMMENTING_RESTRICTED`: голос — та же реакция |
+| DELETE | `/polls/{id}/vote` | `user` | 204, снимает весь выбор, идемпотентно. Работает и под баном |
 
 **Внутреннее**
 

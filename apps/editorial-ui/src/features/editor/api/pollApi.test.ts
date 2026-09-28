@@ -15,7 +15,12 @@ describe('createPoll', () => {
     it('posts the poll as JSON and returns what the service made of it', async () => {
         const made = { id: 'p1', question: 'Who wins?', options: [] }
         apiFetchMock.mockResolvedValue(Response.json(made, { status: 201 }))
-        const poll = { question: 'Who wins?', options: ['Sinner', 'Alcaraz'], closesAt: null }
+        const poll = {
+            question: 'Who wins?',
+            options: ['Sinner', 'Alcaraz'],
+            closesAt: null,
+            multipleChoice: true,
+        }
 
         await expect(createPoll(poll)).resolves.toEqual(made)
 
@@ -30,9 +35,12 @@ describe('createPoll', () => {
             Response.json({ error: 'VALIDATION_ERROR', message: 'too few' }, { status: 400 })
         )
 
-        const error = await createPoll({ question: '', options: [], closesAt: null }).catch(
-            (e: unknown) => e
-        )
+        const error = await createPoll({
+            question: '',
+            options: [],
+            closesAt: null,
+            multipleChoice: false,
+        }).catch((e: unknown) => e)
 
         expect(error).toBeInstanceOf(PollApiError)
         expect((error as PollApiError).status).toBe(400)

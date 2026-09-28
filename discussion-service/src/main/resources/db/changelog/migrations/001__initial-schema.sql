@@ -342,12 +342,15 @@ CREATE INDEX idx_comment_author ON comment (author_id, created_at, id)
 -- comment: A poll the editor drops into an article. The article holds only the id; the question,
 -- comment: the options and the counts live here, next to the votes that make the counts. Who made
 -- comment: it is the token's subject, not a reader id: an author need not have a reader profile.
--- comment: closes_at in the past is a closed poll; NULL is one that stays open.
+-- comment: closes_at in the past is a closed poll; NULL is one that stays open. vote_count is the
+-- comment: number of people who voted; an option's vote_count, the people who chose it. With
+-- comment: multiple_choice one person may choose several, so the options add up to more than the poll.
 CREATE TABLE poll (
     id UUID PRIMARY KEY DEFAULT uuidv7(),
     question TEXT NOT NULL,
     created_by UUID NOT NULL,
     closes_at TIMESTAMPTZ,
+    multiple_choice BOOLEAN NOT NULL DEFAULT FALSE,
     vote_count INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -361,19 +364,25 @@ CREATE TABLE poll_option (
     text TEXT NOT NULL,
     vote_count INTEGER NOT NULL DEFAULT 0,
     CONSTRAINT uq_poll_option_position UNIQUE (poll_id, position),
+    -- the target of the vote's (poll, option) key: an option counts only in its own poll
+    CONSTRAINT uq_poll_option_poll UNIQUE (poll_id, id),
     CONSTRAINT chk_poll_option_vote_count CHECK (vote_count >= 0)
 );
 
 -- changeset andrei:23
--- comment: One vote per person per poll, replaceable and removable, as a reaction is. Read back only
--- comment: to mark the viewer's own choice and to take it off the counts when his account goes; the
--- comment: numbers people see are the counts on the poll and its options.
+-- comment: One row per option a person chose, replaceable and removable, as a reaction is. A
+-- comment: single-choice poll holds one row per person; the service keeps it so under the poll's row
+-- comment: lock, since the rule lives on the poll. Read back only to mark the viewer's own choice and
+-- comment: to take it off the counts when his account goes; the numbers people see are the counts on
+-- comment: the poll and its options.
 CREATE TABLE poll_vote (
     poll_id UUID NOT NULL REFERENCES poll(id) ON DELETE CASCADE,
     user_id UUID NOT NULL,
-    option_id UUID NOT NULL REFERENCES poll_option(id) ON DELETE CASCADE,
+    option_id UUID NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (poll_id, user_id)
+    PRIMARY KEY (poll_id, user_id, option_id),
+    CONSTRAINT fk_poll_vote_option FOREIGN KEY (poll_id, option_id)
+        REFERENCES poll_option (poll_id, id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_poll_vote_user ON poll_vote (user_id);
