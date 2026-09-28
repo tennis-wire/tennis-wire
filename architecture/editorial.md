@@ -101,7 +101,7 @@
 |---|---|
 | `article_id` | PK, FK на `articles`, `ON DELETE CASCADE` |
 | `owner_id` | `sub` держателя |
-| `owner_name` | `preferred_username` держателя на момент создания — для «Сейчас правит X» |
+| `owner_name` | Claim `name` держателя на момент создания, без него — `preferred_username`; для «Сейчас правит X» |
 | `payload` | `jsonb`: поля правки в форме тела `PUT` |
 | `version` | `@Version` |
 | `created_at`, `updated_at` | |
