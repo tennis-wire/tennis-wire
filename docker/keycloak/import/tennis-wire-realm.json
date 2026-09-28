@@ -171,17 +171,16 @@
             },
             "protocolMappers": [
                 {
-                    "name": "realm-roles-in-id-token",
+                    "name": "groups",
                     "protocol": "openid-connect",
-                    "protocolMapper": "oidc-usermodel-realm-role-mapper",
+                    "protocolMapper": "oidc-group-membership-mapper",
                     "consentRequired": false,
                     "config": {
-                        "claim.name": "realm_access.roles",
-                        "jsonType.label": "String",
-                        "multivalued": "true",
+                        "claim.name": "groups",
+                        "full.path": "true",
                         "id.token.claim": "true",
-                        "access.token.claim": "false",
-                        "introspection.token.claim": "false",
+                        "access.token.claim": "true",
+                        "introspection.token.claim": "true",
                         "userinfo.token.claim": "false"
                     }
                 },
@@ -217,6 +216,20 @@
                 "pkce.code.challenge.method": "S256"
             },
             "protocolMappers": [
+                {
+                    "name": "groups",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-group-membership-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "claim.name": "groups",
+                        "full.path": "true",
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "introspection.token.claim": "true",
+                        "userinfo.token.claim": "false"
+                    }
+                },
                 {
                     "name": "tennis-wire-api-audience",
                     "protocol": "openid-connect",
@@ -426,7 +439,7 @@
 
     "scopeMappings": [
         { "client": "editorial-ui", "roles": ["user", "author", "chief-editor", "moderator", "admin"] },
-        { "client": "public-web", "roles": ["user", "author"] },
+        { "client": "public-web", "roles": ["user"] },
         { "client": "mobile", "roles": ["user"] }
     ],
 

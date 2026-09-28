@@ -243,16 +243,22 @@ exchange with `not_allowed`, "Offline tokens not allowed for the user or
 client" (seen on 26.7.3 with `moderator`, before it had the role). Whatever a
 fixture is meant to exercise has to be spelled out on the fixture.
 
-`editorial-ui` and `public-web` carry one more mapper of their own: realm roles
-into the **id** token. The built-in `roles` scope puts them in the access token, which is
+`editorial-ui` carries one more mapper of its own: realm roles into the **id**
+token. The built-in `roles` scope puts them in the access token, which is
 addressed to the services — a browser app reading it would be opening a token
 written for someone else. The id token is the one issued to the client, so that
-is where a screen decides whether to offer a moderator-only page, or the site
-whether to show staff a link to the editor. Composites are
-expanded on the way in, so `dev` arrives in `editorial-ui` carrying `moderator`;
-on the site it arrives with `user` and `author` only (see Role scope below). Hiding a page is
-a convenience and never a control: the gateway and the service each check the
-role again, and neither trusts that the browser did.
+is where a screen decides whether to offer a moderator-only page. Composites are
+expanded on the way in, so `dev` arrives in `editorial-ui` carrying `moderator`.
+
+`public-web` and `mobile` carry no staff roles at all (see Role scope below)
+and get a `groups` mapper instead: full group paths, `/readers` or
+`/staff/...`, in the id and the access token. The site reads the id token's:
+`/staff/authors` or `/staff/chief-editors` shows the link to the editor, any
+`/staff/...` group, or no claim at all, swaps the deletion on `/me` for a note.
+Keycloak leaves the claim out for an account in no group rather than sending an
+empty list. Hiding a page or a link is a convenience and never a control: the
+gateway and the service each check the role again, and neither trusts that the
+browser did.
 
 To register locally, open <http://localhost:8180/realms/tennis-wire/account>,
 follow the sign-in link and choose Register. Keycloak sends the confirmation
@@ -361,13 +367,11 @@ tokens anyway.
 #### Role scope
 
 `public-web` and `mobile` have `fullScopeAllowed` off. Their tokens carry only
-the realm roles listed for them under `scopeMappings` — `user` and `author` for
-the site, `user` for the app — plus `offline_access`, which comes with the client
-scope of that name rather than through the client's own list. Staff who sign in
-on the site are readers there: `admin`, `moderator` and `chief-editor` stay out
-of both tokens, and `author` stays in because the site decides from it whether
-to offer a link to the editor. Composites are expanded first, so a chief editor
-or an admin gets the link as well. Without this an admin who opened an article
+the realm roles listed for them under `scopeMappings` — `user` for both — plus
+`offline_access`, which comes with the client scope of that name rather than
+through the client's own list. Staff who sign in on the site are readers there:
+no staff role reaches either token, and the site tells staff by `groups`
+instead. Without this an admin who opened an article
 would leave every role he has in the site's offline session for up to 180 days,
 behind a proxy that forwards moderation and account deletion as readily as
 comments.

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
+import { sealSession } from '@/lib/auth/session'
 import { GET } from './route'
 
 const authorizationCodeGrant = vi.fn()
@@ -44,12 +45,12 @@ vi.mock('@/lib/auth/session', () => ({
     sealSession: vi.fn(async () => 'sealed'),
 }))
 
-function tokensFor(sub: string) {
+function tokensFor(sub: string, groups: string[] = ['/readers']) {
     return {
         access_token: 'new-access',
         refresh_token: 'new-refresh',
         id_token: 'new-id',
-        claims: () => ({ sub }),
+        claims: () => ({ sub, groups }),
         expiresIn: () => 60,
     }
 }
@@ -108,6 +109,40 @@ describe('GET /api/auth/callback/keycloak', () => {
 
         expect(response.headers.get('location')).toBe('http://localhost:3000/news/one')
         expect(response.cookies.get('tw_session')?.value).toBe('sealed')
+    })
+
+    describe('the staff flags', () => {
+        it('seals a reader as a reader', async () => {
+            authorizationCodeGrant.mockResolvedValue(tokensFor('reader-1'))
+
+            await GET(callback())
+
+            expect(sealSession).toHaveBeenLastCalledWith(
+                expect.objectContaining({ sub: 'reader-1', canEdit: false, staff: false })
+            )
+        })
+
+        it('seals a moderator as staff with no way to the editor', async () => {
+            authorizationCodeGrant.mockResolvedValue(
+                tokensFor('moderator-1', ['/staff/moderators'])
+            )
+
+            await GET(callback())
+
+            expect(sealSession).toHaveBeenLastCalledWith(
+                expect.objectContaining({ sub: 'moderator-1', canEdit: false, staff: true })
+            )
+        })
+
+        it('seals an author as staff who may edit', async () => {
+            authorizationCodeGrant.mockResolvedValue(tokensFor('author-1', ['/staff/authors']))
+
+            await GET(callback())
+
+            expect(sealSession).toHaveBeenLastCalledWith(
+                expect.objectContaining({ sub: 'author-1', canEdit: true, staff: true })
+            )
+        })
     })
 
     describe('the mark that opens the last step of deleting an account', () => {

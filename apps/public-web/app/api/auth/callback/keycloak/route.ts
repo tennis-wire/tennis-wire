@@ -15,7 +15,7 @@ import {
 } from '@/lib/auth/session'
 import { withoutDeletionMark } from '@/lib/auth/deletion'
 import { safeReturnTo } from '@/lib/auth/returnTo'
-import { mayEdit } from '@/lib/auth/roles'
+import { isStaff, mayEdit } from '@/lib/auth/groups'
 
 function failed(reason: string, error?: unknown) {
     console.error('login failed: %s', reason, error)
@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
             refreshToken: tokens.refresh_token,
             accessExpiresAt: Math.floor(Date.now() / 1000) + (tokens.expiresIn() ?? 0),
             canEdit: mayEdit(claims),
+            staff: isStaff(claims),
         }
         idToken = tokens.id_token
     } catch (error) {

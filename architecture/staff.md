@@ -19,7 +19,7 @@
     - `article_edits.owner_name` — claim `name`. Без имени в Keycloak туда попадёт `preferred_username`, то есть email, поэтому имя при заведении обязательно (§6).
     - `transcription-service` знает владельца задачи только по `sub`, и в лог пишет его же.
 - **Модерация подписана.** `hidden_by`/`hidden_at`, `issued_by`, `lifted_by`, `resolved_by`/`resolved_at`. Засчитанное вручную (`counted_at`) подписано через жалобу: `markCounted` вызывается только из `resolve` с `COUNTED`, и тот же вызов закрывает жалобы с `resolved_by`. Кроме снятий ботом: `hideByBot` передаёт `null` в `hidden_by` и `resolved_by`. После `bot-rights` новых таких снятий не будет.
-- **Сотрудник на сайте — читатель.** У `public-web` и `mobile` `fullScopeAllowed: false`: `admin`, `moderator`, `chief-editor` в их токены не попадают.
+- **Сотрудник на сайте — читатель.** У `public-web` и `mobile` `fullScopeAllowed: false` и в scope только `user`: ни одна роль сотрудника в их токены не попадает.
 - **Журнал админ-действий Keycloak** включён, 90 дней, без представлений.
 
 ## 3. Модель угроз
@@ -162,11 +162,12 @@
     - Страховка от забытого удаления из `/readers`: эта проверка, IT на фикстурах и оповещение на каждое изменение групп (§9).
 3. **Группы в токенах сайта и приложения.**
     - У `public-web` и `mobile` — Group Membership mapper: claim `groups`, полный путь, в id- и access-токене.
+    - При нуле групп claim нет вовсе, а не пустой массив (проверено на 26.7.0 и 26.7.3, `GatewayKeycloakIT`). Бывший сотрудник без групп получит 409 (п. 2), runbook возвращает его в `/readers`. Сайт читает отсутствие claim так же: флаг `staff`, секции удаления нет.
     - `author` убирается из `scopeMappings` сайта, маппер `realm-roles-in-id-token` у `public-web` — тоже.
     - Сессия сайта хранит два флага, оба ставятся при входе и на каждом refresh:
         - `canEdit` — есть `/staff/authors` или `/staff/chief-editors`, кнопка «Редактировать» на материале;
-        - `staff` — любая `/staff/*`, текст на `/me`.
-    - `/api/auth/session` отдаёт оба.
+        - `staff` — любая `/staff/*` или claim нет, текст на `/me`.
+    - `/api/auth/session` отдаёт `staff`, а `canEdit` — в виде адреса редактора, не `null` только при `canEdit`.
     - Модератору кнопка «Редактировать» не показывается: в редакторе он получил бы 403.
 4. **Staff-маршруты только с токеном `editorial-ui`.** Gateway проверяет `azp` на `/api/editorial/**`, `/api/ai/**`, `/api/translate/**`, `/api/transcribe/**`, запись опросов, `/api/discussion/moderation/**`, `/api/users/moderation/**`, `PUT`/`DELETE /api/users/{id}/avatar...` и `DELETE /api/users/{id}`. Бот — `azp=moderation-bot` на `POST /moderation/reports`. После п. 3 `author` в токене сайта нет, и `azp` — вторая линия, а не единственная.
 5. **Бот только жалуется.** `DELETE /moderation/comments/{id}` — только `moderator`.
@@ -423,7 +424,6 @@
     - Покрывает ли `manage-members` на группе всё, что делает `KeycloakAdmin`: чтение и запись учётки, выход, credentials, federated identity, удаление.
     - Отказывает ли выдача `admin` без `map-role`.
     - Импортируются ли права из realm-JSON. Если нет — создавать через admin API при старте; если и это плохо — пересмотреть один realm.
-- **Group Membership mapper при нуле групп:** пустой массив или claim вовсе нет. Во втором случае бывший сотрудник без групп получит 409, runbook возвращает его в `/readers`.
 - **OTP после Google:** запускает ли `OTP Form` в `postBrokerLoginFlow` настройку OTP, если его нет.
 - **Формат админ-событий `jboss-logging`** на 26.7.
 - **SCG 2025.1.3.** Per-route args, ключ с `routeId` и fail-open проверены по исходникам `main`, а не на нашей версии. Сверить тестом в `staff-guards`.

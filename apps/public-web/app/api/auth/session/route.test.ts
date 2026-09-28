@@ -16,6 +16,11 @@ vi.mock('@/lib/auth/config', () => ({
 }))
 const editorial: { origin: string | null } = { origin: null }
 
+const staff = {
+    author: { canEdit: true, staff: true },
+    moderator: { canEdit: false, staff: true },
+}
+
 vi.mock('@/lib/auth/session', () => ({
     SESSION_COOKIE: 'tw_session',
     sessionCookieOptions: () => ({
@@ -25,7 +30,11 @@ vi.mock('@/lib/auth/session', () => ({
         maxAge: 1,
     }),
     readSession: vi.fn(async (seal?: string) =>
-        seal === 'signed-in' ? session : seal === 'staff' ? { ...session, canEdit: true } : null
+        seal === 'signed-in'
+            ? session
+            : seal === 'author' || seal === 'moderator'
+              ? { ...session, ...staff[seal] }
+              : null
     ),
     sealSession: vi.fn(async () => 'sealed'),
 }))
@@ -84,6 +93,7 @@ describe('GET /api/auth/session', () => {
             avatarUrl: 'http://media/96/k.jpg',
             avatarLargeUrl: 'http://media/288/k.jpg',
             editorialOrigin: null,
+            staff: false,
         })
         expect(JSON.stringify(body)).not.toContain('token')
         expect(response.headers.get('cache-control')).toBe('no-store')
@@ -103,6 +113,7 @@ describe('GET /api/auth/session', () => {
             avatarUrl: null,
             avatarLargeUrl: null,
             editorialOrigin: null,
+            staff: false,
         })
     })
 
@@ -110,9 +121,27 @@ describe('GET /api/auth/session', () => {
         fetchProfile.mockResolvedValue(null)
         editorial.origin = 'http://editor.test'
 
-        const body = await (await GET(request('staff'))).json()
+        const body = await (await GET(request('author'))).json()
 
         expect(body.editorialOrigin).toBe('http://editor.test')
+    })
+
+    it('tells staff they are staff', async () => {
+        fetchProfile.mockResolvedValue(null)
+
+        const body = await (await GET(request('author'))).json()
+
+        expect(body.staff).toBe(true)
+    })
+
+    it('tells a moderator they are staff, and nothing about the editor', async () => {
+        fetchProfile.mockResolvedValue(null)
+        editorial.origin = 'http://editor.test'
+
+        const body = await (await GET(request('moderator'))).json()
+
+        expect(body.staff).toBe(true)
+        expect(body.editorialOrigin).toBeNull()
     })
 
     it('tells a reader nothing about the editor', async () => {
@@ -127,7 +156,7 @@ describe('GET /api/auth/session', () => {
     it('gives staff no link where the editor is not configured', async () => {
         fetchProfile.mockResolvedValue(null)
 
-        const body = await (await GET(request('staff'))).json()
+        const body = await (await GET(request('author'))).json()
 
         expect(body.editorialOrigin).toBeNull()
     })

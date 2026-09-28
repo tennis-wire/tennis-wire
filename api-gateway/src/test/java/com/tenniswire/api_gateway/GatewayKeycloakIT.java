@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterAll;
@@ -72,6 +73,8 @@ class GatewayKeycloakIT {
             new BrowserClient("mobile", "", "tenniswire://auth", "openid offline_access");
     private static final BrowserClient EDITOR =
             new BrowserClient("editorial-ui", "", "http://localhost:5173/auth/callback", "openid");
+
+    private static final String CREATED_PASSWORD = "created";
 
     private static final Pattern LOGIN_FORM_ACTION = Pattern.compile("<form[^>]*action=\"([^\"]+)\"");
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -163,15 +166,19 @@ class GatewayKeycloakIT {
     }
 
     @Test
-    void anAdminSignedInOnTheSiteIsAReaderAndAnAuthorThere() {
+    void anAdminSignedInOnTheSiteIsAReaderThere() {
         var tokens = signInThroughTheBrowser(SITE, "dev", "dev");
 
         // offline_access is outside the client's role scope and arrives with the client scope of the
         // same name. Were it lost, the code exchange would be refused rather than downgraded
         assertThat(claims(tokens, "refresh_token").path("typ").asText()).isEqualTo("Offline");
-        // author stays for the link to the editor
-        assertThat(roles(claims(tokens, "id_token"))).contains("user", "author");
-        assertThat(roles(claims(tokens, "access_token"))).doesNotContain("admin", "moderator", "chief-editor");
+        // The site tells staff by their groups, the link to the editor included
+        assertThat(groups(claims(tokens, "id_token"))).contains("/staff/admins", "/staff/chief-editors");
+        var access = claims(tokens, "access_token");
+        assertThat(roles(access))
+                .contains("user")
+                .doesNotContain("admin", "moderator", "chief-editor", "author", "staff");
+        assertThat(groups(access)).contains("/staff/admins");
 
         // Through dev-cli the same person is let in: deletingSomebodyElsesAccountNeedsAnAdmin
         client.delete()
@@ -189,9 +196,11 @@ class GatewayKeycloakIT {
         var tokens = signInThroughTheBrowser(APP, "dev", "dev");
 
         assertThat(claims(tokens, "refresh_token").path("typ").asText()).isEqualTo("Offline");
-        assertThat(roles(claims(tokens, "access_token")))
+        var access = claims(tokens, "access_token");
+        assertThat(roles(access))
                 .contains("user")
-                .doesNotContain("admin", "moderator", "chief-editor", "author");
+                .doesNotContain("admin", "moderator", "chief-editor", "author", "staff");
+        assertThat(groups(access)).contains("/staff/admins");
     }
 
     @Test
@@ -223,6 +232,37 @@ class GatewayKeycloakIT {
                 .path("access_token")
                 .asText();
         assertThat(adminApiStatus(editorToken)).isEqualTo(403);
+    }
+
+    @Test
+    void someoneInNoGroupSignsInOnTheSiteWithoutAGroupsClaim() {
+        var admin = passwordToken("dev", "dev");
+        var email = "no-group-" + UUID.randomUUID() + "@example.test";
+        var account = createAccount(admin, email);
+        // Made through the admin API, the account lands in the default group, as one made in the console does
+        var readers = json(adminApi(admin, "GET", "/users/" + account + "/groups", null)
+                        .body())
+                .path(0)
+                .path("id")
+                .asText();
+        assertThat(adminApi(admin, "DELETE", "/users/" + account + "/groups/" + readers, null)
+                        .statusCode())
+                .isEqualTo(204);
+
+        var tokens = signInThroughTheBrowser(SITE, email, CREATED_PASSWORD);
+        assertThat(claims(tokens, "id_token").get("groups")).isNull();
+        assertThat(claims(tokens, "access_token").get("groups")).isNull();
+
+        // The site sets its flags from the id token a refresh brings
+        assertThat(adminApi(admin, "PUT", "/users/" + account + "/groups/" + readers, null)
+                        .statusCode())
+                .isEqualTo(204);
+        var refreshed = tokens(Map.of(
+                "grant_type", "refresh_token",
+                "client_id", SITE.id(),
+                "client_secret", SITE.secret(),
+                "refresh_token", tokens.path("refresh_token").asText()));
+        assertThat(groups(claims(refreshed, "id_token"))).containsExactly("/readers");
     }
 
     @Test
@@ -301,14 +341,50 @@ class GatewayKeycloakIT {
     }
 
     private static int adminApiStatus(String token) {
-        var users = URI.create(
-                KEYCLOAK.getAuthServerUrl().replaceAll("/+$", "") + "/admin/realms/" + REALM + "/users?max=1");
-        return browse(
-                        HttpRequest.newBuilder(users)
-                                .header(HttpHeaders.AUTHORIZATION, bearer(token))
-                                .GET(),
-                        new HashMap<>())
-                .statusCode();
+        return adminApi(token, "GET", "/users?max=1", null).statusCode();
+    }
+
+    private static HttpResponse<String> adminApi(String token, String method, String path, String json) {
+        var request = HttpRequest.newBuilder(
+                        URI.create(KEYCLOAK.getAuthServerUrl().replaceAll("/+$", "") + "/admin/realms/" + REALM + path))
+                .header(HttpHeaders.AUTHORIZATION, bearer(token));
+        if (json == null) {
+            request.method(method, HttpRequest.BodyPublishers.noBody());
+        } else {
+            request.header(HttpHeaders.CONTENT_TYPE, "application/json")
+                    .method(method, HttpRequest.BodyPublishers.ofString(json, UTF_8));
+        }
+        return browse(request, new HashMap<>());
+    }
+
+    // Verified and with the names the user profile asks for, or the first sign-in stops at a form
+    private static String createAccount(String adminToken, String email) {
+        var account = Map.of(
+                "username",
+                email,
+                "email",
+                email,
+                "emailVerified",
+                true,
+                "enabled",
+                true,
+                "firstName",
+                "No",
+                "lastName",
+                "Group",
+                "credentials",
+                List.of(Map.of("type", "password", "value", CREATED_PASSWORD, "temporary", false)));
+        String body;
+        try {
+            body = MAPPER.writeValueAsString(account);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        var created = adminApi(adminToken, "POST", "/users", body);
+        var location = created.headers()
+                .firstValue("Location")
+                .orElseThrow(() -> new IllegalStateException("Account not created: " + created.statusCode()));
+        return location.substring(location.lastIndexOf('/') + 1);
     }
 
     private static String clientCredentialsToken() {
@@ -462,6 +538,20 @@ class GatewayKeycloakIT {
         var roles = new ArrayList<String>();
         claims.path("realm_access").path("roles").forEach(role -> roles.add(role.asText()));
         return roles;
+    }
+
+    private static List<String> groups(JsonNode claims) {
+        var groups = new ArrayList<String>();
+        claims.path("groups").forEach(group -> groups.add(group.asText()));
+        return groups;
+    }
+
+    private static JsonNode json(String body) {
+        try {
+            return MAPPER.readTree(body);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     private static String bearer(String token) {
