@@ -48,6 +48,36 @@
             "name": "readers",
             "path": "/readers",
             "realmRoles": ["user"]
+        },
+        {
+            "name": "staff",
+            "path": "/staff",
+            "realmRoles": ["user", "staff"],
+            "subGroups": [
+                {
+                    "name": "authors",
+                    "path": "/staff/authors",
+                    "realmRoles": ["author"]
+                },
+                {
+                    "name": "chief-editors",
+                    "path": "/staff/chief-editors",
+                    "realmRoles": ["chief-editor"]
+                },
+                {
+                    "name": "moderators",
+                    "path": "/staff/moderators",
+                    "realmRoles": ["moderator"]
+                },
+                {
+                    "name": "admins",
+                    "path": "/staff/admins",
+                    "realmRoles": ["admin"],
+                    "clientRoles": {
+                        "realm-management": ["realm-admin"]
+                    }
+                }
+            ]
         }
     ],
     "defaultGroups": ["/readers"],
@@ -82,6 +112,7 @@
                 "http://localhost:5173/popup-callback.html"
             ],
             "webOrigins": ["http://localhost:5173"],
+            "fullScopeAllowed": false,
             "defaultClientScopes": ["acr", "basic", "email", "profile", "roles", "web-origins"],
             "optionalClientScopes": ["address", "microprofile-jwt", "organization", "phone"],
             "attributes": {
@@ -334,7 +365,8 @@
             "firstName": "Dev",
             "lastName": "Staff",
             "credentials": [{ "type": "password", "value": "dev", "temporary": false }],
-            "realmRoles": ["author", "admin", "offline_access"]
+            "realmRoles": ["offline_access"],
+            "groups": ["/staff/admins", "/staff/chief-editors"]
         },
         {
             "username": "reader",
@@ -344,7 +376,8 @@
             "firstName": "Dev",
             "lastName": "Reader",
             "credentials": [{ "type": "password", "value": "reader", "temporary": false }],
-            "realmRoles": ["user", "offline_access"]
+            "realmRoles": ["offline_access"],
+            "groups": ["/readers"]
         },
         {
             "username": "moderator",
@@ -354,7 +387,8 @@
             "firstName": "Dev",
             "lastName": "Moderator",
             "credentials": [{ "type": "password", "value": "moderator", "temporary": false }],
-            "realmRoles": ["moderator", "user", "offline_access"]
+            "realmRoles": ["offline_access"],
+            "groups": ["/staff/moderators"]
         },
         {
             "username": "author",
@@ -364,7 +398,8 @@
             "firstName": "Dev",
             "lastName": "Author",
             "credentials": [{ "type": "password", "value": "author", "temporary": false }],
-            "realmRoles": ["author", "user", "offline_access"]
+            "realmRoles": ["offline_access"],
+            "groups": ["/staff/authors"]
         },
         {
             "username": "service-account-moderation-bot",
@@ -390,6 +425,7 @@
     ],
 
     "scopeMappings": [
+        { "client": "editorial-ui", "roles": ["user", "author", "chief-editor", "moderator", "admin"] },
         { "client": "public-web", "roles": ["user", "author"] },
         { "client": "mobile", "roles": ["user"] }
     ],
@@ -405,6 +441,7 @@
                 "composites": { "realm": ["author"] }
             },
             { "name": "moderator", "description": "Staff: comment moderation" },
+            { "name": "staff", "description": "Marker of /staff for the staff OTP condition; no service checks it" },
             { "name": "moderator-bot", "description": "Service account of the automatic moderator" },
             { "name": "service", "description": "Service account: calls into /internal/**" },
             {

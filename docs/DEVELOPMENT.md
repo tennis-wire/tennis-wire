@@ -172,12 +172,12 @@ That is why the audience mapper is repeated on each client instead.
 
 Local principals:
 
-| Principal | Credentials | Roles |
+| Principal | Credentials | Groups and roles |
 |---|---|---|
-| `dev` | `dev` / `dev` | `author`, `admin`, `offline_access` (so also `chief-editor`, `moderator` and `user`) |
-| `reader` | `reader` / `reader` | `user`, `offline_access` |
-| `moderator` | `moderator` / `moderator` | `moderator`, `user`, `offline_access` |
-| `author` | `author` / `author` | `author`, `user`, `offline_access` |
+| `dev` | `dev` / `dev` | `/staff/admins` and `/staff/chief-editors`: `admin` (so also `author`, `moderator` and `user`), `chief-editor`, `staff`, `realm-management` `realm-admin`; plus `offline_access` |
+| `reader` | `reader` / `reader` | `/readers`: `user`; plus `offline_access` |
+| `moderator` | `moderator` / `moderator` | `/staff/moderators`: `moderator`, `user`, `staff`; plus `offline_access` |
+| `author` | `author` / `author` | `/staff/authors`: `author`, `user`, `staff`; plus `offline_access` |
 | `moderation-bot` | client secret `dev-moderation-bot-secret` | `moderator-bot` |
 | `user-service` | client secret `dev-user-service-secret` | `service`, plus `realm-management`: `manage-users`, `view-realm` |
 | `discussion-service` | client secret `dev-discussion-service-secret` | `service` |
@@ -185,20 +185,25 @@ Local principals:
 `moderator` exists because `dev` is not a moderator in the shape production
 has: `admin` is composite and hands it `author` and `user` as well, so a check
 a real moderator would fail passes on `dev`. Moderation records who acted, and
-that identity is a reader profile in `user-service` — hence `user` spelled out
-on the fixture instead of assumed, per the rule under Readers below.
+that identity is a reader profile in `user-service`, so a moderator needs
+`user`. The fixture gets it from `/staff`, as every member of staff does.
 
 `author` exists for the same reason on the editorial side. `dev` carries
 `chief-editor` through `admin`, so it never hits the limits a plain author has:
 someone else's published article, unpublishing, resetting another person's
 pending edit. Ownership and the edit lock need two people with different
 rights, and `author` with `dev` are those two. Both also carry `offline_access`,
-and `author` carries `user`: that is what a staff account made in the console
-gets from the default roles and the `readers` group, and it is what signing in
-on the site needs: without `offline_access` there is no offline session (see
-the note on `reader` under Readers below). `moderator` carries `offline_access`
-for the same reason, so that it too can sign in on the site, where it is a
-reader like every other member of staff (see Role scope below).
+which a staff account made in the console gets from the default roles, and
+`user` from `/staff`: signing in on the site needs both, and without
+`offline_access` there is no offline session (see the note on `reader` under
+Readers below). `moderator` carries `offline_access` for the same reason, so
+that it too can sign in on the site, where it is a reader like every other
+member of staff (see Role scope below).
+
+`dev` is also the realm's admin account: `/staff/admins` carries
+`realm-management` `realm-admin`, so a `dev` token from `dev-cli` opens the
+realm's admin REST API. A token from `editorial-ui` does not (see Role scope
+below).
 
 `dev-cli` is a password-grant client that exists only for `curl` and for the
 gateway integration test. ROPC is deprecated in OAuth 2.1; this client must
@@ -223,11 +228,13 @@ log in, and lands in the default group `readers`, which carries the `user` role.
 Default groups apply to accounts created outside the realm file — by
 registration, identity brokering, the admin console or the admin API — and not
 to accounts declared in it. A staff account created by an admin therefore lands
-in `readers` and picks up `user` as well, which is intended: someone on the team
-who comments on an article is a reader like anyone else.
+in `readers` too, and is moved out of it into its `/staff/...` group. `/staff`
+carries `user` itself, so someone on the team who comments on an article is
+still a reader like anyone else, while staying out of the group `user-service`
+is to be confined to (`architecture/staff.md` §5, §8).
 
 The other half of that rule is easy to trip over. An account declared in the
-realm file gets exactly the roles listed for it and nothing besides — Keycloak
+realm file gets exactly the roles and groups listed for it and nothing besides — Keycloak
 skips both default roles and default groups on import. That is what keeps the
 service accounts above free of `user`, and it is also why `reader` carries
 `offline_access` explicitly: the client scope of that name is gated on the realm
@@ -351,7 +358,7 @@ rest) are not described in the realm file and keep `offline_access`. None of
 them carries the `tennis-wire-api` audience mapper, so our services reject their
 tokens anyway.
 
-#### Role scope of the reader clients
+#### Role scope
 
 `public-web` and `mobile` have `fullScopeAllowed` off. Their tokens carry only
 the realm roles listed for them under `scopeMappings` — `user` and `author` for
@@ -365,9 +372,19 @@ would leave every role he has in the site's offline session for up to 180 days,
 behind a proxy that forwards moderation and account deletion as readily as
 comments.
 
+`editorial-ui` has `fullScopeAllowed` off too, with `user`, `author`,
+`chief-editor`, `moderator` and `admin` in its `scopeMappings`: every staff
+role, but not the `staff` marker and not the `realm-management` roles `dev`
+gets from `/staff/admins`. The admin REST API takes roles from the access token
+and checks them against the scope of the client that issued it, so with the
+full scope the editor's token, which lives in the browser, would open the realm
+to any XSS in the editor. `dev-cli` keeps the full scope and does get in; it
+never leaves a local realm.
+
 To see what a client would issue for someone: admin console, Clients →
-`public-web` → Client scopes → Evaluate, pick the user, Generated access token.
-`GatewayKeycloakIT` pins the same through a real code flow.
+`public-web` (or `editorial-ui`) → Client scopes → Evaluate, pick the user,
+Generated access token. `GatewayKeycloakIT` pins the same through a real code
+flow.
 
 #### Login theme
 
