@@ -43,6 +43,9 @@ public class Poll {
     @Column(name = "closes_at")
     private @Nullable Instant closesAt;
 
+    @Column(name = "multiple_choice", nullable = false, updatable = false)
+    private boolean multipleChoice;
+
     @Column(name = "vote_count", nullable = false)
     private int voteCount;
 

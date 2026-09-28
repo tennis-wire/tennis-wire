@@ -64,7 +64,7 @@ public class PollController {
     @PutMapping("/{id}/vote")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void vote(@PathVariable UUID id, @Valid @RequestBody VoteRequest request, @AuthenticationPrincipal Jwt jwt) {
-        polls.vote(currentUser.id(jwt), id, request.optionId());
+        polls.vote(currentUser.id(jwt), id, request.optionIds());
     }
 
     @DeleteMapping("/{id}/vote")
