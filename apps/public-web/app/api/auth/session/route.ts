@@ -51,7 +51,9 @@ function signedIn(session: Session, profile: Profile | null) {
         createdAt: profile?.createdAt ?? null,
         avatarUrl: profile?.avatarUrl ?? null,
         avatarLargeUrl: profile?.avatarLargeUrl ?? null,
-        // Only to staff: the public HTML says nothing about the editor, not even where it is
+        // Only to those who may edit: the public HTML says nothing about the editor, not even
+        // where it is. This is canEdit as the page sees it
         editorialOrigin: session.canEdit ? editorialOrigin() : null,
+        staff: session.staff ?? false,
     }
 }

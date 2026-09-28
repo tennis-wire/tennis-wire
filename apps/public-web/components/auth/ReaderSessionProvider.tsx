@@ -17,6 +17,8 @@ export type ReaderSession =
           avatarLargeUrl: string | null
           // where to send staff to edit what they are reading; null for everyone else
           editorialOrigin: string | null
+          // a member of staff: such an account is deleted by the administrator, not by its owner
+          staff: boolean
       }
 
 type Store = {

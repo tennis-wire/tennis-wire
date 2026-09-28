@@ -93,8 +93,9 @@ export default function NicknameForm({
             createdAt: profile.createdAt ?? null,
             avatarUrl: profile.avatarUrl ?? null,
             avatarLargeUrl: profile.avatarLargeUrl ?? null,
-            // a new name does not change who may edit
+            // a new name changes neither who may edit nor who is staff
             editorialOrigin: session?.authenticated ? session.editorialOrigin : null,
+            staff: session?.authenticated ? session.staff : false,
         })
         setValue(profile.displayName)
         setSaved(true)

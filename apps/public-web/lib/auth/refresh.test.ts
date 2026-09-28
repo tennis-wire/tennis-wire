@@ -13,8 +13,8 @@ vi.mock('./config', () => ({ oidcConfig: vi.fn(async () => ({})) }))
 
 const grant = vi.mocked(client.refreshTokenGrant)
 
-function expired(sub: string, canEdit?: boolean): Session {
-    return { sub, accessToken: 'old', refreshToken: 'refresh', accessExpiresAt: 0, canEdit }
+function expired(sub: string, flags: Pick<Session, 'canEdit' | 'staff'> = {}): Session {
+    return { sub, accessToken: 'old', refreshToken: 'refresh', accessExpiresAt: 0, ...flags }
 }
 
 function answer(
@@ -42,29 +42,32 @@ beforeEach(() => {
     grant.mockReset()
 })
 
-describe('freshSession and the edit flag', () => {
-    it('picks up an author role granted since sign-in', async () => {
-        grant.mockResolvedValue(answer({ sub: 's1', realm_access: { roles: ['user', 'author'] } }))
+describe('freshSession and the staff flags', () => {
+    it('picks up a place among the authors given since sign-in', async () => {
+        grant.mockResolvedValue(answer({ sub: 's1', groups: ['/staff/authors'] }))
 
-        const session = usable(await freshSession(expired('s1', false)))
+        const session = usable(await freshSession(expired('s1', { canEdit: false, staff: false })))
 
         expect(session.canEdit).toBe(true)
+        expect(session.staff).toBe(true)
     })
 
-    it('drops the flag once the role is taken away', async () => {
-        grant.mockResolvedValue(answer({ sub: 's2', realm_access: { roles: ['user'] } }))
+    it('drops both flags once the account is back among the readers', async () => {
+        grant.mockResolvedValue(answer({ sub: 's2', groups: ['/readers'] }))
 
-        const session = usable(await freshSession(expired('s2', true)))
+        const session = usable(await freshSession(expired('s2', { canEdit: true, staff: true })))
 
         expect(session.canEdit).toBe(false)
+        expect(session.staff).toBe(false)
     })
 
     it('keeps what it knew when the answer carries no id token', async () => {
         grant.mockResolvedValue(answer(undefined))
 
-        const session = usable(await freshSession(expired('s3', true)))
+        const session = usable(await freshSession(expired('s3', { canEdit: true, staff: true })))
 
         expect(session.canEdit).toBe(true)
+        expect(session.staff).toBe(true)
         expect(session.accessToken).toBe('new')
     })
 })

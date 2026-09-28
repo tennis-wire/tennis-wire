@@ -25,12 +25,17 @@ export type Session = {
     /** Epoch seconds. */
     accessExpiresAt: number
     /**
-     * Carried the author role in the last id token: at sign-in, then on every refresh,
-     * so a role granted or taken away shows within one access token lifetime. Only
-     * decides whether the site offers a link to the editor. Absent in cookies sealed
+     * In /staff/authors or /staff/chief-editors by the last id token: at sign-in, then on
+     * every refresh, so a group given or taken away shows within one access token lifetime.
+     * Only decides whether the site offers a link to the editor. Absent in cookies sealed
      * before it existed, which reads as false until the next refresh.
      */
     canEdit?: boolean
+    /**
+     * In any /staff/ group by the last id token, or with no groups claim at all; set as
+     * canEdit is. Only swaps the deletion on /me for a note.
+     */
+    staff?: boolean
 }
 
 export type Flow = {

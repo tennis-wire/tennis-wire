@@ -1,7 +1,7 @@
 import * as client from 'openid-client'
 
 import { oidcConfig } from './config'
-import { mayEdit } from './roles'
+import { isStaff, mayEdit } from './groups'
 import type { Session } from './session'
 
 // What a request can do with the session it came with
@@ -39,8 +39,8 @@ export async function freshSession(session: Session): Promise<Freshness> {
 async function refresh(session: Session): Promise<Freshness> {
     try {
         const tokens = await client.refreshTokenGrant(await oidcConfig(), session.refreshToken)
-        // Keycloak answers a refresh with a new id token, roles as they are now; without
-        // one the flag stays what it was
+        // Keycloak answers a refresh with a new id token, groups as they are now; without
+        // one the flags stay what they were
         const claims = tokens.claims()
         return {
             status: 'usable',
@@ -51,6 +51,7 @@ async function refresh(session: Session): Promise<Freshness> {
                 refreshToken: tokens.refresh_token ?? session.refreshToken,
                 accessExpiresAt: Math.floor(Date.now() / 1000) + (tokens.expiresIn() ?? 0),
                 canEdit: claims ? mayEdit(claims) : session.canEdit,
+                staff: claims ? isStaff(claims) : session.staff,
             },
         }
     } catch (error) {

@@ -101,7 +101,15 @@ export default function ProfilePage() {
                         {session.createdAt ? `с ${formatDay(session.createdAt)}` : '\u2014'}
                     </span>
                 </div>
-                <DeleteAccount userId={session.userId} />
+                {/* The session knows before user-service would answer 409 */}
+                {session.staff ? (
+                    <div style={{ ...row, flexWrap: 'wrap' }}>
+                        <span style={{ color: 'var(--tw-text-secondary)' }}>Удаление аккаунта</span>
+                        <span>Аккаунт сотрудника удаляет администратор</span>
+                    </div>
+                ) : (
+                    <DeleteAccount userId={session.userId} />
+                )}
             </section>
         </div>
     )
