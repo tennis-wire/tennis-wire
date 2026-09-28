@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,10 +52,12 @@ class SecurityConfigTest {
                 .authorities(new SimpleGrantedAuthority("ROLE_" + role));
     }
 
-    // Deleting one's own account also asks how recent the login is; RecentLoginTest is about that
+    // Deleting an account also asks how recent the login is, and deleting one's own whether it is a
+    // reader's; RecentLoginTest and StaffAccountDeletionTest are about those
     private static JwtRequestPostProcessor justSignedInWith(String role) {
         return jwt().jwt(builder -> builder.subject(UUID.randomUUID().toString())
-                        .claim("auth_time", Instant.now().getEpochSecond()))
+                        .claim("auth_time", Instant.now().getEpochSecond())
+                        .claim("groups", List.of("/readers")))
                 .authorities(new SimpleGrantedAuthority("ROLE_" + role));
     }
 
@@ -129,7 +132,7 @@ class SecurityConfigTest {
 
         mvc.perform(delete(someone).with(tokenWith("user"))).andExpect(status().isForbidden());
         // an admin gets through the chain; that there is no such account is the service answering
-        mvc.perform(delete(someone).with(tokenWith("admin"))).andExpect(status().isNotFound());
+        mvc.perform(delete(someone).with(justSignedInWith("admin"))).andExpect(status().isNotFound());
     }
 
     @Test

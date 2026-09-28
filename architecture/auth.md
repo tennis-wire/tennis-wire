@@ -52,7 +52,7 @@ Realm-роли (client-роли не используем — проще мап�
 | `public-web` | `apps/public-web` (Next.js, SSR) | confidential | Authorization Code + PKCE, секрет на сервере | `openid-client` + `iron-session`; токены в зашифрованной cookie, в браузер не попадают |
 | `mobile` | `apps/mobile` (Expo) | public | Authorization Code + PKCE | `expo-auth-session` |
 | `moderation-bot` | бот-модератор | confidential, service account | `client_credentials` | — |
-| `user-service` | `user-service` | confidential, service account | `client_credentials` | Spring Security OAuth2 Client; роль `service` и client-роли `realm-management` `manage-users`, `view-realm` — гашение и удаление учёток, чтение `accessTokenLifespan` |
+| `user-service` | `user-service` | confidential, service account | `client_credentials` | Spring Security OAuth2 Client; роль `service` и client-роли `realm-management` `manage-users`, `view-realm` — гашение и удаление учёток, чтение групп цели перед удалением её `admin`'ом, чтение `accessTokenLifespan` |
 | `discussion-service` | `discussion-service` | confidential, service account | `client_credentials` | Spring Security OAuth2 Client; роль `service` |
 
 Путь к `author` / `chief-editor` / `moderator` — только через администратора, членством в `/staff/*`.
@@ -173,10 +173,10 @@ Realm-роли (client-роли не используем — проще мап�
 | `/api/discussion/comments/**` GET | анонимно | токен, если есть, всё равно валидируется — по нему применяются блокировки зрителя |
 | `/api/discussion/**` (прочее) | `user` | запись комментариев и жалоб, игнор-лист; сервис пускает только `comments/**` и `blocks/**` |
 | `/api/discussion/moderation/**` | `moderator` или `moderator-bot` | сервис сужает: `/moderation/restrictions/**` и `GET`/`PATCH /moderation/reports/**` — только `moderator`; `DELETE /moderation/comments/{id}` — только `moderator` (и в gateway); `POST /moderation/reports` — только `moderator-bot` |
-| `/api/users/me/**` | `user` | сюда же `DELETE /api/users/me` — читатель удаляет свой аккаунт; сервис дополнительно требует вход не старше 5 минут (`auth_time`) |
+| `/api/users/me/**` | `user` | сюда же `DELETE /api/users/me` — читатель удаляет свой аккаунт. Сервис сначала отказывает сотруднику — 409 `STAFF_ACCOUNT`, если в `groups` есть группа `/staff/...` или claim нет вовсе (у `editorial-ui` и `dev-cli` маппера нет), — и только потом требует вход не старше 5 минут (`auth_time`) |
 | `GET /api/users/{id}` | анонимно | профиль читателя: имя, аватарка и дата регистрации, то есть то, что и так видно под его комментарием |
 | `GET /api/users/moderation/avatars`, `PUT /api/users/{id}/avatar/review`, `DELETE /api/users/{id}/avatar` | `moderator` | постмодерация аватаров, своя очередь, не очередь жалоб: «ок» и «снять», снятие нарушением не считается. Оба действия несут `avatarKey`, который видел модератор; на его месте уже другой аватар — 409 `AVATAR_CHANGED`. Свой аватар читатель ставит и снимает через `/api/users/me/avatar` строкой выше |
-| `DELETE /api/users/{id}` | `admin` | удаление аккаунта через поддержку: единственный выход для забаненного навсегда (`discussion-rules.md` §12.16) |
+| `DELETE /api/users/{id}` | `admin` | удаление аккаунта через поддержку: единственный выход для забаненного навсегда (`discussion-rules.md` §12.16). Вход не старше 5 минут (`auth_time`), как у `/me`. Сотрудника не удаляет: до любой записи сервис читает группы цели через admin API, группа `/staff/...` — 409 `STAFF_ACCOUNT`, Keycloak не ответил или учётки не знает — 503 ([staff.md](staff.md) §8) |
 | всё прочее | — | правила нет, значит `denyAll` — в gateway и в каждом сервисе. Новый путь объявляет себя сам |
 
 **`groups` в токене — только для отказа, никогда для допуска.** Допуск дают роли из таблицы выше (§1, п. 3). Сайт по группам решает только, что показать (§4).

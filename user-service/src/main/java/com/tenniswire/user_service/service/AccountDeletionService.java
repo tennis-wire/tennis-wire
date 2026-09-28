@@ -8,6 +8,7 @@ import com.tenniswire.user_service.exception.ResourceNotFoundException;
 import com.tenniswire.user_service.repository.IdentityLinkRepository;
 import com.tenniswire.user_service.repository.PendingIdentityDeleteRepository;
 import com.tenniswire.user_service.repository.ProfileRepository;
+import com.tenniswire.user_service.security.StaffAccounts;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,18 +34,21 @@ public class AccountDeletionService {
     private final PendingIdentityDeleteRepository pending;
     private final KeycloakAdmin keycloak;
     private final ImmediateTraceErasure trace;
+    private final StaffAccounts staffAccounts;
 
     public AccountDeletionService(
             ProfileRepository profiles,
             IdentityLinkRepository links,
             PendingIdentityDeleteRepository pending,
             KeycloakAdmin keycloak,
-            ImmediateTraceErasure trace) {
+            ImmediateTraceErasure trace,
+            StaffAccounts staffAccounts) {
         this.profiles = profiles;
         this.links = links;
         this.pending = pending;
         this.keycloak = keycloak;
         this.trace = trace;
+        this.staffAccounts = staffAccounts;
     }
 
     // Idempotent: asking twice records once, and the second call only retries what did not work
@@ -67,14 +71,24 @@ public class AccountDeletionService {
         trace.start(userId);
     }
 
+    // Someone else's account, through support: never a staff one, asked of Keycloak before anything
+    // is written. The subject comes off the record first: a banned reader's profile goes before the
+    // account does, and then the record is all that is left.
+    public void requestOnBehalf(UUID userId) {
+        var subject =
+                pending.findById(userId).map(PendingIdentityDelete::subject).orElseGet(() -> subjectOf(userId));
+        staffAccounts.refuseTarget(subject);
+        request(userId);
+    }
+
     private PendingIdentityDelete record(UUID userId) {
-        if (!profiles.existsById(userId)) {
-            throw new ResourceNotFoundException("Profile", userId);
-        }
         return pending.save(new PendingIdentityDelete(userId, subjectOf(userId)));
     }
 
     private String subjectOf(UUID userId) {
+        if (!profiles.existsById(userId)) {
+            throw new ResourceNotFoundException("Profile", userId);
+        }
         return links.findByUserId(userId).stream()
                 .filter(link -> IdentityLink.KEYCLOAK.equals(link.id().provider()))
                 .map(link -> link.id().sub())

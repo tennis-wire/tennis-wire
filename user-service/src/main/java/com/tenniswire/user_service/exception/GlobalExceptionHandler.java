@@ -36,6 +36,11 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("REAUTHENTICATION_REQUIRED", ex.getMessage()));
     }
 
+    @ExceptionHandler(StaffAccountException.class)
+    public ResponseEntity<ErrorResponse> handleStaffAccount(StaffAccountException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of("STAFF_ACCOUNT", ex.getMessage()));
+    }
+
     @ExceptionHandler(DisplayNameTakenException.class)
     public ResponseEntity<ErrorResponse> handleTaken(DisplayNameTakenException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of("DISPLAY_NAME_TAKEN", ex.getMessage()));
@@ -70,7 +75,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ErrorResponse.of("BAD_REQUEST", ex.getMessage()));
     }
 
-    @ExceptionHandler({StorageUnavailableException.class, AvatarBusyException.class})
+    @ExceptionHandler({
+        StorageUnavailableException.class,
+        AvatarBusyException.class,
+        IdentityProviderUnavailableException.class
+    })
     public ResponseEntity<ErrorResponse> handleUnavailable(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(ErrorResponse.of("SERVICE_UNAVAILABLE", ex.getMessage()));

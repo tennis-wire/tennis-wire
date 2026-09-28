@@ -7,6 +7,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withResourceNotFound;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.tenniswire.user_service.client.KeycloakAdmin;
@@ -15,6 +16,7 @@ import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -116,6 +118,41 @@ class KeycloakAdminTest {
                 .andRespond(withSuccess("{\"realm\":\"tennis-wire\"}", MediaType.APPLICATION_JSON));
 
         assertThatThrownBy(() -> admin.accessTokenLifespan()).isInstanceOf(IdentityProviderUnavailableException.class);
+    }
+
+    @Test
+    void groupsAreReadAsTheirFullPaths() {
+        keycloak.expect(requestTo(USERS + "/groups"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(
+                        "[{\"id\":\"g-1\",\"name\":\"authors\",\"path\":\"/staff/authors\"},"
+                                + "{\"id\":\"g-2\",\"name\":\"moderators\",\"path\":\"/staff/moderators\"}]",
+                        MediaType.APPLICATION_JSON));
+
+        assertThat(admin.groupsOf("sub-1")).containsExactly("/staff/authors", "/staff/moderators");
+    }
+
+    @Test
+    void aGroupWithoutAPathIsNotReadAsNoGroup() {
+        keycloak.expect(requestTo(USERS + "/groups"))
+                .andRespond(withSuccess("[{\"id\":\"g-1\",\"name\":\"authors\"}]", MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> admin.groupsOf("sub-1")).isInstanceOf(IdentityProviderUnavailableException.class);
+    }
+
+    // Unlike everything taken away above, a missing account is not where anyone wanted to end up here
+    @Test
+    void groupsOfAnAccountThatIsNotThereAreARefusal() {
+        keycloak.expect(requestTo(USERS + "/groups")).andRespond(withResourceNotFound());
+
+        assertThatThrownBy(() -> admin.groupsOf("sub-1")).isInstanceOf(IdentityProviderUnavailableException.class);
+    }
+
+    @Test
+    void groupsKeycloakWouldNotShowAreARefusal() {
+        keycloak.expect(requestTo(USERS + "/groups")).andRespond(withStatus(HttpStatus.FORBIDDEN));
+
+        assertThatThrownBy(() -> admin.groupsOf("sub-1")).isInstanceOf(IdentityProviderUnavailableException.class);
     }
 
     @Test

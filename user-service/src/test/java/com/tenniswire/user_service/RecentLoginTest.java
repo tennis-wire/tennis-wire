@@ -16,6 +16,7 @@ import com.tenniswire.user_service.entity.IdentityLink;
 import com.tenniswire.user_service.entity.IdentityLinkId;
 import com.tenniswire.user_service.repository.IdentityLinkRepository;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -91,7 +92,7 @@ class RecentLoginTest {
 
     private static JwtRequestPostProcessor reader(String subject, Instant signedInAt) {
         return jwt().jwt(builder -> {
-                    builder.subject(subject);
+                    builder.subject(subject).claim("groups", List.of("/readers"));
                     if (signedInAt != null) {
                         builder.claim("auth_time", signedInAt.getEpochSecond());
                     }
