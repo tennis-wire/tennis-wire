@@ -169,7 +169,8 @@
         - `staff` — любая `/staff/*` или claim нет, текст на `/me`.
     - `/api/auth/session` отдаёт `staff`, а `canEdit` — в виде адреса редактора, не `null` только при `canEdit`.
     - Модератору кнопка «Редактировать» не показывается: в редакторе он получил бы 403.
-4. **Staff-маршруты только с токеном `editorial-ui`.** Gateway проверяет `azp` на `/api/editorial/**`, `/api/ai/**`, `/api/translate/**`, `/api/transcribe/**`, запись опросов, `/api/discussion/moderation/**`, `/api/users/moderation/**`, `PUT`/`DELETE /api/users/{id}/avatar...` и `DELETE /api/users/{id}`. Бот — `azp=moderation-bot` на `POST /moderation/reports`. После п. 3 `author` в токене сайта нет, и `azp` — вторая линия, а не единственная.
+4. **Staff-маршруты только с токеном `editorial-ui`.** Gateway проверяет `azp` на `/api/editorial/**`, `/api/ai/**`, `/api/translate/**`, `/api/transcribe/**`, запись опросов, `/api/discussion/moderation/**`, `/api/users/moderation/**`, `PUT`/`DELETE /api/users/{id}/avatar...` и `DELETE /api/users/{id}`. Бот — `azp=moderation-bot` на `POST /moderation/reports`, прочая модерация ему в gateway закрыта. После п. 3 `author` в токене сайта нет, и `azp` — вторая линия, а не единственная.
+    - `azp` в реальных токенах `editorial-ui` и `moderation-bot` проверен на 26.7.0 (`GatewayKeycloakIT`). Токен `dev-cli` с полным набором ролей на staff-маршрутах получает 403: локальный `curl` к ним идёт на порт сервиса.
 5. **Бот только жалуется.** `DELETE /moderation/comments/{id}` — только `moderator`.
 6. **Модерация живёт в `editorial-ui`.** `moderator` на сайт не пускаем, иначе права модератора живут в offline-сессии до 180 дней.
 7. **Токен `editorial-ui` без `realm-management`.**
