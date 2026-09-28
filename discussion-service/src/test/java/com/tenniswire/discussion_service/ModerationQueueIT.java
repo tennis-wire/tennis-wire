@@ -9,7 +9,6 @@ import com.tenniswire.discussion_service.client.AuthorProfile;
 import com.tenniswire.discussion_service.client.AuthorProfileClient;
 import com.tenniswire.discussion_service.controller.moderation.ModerationQueueResponses;
 import com.tenniswire.discussion_service.dto.moderation.QueueEntryResponse;
-import com.tenniswire.discussion_service.entity.Comment;
 import com.tenniswire.discussion_service.entity.Report;
 import com.tenniswire.discussion_service.entity.ReportResolution;
 import com.tenniswire.discussion_service.exception.ResolutionNotApplicableException;
@@ -111,7 +110,6 @@ class ModerationQueueIT {
             assertThat(r.reporterHash()).isNull();
         });
         var stored = comments.findById(comment).orElseThrow();
-        assertThat(stored.hiddenSource()).isEqualTo(Comment.HIDDEN_BY_MODERATOR);
         assertThat(stored.hiddenBy()).isEqualTo(moderator);
     }
 
@@ -163,7 +161,6 @@ class ModerationQueueIT {
         var counts = countsFor(author);
         assertThat(counts.removedByModerator().total()).isEqualTo(1);
         assertThat(counts.removedByModerator().last30Days()).isEqualTo(1);
-        assertThat(counts.removedByBot().total()).isZero();
     }
 
     @Test
@@ -230,7 +227,6 @@ class ModerationQueueIT {
         assertThat(entry.author().restriction().expiresAt()).isNotNull();
         assertThat(entry.author().removedByModerator().total()).isEqualTo(1);
         assertThat(entry.author().removedByModerator().last30Days()).isEqualTo(1);
-        assertThat(entry.author().removedByBot().total()).isZero();
     }
 
     @Test

@@ -207,19 +207,14 @@ CREATE INDEX idx_report_open ON report (comment_id, created_at)
 -- comment: updated_at trigger fires on a body change only, so nothing written here can pass for an edit.
 ALTER TABLE comment
     ADD COLUMN hidden_at         TIMESTAMPTZ,
-    ADD COLUMN hidden_by         UUID,            -- NULL when the bot removed it: it has no profile
-    ADD COLUMN hidden_source     TEXT,            -- 'moderator' | 'bot'
+    ADD COLUMN hidden_by         UUID,            -- the moderator; only a person removes
     ADD COLUMN reports_closed_at TIMESTAMPTZ,
 
-    ADD CONSTRAINT chk_comment_hidden_source CHECK (
-        hidden_source IS NULL OR hidden_source IN ('moderator', 'bot')),
-    ADD CONSTRAINT chk_comment_hidden CHECK (
-        (hidden_at IS NULL) = (hidden_source IS NULL)
-        AND (hidden_source IS NULL OR (hidden_source = 'bot') = (hidden_by IS NULL)));
+    ADD CONSTRAINT chk_comment_hidden CHECK ((hidden_at IS NULL) = (hidden_by IS NULL));
 
 -- changeset andrei:12
 -- comment: The queue card shows how many of the author's comments moderation has removed — over the
--- comment: last 30 days and in total, the bot's removals counted apart. Partial: removals are rare
+-- comment: last 30 days and in total. Partial: removals are rare
 -- comment: next to the comments themselves.
 CREATE INDEX idx_comment_hidden_author ON comment (author_id, hidden_at)
     WHERE hidden_at IS NOT NULL;

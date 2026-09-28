@@ -315,17 +315,15 @@ limit :limit
         """)
     int eraseTextOf(@Param("ids") Collection<UUID> ids, @Param("cutoff") Instant cutoff);
 
-    // Removals and hand-counted violations land in one total. A counted one has no source of its
-    // own - only a person counts one - hence the coalesce. The two columns exclude each other.
+    // Removals and hand-counted violations land in one total. The two columns exclude each other.
     @Query("""
         select new com.tenniswire.discussion_service.repository.RemovalTally(
             c.authorId,
-            coalesce(c.hiddenSource, 'moderator'),
             count(c),
             sum(case when coalesce(c.hiddenAt, c.countedAt) > :since then 1 else 0 end))
         from Comment c
         where c.authorId in :authorIds and (c.hiddenAt is not null or c.countedAt is not null)
-        group by c.authorId, coalesce(c.hiddenSource, 'moderator')
+        group by c.authorId
         """)
     List<RemovalTally> countRemovalsAmong(
             @Param("authorIds") Collection<UUID> authorIds, @Param("since") Instant since);

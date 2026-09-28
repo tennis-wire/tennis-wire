@@ -80,10 +80,7 @@ class BlockRenderPolicyTest {
     void aRemovalByModerationIsToldFromADeletionAndBeatsTheSameModes() {
         var now = Instant.now();
         // what hide() writes: the deletion mark as well, which is why moderation is asked first
-        reply.deletedAt(now)
-                .hiddenAt(now)
-                .hiddenSource(Comment.HIDDEN_BY_MODERATOR)
-                .hiddenBy(UUID.randomUUID());
+        reply.deletedAt(now).hiddenAt(now).hiddenBy(UUID.randomUUID());
 
         assertThat(replyView(render(Map.of())).visibility()).isEqualTo(Visibility.REMOVED);
         assertThat(replyView(render(Map.of(BOB, BlockMode.SOFT))).visibility()).isEqualTo(Visibility.REMOVED);

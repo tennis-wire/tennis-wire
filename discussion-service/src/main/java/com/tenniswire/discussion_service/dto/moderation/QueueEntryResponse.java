@@ -28,8 +28,7 @@ public record QueueEntryResponse(
             @Nullable String displayName,
             @Nullable String avatarUrl,
             @Nullable ActiveRestriction restriction,
-            RemovalCounts removedByModerator,
-            RemovalCounts removedByBot) {}
+            RemovalCounts removedByModerator) {}
 
     public record ActiveRestriction(@Nullable Instant expiresAt) {}
 

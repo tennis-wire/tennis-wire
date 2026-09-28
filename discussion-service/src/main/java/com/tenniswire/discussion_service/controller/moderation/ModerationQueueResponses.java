@@ -7,15 +7,14 @@ import com.tenniswire.discussion_service.dto.moderation.QueueEntryResponse;
 import com.tenniswire.discussion_service.dto.moderation.QueueEntryResponse.ActiveRestriction;
 import com.tenniswire.discussion_service.dto.moderation.QueueEntryResponse.QueueAuthor;
 import com.tenniswire.discussion_service.dto.moderation.QueueEntryResponse.RemovalCounts;
-import com.tenniswire.discussion_service.entity.Comment;
 import com.tenniswire.discussion_service.entity.UserRestriction;
 import com.tenniswire.discussion_service.exception.UserServiceUnavailableException;
 import com.tenniswire.discussion_service.repository.CommentRepository;
+import com.tenniswire.discussion_service.repository.RemovalTally;
 import com.tenniswire.discussion_service.repository.UserRestrictionRepository;
 import com.tenniswire.discussion_service.service.QueuedComment;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -56,21 +55,19 @@ public class ModerationQueueResponses {
             QueuedComment card,
             Map<UUID, AuthorProfile> named,
             Map<UUID, UserRestriction> banned,
-            Map<UUID, Map<String, RemovalCounts>> removed) {
+            Map<UUID, RemovalCounts> removed) {
 
         var comment = card.comment();
         var authorId = comment.authorId();
         var profile = named.get(authorId);
         var ban = banned.get(authorId);
-        var record = removed.getOrDefault(authorId, Map.of());
 
         var author = new QueueAuthor(
                 authorId,
                 profile == null ? null : profile.displayName(),
                 profile == null ? null : profile.avatarUrl(),
                 ban == null ? null : new ActiveRestriction(ban.expiresAt()),
-                record.getOrDefault(Comment.HIDDEN_BY_MODERATOR, RemovalCounts.NONE),
-                record.getOrDefault(Comment.HIDDEN_BY_BOT, RemovalCounts.NONE));
+                removed.getOrDefault(authorId, RemovalCounts.NONE));
 
         return new QueueEntryResponse(
                 comment.id(),
@@ -112,15 +109,12 @@ public class ModerationQueueResponses {
                 .collect(Collectors.toMap(UserRestriction::userId, r -> r, (first, later) -> first));
     }
 
-    private Map<UUID, Map<String, RemovalCounts>> removalsOf(Set<UUID> ids) {
+    private Map<UUID, RemovalCounts> removalsOf(Set<UUID> ids) {
         if (ids.isEmpty()) {
             return Map.of();
         }
-        var byAuthor = new HashMap<UUID, Map<String, RemovalCounts>>();
-        for (var tally : comments.countRemovalsAmong(ids, Instant.now().minus(RECENT))) {
-            byAuthor.computeIfAbsent(tally.authorId(), id -> new HashMap<>())
-                    .put(tally.hiddenSource(), new RemovalCounts(tally.recent(), tally.total()));
-        }
-        return byAuthor;
+        return comments.countRemovalsAmong(ids, Instant.now().minus(RECENT)).stream()
+                .collect(Collectors.toMap(
+                        RemovalTally::authorId, tally -> new RemovalCounts(tally.recent(), tally.total())));
     }
 }
