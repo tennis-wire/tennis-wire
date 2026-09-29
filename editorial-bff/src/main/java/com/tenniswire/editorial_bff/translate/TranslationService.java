@@ -3,7 +3,6 @@ package com.tenniswire.editorial_bff.translate;
 import com.deepl.api.DeepLClient;
 import com.deepl.api.DeepLException;
 import com.deepl.api.TextResult;
-import com.deepl.api.TextTranslationOptions;
 import com.tenniswire.editorial_bff.translate.dto.TranslateRequest;
 import com.tenniswire.editorial_bff.translate.dto.TranslateResponse;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -19,22 +18,14 @@ public class TranslationService {
         this.deepLClient = deepLClient;
     }
 
-    /**
-     * Translates text using DeepL API with HTML tag handling enabled.
-     *
-     * <p>HTML tags are preserved during translation, essential because the editor
-     * works with rich text (Tiptap produces HTML).
-     */
+    // The editor sends plain text, paragraphs split by blank lines. As HTML, DeepL would read a
+    // < or & in it as markup and would be free to fold the line breaks.
     public TranslateResponse translate(TranslateRequest request) throws DeepLException, InterruptedException {
-
-        TextTranslationOptions options = new TextTranslationOptions();
-        options.setTagHandling("html");
 
         TextResult result = deepLClient.translateText(
                 request.text(),
                 request.sourceLang(), // null = auto-detect
-                request.targetLang(),
-                options);
+                request.targetLang());
 
         return new TranslateResponse(result.getText(), result.getDetectedSourceLanguage());
     }
