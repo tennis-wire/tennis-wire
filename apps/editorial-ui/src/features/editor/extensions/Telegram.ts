@@ -13,11 +13,18 @@ declare module '@tiptap/core' {
 }
 
 export const extractTelegramData = (url: string): { channel: string; postId: string } | null => {
-    const match = url.match(/(?:t\.me|telegram\.me)\/([^/]+)\/(\d+)/)
+    const match = url.match(/(?:t\.me|telegram\.me)\/(\w+)\/(\d+)/)
     if (match) {
         return { channel: match[1], postId: match[2] }
     }
     return null
+}
+
+// A saved article keeps the post in one place only, data-telegram-post="channel/123"
+const POST = /^(\w+)\/(\d+)$/
+
+function postOf(element: HTMLElement): RegExpMatchArray | null {
+    return (element.getAttribute('data-telegram-post') ?? '').match(POST)
 }
 
 export const Telegram = Node.create<TelegramOptions>({
@@ -35,14 +42,15 @@ export const Telegram = Node.create<TelegramOptions>({
 
     addAttributes() {
         return {
-            src: {
-                default: null,
-            },
             channel: {
                 default: null,
+                parseHTML: (element) => postOf(element)?.[1] ?? null,
+                renderHTML: () => ({}),
             },
             postId: {
                 default: null,
+                parseHTML: (element) => postOf(element)?.[2] ?? null,
+                renderHTML: () => ({}),
             },
         }
     },
@@ -51,12 +59,13 @@ export const Telegram = Node.create<TelegramOptions>({
         return [
             {
                 tag: 'div[data-telegram-post]',
+                getAttrs: (element) => (postOf(element) ? null : false),
             },
         ]
     },
 
-    renderHTML({ HTMLAttributes }) {
-        const { channel, postId } = HTMLAttributes
+    renderHTML({ node }) {
+        const { channel, postId } = node.attrs
         const embedUrl = `https://t.me/${channel}/${postId}?embed=1&mode=tme`
 
         return [
@@ -89,11 +98,7 @@ export const Telegram = Node.create<TelegramOptions>({
 
                     return commands.insertContent({
                         type: this.name,
-                        attrs: {
-                            src: options.src,
-                            channel: data.channel,
-                            postId: data.postId,
-                        },
+                        attrs: data,
                     })
                 },
         }

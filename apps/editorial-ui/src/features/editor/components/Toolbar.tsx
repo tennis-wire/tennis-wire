@@ -33,6 +33,7 @@ import {
 import type { Editor } from '@tiptap/react'
 import { useAppTheme } from '../../../theme'
 import { IMAGE_ACCEPT, uploadErrorMessage, uploadImage } from '../api/mediaApi'
+import { extractTelegramData } from '../extensions'
 
 interface Props {
     editor: Editor | null
@@ -133,8 +134,7 @@ export const Toolbar: React.FC<Props> = ({
         const url = window.prompt('Вставьте ссылку на пост Telegram:', 'https://t.me/channel/123')
         if (!url) return
 
-        const match = url.match(/(?:t\.me|telegram\.me)\/([^/]+)\/(\d+)/)
-        if (!match) {
+        if (!extractTelegramData(url)) {
             alert('Не удалось распознать ссылку на Telegram.\nФормат: https://t.me/channel/123')
             return
         }

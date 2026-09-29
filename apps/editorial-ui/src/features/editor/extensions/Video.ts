@@ -35,8 +35,14 @@ export const Video = Node.create<VideoOptions>({
 
     addAttributes() {
         return {
+            // a bare <video> carries src itself, the saved embed keeps it on the inner <video>
             src: {
                 default: null,
+                parseHTML: (element) =>
+                    element.getAttribute('src') ??
+                    element.querySelector('video')?.getAttribute('src') ??
+                    null,
+                renderHTML: () => ({}),
             },
         }
     },
@@ -52,7 +58,7 @@ export const Video = Node.create<VideoOptions>({
         ]
     },
 
-    renderHTML({ HTMLAttributes }) {
+    renderHTML({ node }) {
         return [
             'div',
             mergeAttributes(this.options.HTMLAttributes, {
@@ -62,7 +68,7 @@ export const Video = Node.create<VideoOptions>({
             [
                 'video',
                 {
-                    src: HTMLAttributes.src,
+                    src: node.attrs.src,
                     controls: true,
                     preload: 'metadata',
                     style: 'width: 100%; max-width: 100%; border-radius: 8px;',
