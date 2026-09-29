@@ -102,12 +102,38 @@
    Images
    =========================== */
 
+.ProseMirror figure {
+    margin: 1.5rem 0;
+}
+
 .ProseMirror img {
     max-width: 100%;
     border-radius: 10px;
-    margin: 1.5rem auto;
+    margin: 0 auto;
     display: block;
     box-shadow: var(--tw-card-shadow);
+    cursor: pointer;
+}
+
+.ProseMirror .ProseMirror-selectednode img {
+    outline: 3px solid var(--tw-primary);
+    outline-offset: 2px;
+}
+
+/* The caption as the site draws it: the credit after the caption, a shade quieter */
+.ProseMirror figcaption {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: var(--tw-text-secondary);
+}
+
+.ProseMirror figcaption [data-credit] {
+    color: var(--tw-text-muted);
+}
+
+.ProseMirror figcaption [data-caption] + [data-credit] {
+    margin-left: 0.4em;
 }
 
 /* ===========================

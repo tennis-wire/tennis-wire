@@ -1,10 +1,10 @@
-import { useEditor, type Editor } from '@tiptap/react'
+import { ReactNodeViewRenderer, useEditor, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Heading from '@tiptap/extension-heading'
-import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
 import Youtube from '@tiptap/extension-youtube'
-import { Poll, Telegram, Video } from '../extensions'
+import { FigureView } from '../components/FigureView'
+import { Figure, Poll, Telegram, Video } from '../extensions'
 
 // The site draws the title as the page's only h1, and the toolbar offers h2 and h3. A heading of
 // another level, pasted or from the AI chat's markdown, takes the nearest of the two rather than
@@ -30,7 +30,7 @@ export function articleExtensions() {
             link: { openOnClick: false },
         }),
         ArticleHeading,
-        Image,
+        Figure.extend({ addNodeView: () => ReactNodeViewRenderer(FigureView) }),
         Youtube.configure({ controls: true, nocookie: true, modestBranding: true }),
         Telegram,
         Video,

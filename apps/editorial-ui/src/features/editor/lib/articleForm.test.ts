@@ -17,6 +17,10 @@ function article(overrides: Partial<EditorialArticle> = {}): EditorialArticle {
             subtitle: 'Lead',
             content: '<p>Body</p>',
             coverImageUrl: 'http://media/cover.png',
+            coverAlt: 'An empty court',
+            coverCaption: 'Centre court',
+            coverCredit: 'Getty Images',
+            coverCreditKind: 'illustration',
             readingTime: 1,
             sourceUrl: null,
             sourceName: null,
@@ -46,6 +50,10 @@ describe('metadataOf and the requests', () => {
             slug: null,
             content: '<p>Body</p>',
             coverImageUrl: 'http://media/cover.png',
+            coverAlt: 'An empty court',
+            coverCaption: 'Centre court',
+            coverCredit: 'Getty Images',
+            coverCreditKind: 'illustration',
             sourceUrl: null,
             sourceName: null,
             tagIds: ['b', 'a'],
@@ -72,10 +80,32 @@ describe('metadataOf and the requests', () => {
         })
     })
 
+    // as the server keeps them: no cover, nothing to caption; no credit, no kind of it
+    it('sends the cover text with the cover and the kind with the credit', () => {
+        const loaded = metadataOf(article())
+        if (loaded.type !== 'article') throw new Error('an article')
+
+        expect(createRequestOf({ ...loaded, coverImage: undefined }, '')).toMatchObject({
+            coverAlt: null,
+            coverCaption: null,
+            coverCredit: null,
+            coverCreditKind: null,
+        })
+        expect(createRequestOf({ ...loaded, coverCredit: ' ' }, '')).toMatchObject({
+            coverCaption: 'Centre court',
+            coverCredit: null,
+            coverCreditKind: null,
+        })
+    })
+
     it('drops what news do not have', () => {
         const metadata = { ...metadataOf(article()), type: 'news' } as ContentMetadata
 
-        expect(createRequestOf(metadata, '')).toMatchObject({ subtitle: null, coverImageUrl: null })
+        expect(createRequestOf(metadata, '')).toMatchObject({
+            subtitle: null,
+            coverImageUrl: null,
+            coverCaption: null,
+        })
     })
 })
 
@@ -92,6 +122,16 @@ describe('snapshotOf', () => {
 
         expect(snapshotOf(loaded, '<p>Other</p>')).not.toBe(snapshotOf(loaded, '<p>Body</p>'))
         expect(snapshotOf({ ...loaded, title: 'New' }, 'x')).not.toBe(snapshotOf(loaded, 'x'))
+    })
+
+    it('does not count a kind picked for a credit that is not there', () => {
+        const loaded = metadataOf(article())
+        if (loaded.type !== 'article') throw new Error('an article')
+        const uncredited = { ...loaded, coverCredit: '' }
+
+        expect(snapshotOf({ ...uncredited, coverCreditKind: 'screenshot' }, 'x')).toBe(
+            snapshotOf(uncredited, 'x')
+        )
     })
 
     // what the server stores comes back without the padding
