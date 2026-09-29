@@ -25,15 +25,6 @@
    Headings: use display font
    =========================== */
 
-.ProseMirror h1 {
-    font-family: var(--tw-font-display);
-    font-size: 2.4rem;
-    margin: 2rem 0 1rem;
-    font-weight: 700;
-    color: var(--tw-text);
-    line-height: 1.2;
-}
-
 .ProseMirror h2 {
     font-family: var(--tw-font-display);
     font-size: 1.9rem;
