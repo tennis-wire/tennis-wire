@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 
 import Comments from '@/components/discussion/Comments'
 import { fetchArticle, type ArticleType } from '@/lib/content/articles'
+import { labelCredits } from '@/lib/content/credits'
 import { splitPolls } from '@/lib/content/polls'
 import { sanitizeArticle } from '@/lib/content/sanitize'
 import { mediaOrigin } from '@/lib/security/csp'
@@ -17,24 +18,30 @@ export default async function ArticlePage({ slug, type }: { slug: string; type: 
     if (!article || article.type !== type) notFound()
 
     return (
-        <article style={{ maxWidth: 760, margin: '0 auto' }}>
-            <EditArticleLink articleId={article.id} />
+        // The text runs in a column; only the cover, in the head, takes the page's full width
+        <article>
+            <div style={{ maxWidth: 760, margin: '0 auto' }}>
+                <EditArticleLink articleId={article.id} />
+            </div>
             <ArticleHead article={article} />
-            <div className="tw-article-body">
-                {splitPolls(sanitizeArticle(article.content, mediaOrigin())).map((piece, i) =>
-                    'pollId' in piece ? (
-                        <PollWidget
-                            key={piece.pollId}
-                            id={piece.pollId}
-                            fallback={piece.fallback}
-                        />
-                    ) : (
-                        <div key={i} dangerouslySetInnerHTML={{ __html: piece.html }} />
-                    )
+            <div className="tw-article-body" style={{ maxWidth: 760, margin: '0 auto' }}>
+                {splitPolls(labelCredits(sanitizeArticle(article.content, mediaOrigin()))).map(
+                    (piece, i) =>
+                        'pollId' in piece ? (
+                            <PollWidget
+                                key={piece.pollId}
+                                id={piece.pollId}
+                                fallback={piece.fallback}
+                            />
+                        ) : (
+                            <div key={i} dangerouslySetInnerHTML={{ __html: piece.html }} />
+                        )
                 )}
             </div>
-            <ArticleTags tags={article.tags} />
-            <Comments subjectType="publication" subjectId={article.id} />
+            <div style={{ maxWidth: 760, margin: '0 auto' }}>
+                <ArticleTags tags={article.tags} />
+                <Comments subjectType="publication" subjectId={article.id} />
+            </div>
         </article>
     )
 }

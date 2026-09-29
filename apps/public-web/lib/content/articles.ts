@@ -4,6 +4,9 @@ import type { Tag } from './tags'
 
 export type ArticleType = 'news' | 'article'
 
+// What a picture's credit names; the word before it is this site's, see credits.ts
+export type CreditKind = 'photo' | 'illustration' | 'screenshot'
+
 // The part of content-service's ArticleResponse this app draws
 export type Article = {
     id: string
@@ -13,6 +16,11 @@ export type Article = {
     subtitle: string | null
     content: string
     coverImageUrl: string | null
+    // the cover's text, each part optional and absent without a cover
+    coverAlt: string | null
+    coverCaption: string | null
+    coverCredit: string | null
+    coverCreditKind: CreditKind | null
     // minutes, filled in for a material; a news item has none
     readingTime: number | null
     sourceUrl: string | null

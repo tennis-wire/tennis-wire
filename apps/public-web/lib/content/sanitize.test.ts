@@ -86,4 +86,28 @@ describe('sanitizeArticle', () => {
         const html = '<p>a</p><img src="https://media.example.com/a.jpg"><p>b</p>'
         expect(sanitizeWith(html, null)).toBe('<p>a</p><p>b</p>')
     })
+
+    it('keeps a figure with its caption and credit', () => {
+        const html =
+            '<figure><img src="https://media.example.com/a.jpg" alt="court" /><figcaption>' +
+            '<span data-caption="">Centre court</span><span data-credit="photo">Getty</span>' +
+            '</figcaption></figure>'
+
+        expect(sanitizeArticle(html)).toBe(html.replace('data-caption=""', 'data-caption'))
+    })
+
+    it('drops a figure whose picture is dropped, caption and all', () => {
+        const html =
+            '<p>a</p><figure><img src="https://elsewhere.example.com/a.jpg" /><figcaption>' +
+            '<span data-caption="">Not ours</span></figcaption></figure><p>b</p>'
+
+        expect(sanitizeArticle(html)).toBe('<p>a</p><p>b</p>')
+    })
+
+    // left without a kind, the credit gets no word before it, see credits.ts
+    it('keeps no credit kind it does not know', () => {
+        expect(sanitizeArticle('<span data-credit="drawing" style="x">Me</span>')).toBe(
+            '<span data-credit>Me</span>'
+        )
+    })
 })

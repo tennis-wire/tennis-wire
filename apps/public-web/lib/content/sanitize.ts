@@ -4,7 +4,7 @@ import { originOf } from '@/lib/security/csp'
 
 import { EMBED_HOSTS } from './embeds'
 
-// What the editor emits (editorial-ui: TipTap StarterKit, Image, Youtube and the two embeds of
+// What the editor emits (editorial-ui: TipTap StarterKit, its figure, Youtube and the embeds of
 // its own), and nothing it does not. The source is staff, but a staff account is one phishing
 // away, and a script on this page would talk to the proxy with the reader's session.
 const OPTIONS: sanitizeHtml.IOptions = {
@@ -34,6 +34,7 @@ const OPTIONS: sanitizeHtml.IOptions = {
         'img',
         'figure',
         'figcaption',
+        'span',
         'div',
         'iframe',
         'video',
@@ -42,6 +43,15 @@ const OPTIONS: sanitizeHtml.IOptions = {
         // no target: links open where they are, and there is no rel to get wrong
         a: ['href'],
         img: ['src', 'alt', 'width', 'height'],
+        // a figure's caption and credit; credits.ts words the credit by its kind
+        span: [
+            'data-caption',
+            {
+                name: 'data-credit',
+                multiple: false,
+                values: ['photo', 'illustration', 'screenshot'],
+            },
+        ],
         div: ['data-video', 'data-telegram-post', 'data-youtube-video', 'data-poll'],
         iframe: ['src', 'width', 'height', 'allow', 'allowfullscreen', 'frameborder'],
         video: ['src', 'controls', 'width', 'height'],
@@ -64,6 +74,8 @@ export function sanitizeArticle(html: string, media: string | null): string {
         exclusiveFilter: (frame) => {
             // a frame from anywhere else has lost its src above and would stay as an empty box
             if (frame.tag === 'iframe') return !frame.attribs.src
+            // a caption under a picture that was dropped would caption nothing
+            if (frame.tag === 'figure') return !frame.mediaChildren.includes('img')
             if (frame.tag === 'img' || frame.tag === 'video') {
                 return media === null || originOf(frame.attribs.src) !== media
             }
