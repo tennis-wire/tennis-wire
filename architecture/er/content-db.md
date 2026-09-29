@@ -19,6 +19,10 @@ erDiagram
         varchar slug UK "null on a draft until set or published"
         text content
         varchar cover_image_url
+        varchar cover_alt "null without a cover"
+        varchar cover_caption "null without a cover"
+        varchar cover_credit "null without a cover"
+        credit_kind cover_credit_kind "photo | illustration | screenshot, null without a credit"
         int reading_time
         varchar source_url
         varchar source_name
@@ -88,3 +92,8 @@ article until the edit is applied or dropped. See `../editorial.md`.
 `media` is a standalone file registry: no table references it by FK, and
 `articles.cover_image_url` is a plain URL. The junction tables cascade on
 delete from both sides.
+
+The cover's text (`cover_alt`, `cover_caption`, `cover_credit`) is optional part by
+part and kept only while there is a cover. `cover_credit_kind` names what the
+credit is; the word before it ("Фото", "Иллюстрация", "Скриншот") is the site's.
+Pictures in the text carry the same parts inside `content`, see `../editorial.md`.
