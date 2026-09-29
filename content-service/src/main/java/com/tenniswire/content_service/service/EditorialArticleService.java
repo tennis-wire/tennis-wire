@@ -6,6 +6,7 @@ import static com.tenniswire.content_service.repository.ArticleSpecification.tit
 
 import com.tenniswire.content_service.config.MediaProperties;
 import com.tenniswire.content_service.dto.TagResponse;
+import com.tenniswire.content_service.dto.editorial.ArticleFields;
 import com.tenniswire.content_service.dto.editorial.CreateArticleRequest;
 import com.tenniswire.content_service.dto.editorial.EditorialArticleResponse;
 import com.tenniswire.content_service.dto.editorial.EditorialArticleResponse.Copy;
@@ -16,6 +17,7 @@ import com.tenniswire.content_service.entity.Article;
 import com.tenniswire.content_service.entity.ArticleEdit;
 import com.tenniswire.content_service.entity.ArticleStatus;
 import com.tenniswire.content_service.entity.ArticleType;
+import com.tenniswire.content_service.entity.CreditKind;
 import com.tenniswire.content_service.entity.Tag;
 import com.tenniswire.content_service.exception.ConflictException;
 import com.tenniswire.content_service.exception.ForbiddenException;
@@ -33,6 +35,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -128,16 +131,7 @@ public class EditorialArticleService {
         article.status(ArticleStatus.DRAFT);
         article.authorId(staff.id());
         article.aggregatorItemId(request.aggregatorItemId());
-        apply(
-                article,
-                payload(
-                        request.title(),
-                        request.subtitle(),
-                        request.content(),
-                        request.coverImageUrl(),
-                        request.sourceUrl(),
-                        request.sourceName(),
-                        request.tagIds()));
+        apply(article, payload(request));
         article.slug(checkedSlug(blankToNull(request.slug()), null));
         return view(articleRepository.saveAndFlush(article), staff);
     }
@@ -145,14 +139,7 @@ public class EditorialArticleService {
     public EditorialArticleResponse save(UUID id, SaveArticleRequest request, Staff staff) {
         var article = findVisible(id, staff);
         requireUnfrozen(article, request.type(), blankToNull(request.slug()));
-        var fields = payload(
-                request.title(),
-                request.subtitle(),
-                request.content(),
-                request.coverImageUrl(),
-                request.sourceUrl(),
-                request.sourceName(),
-                request.tagIds());
+        var fields = payload(request);
 
         if (article.status() == ArticleStatus.DRAFT) {
             requireVersion(request.version(), versionOf(article));
@@ -342,6 +329,12 @@ public class EditorialArticleService {
                 article.subtitle(),
                 article.content(),
                 article.coverImageUrl(),
+                article.coverAlt(),
+                article.coverCaption(),
+                article.coverCredit(),
+                article.coverCreditKind() == null
+                        ? null
+                        : article.coverCreditKind().value(),
                 article.readingTime(),
                 article.sourceUrl(),
                 article.sourceName(),
@@ -356,6 +349,10 @@ public class EditorialArticleService {
                 fields.subtitle(),
                 fields.content(),
                 fields.coverImageUrl(),
+                fields.coverAlt(),
+                fields.coverCaption(),
+                fields.coverCredit(),
+                fields.coverCreditKind(),
                 readingTime(type, fields.content()),
                 fields.sourceUrl(),
                 fields.sourceName(),
@@ -371,22 +368,24 @@ public class EditorialArticleService {
 
     // -- Fields --
 
-    private EditPayload payload(
-            String title,
-            String subtitle,
-            String content,
-            String coverImageUrl,
-            String sourceUrl,
-            String sourceName,
-            Set<UUID> tagIds) {
+    // The cover's text goes with the cover: without one there is nothing to caption. A credit is a
+    // photo's unless it says otherwise, and a kind without a credit names nothing.
+    private EditPayload payload(ArticleFields request) {
+        var cover = uploadedHere("coverImageUrl", blankToNull(request.coverImageUrl()));
+        var credit = cover == null ? null : blankToNull(request.coverCredit());
+        var kind = blankToNull(request.coverCreditKind());
         return new EditPayload(
-                title,
-                blankToNull(subtitle),
-                content,
-                uploadedHere("coverImageUrl", blankToNull(coverImageUrl)),
-                blankToNull(sourceUrl),
-                blankToNull(sourceName),
-                tagIds == null ? List.of() : List.copyOf(tagIds));
+                request.title(),
+                blankToNull(request.subtitle()),
+                request.content(),
+                cover,
+                cover == null ? null : blankToNull(request.coverAlt()),
+                cover == null ? null : blankToNull(request.coverCaption()),
+                credit,
+                credit == null ? null : Objects.requireNonNullElse(kind, CreditKind.PHOTO.value()),
+                blankToNull(request.sourceUrl()),
+                blankToNull(request.sourceName()),
+                request.tagIds() == null ? List.of() : List.copyOf(request.tagIds()));
     }
 
     // The site loads pictures from the bucket alone: any other URL would be a broken box there, and
@@ -407,6 +406,11 @@ public class EditorialArticleService {
         article.subtitle(fields.subtitle());
         article.content(fields.content());
         article.coverImageUrl(fields.coverImageUrl());
+        article.coverAlt(fields.coverAlt());
+        article.coverCaption(fields.coverCaption());
+        article.coverCredit(fields.coverCredit());
+        article.coverCreditKind(
+                fields.coverCreditKind() == null ? null : CreditKind.fromValue(fields.coverCreditKind()));
         article.sourceUrl(fields.sourceUrl());
         article.sourceName(fields.sourceName());
         article.tags(resolveTags(fields.tagIds()));

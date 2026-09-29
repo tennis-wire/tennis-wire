@@ -22,6 +22,10 @@ export function metadataOf(article: EditorialArticle): ContentMetadata {
               type: 'article',
               subtitle: working.subtitle ?? '',
               coverImage: working.coverImageUrl ?? undefined,
+              coverAlt: working.coverAlt ?? '',
+              coverCaption: working.coverCaption ?? '',
+              coverCredit: working.coverCredit ?? '',
+              coverCreditKind: working.coverCreditKind ?? 'photo',
           }
         : { ...common, type: 'news' }
 }
@@ -31,16 +35,23 @@ function orNull(value: string | undefined): string | null {
     return trimmed ? trimmed : null
 }
 
-// Blank optional fields go as null: the server clears whatever is sent as null
+// Blank optional fields go as null: the server clears whatever is sent as null. The cover's
+// text goes with the cover, and the kind with the credit, as the server keeps them.
 function fieldsOf(metadata: ContentMetadata, content: string) {
     const article = metadata.type === 'article' ? metadata : null
+    const cover = orNull(article?.coverImage)
+    const credit = cover ? orNull(article?.coverCredit) : null
     return {
         type: metadata.type,
         title: metadata.title.trim(),
         subtitle: orNull(article?.subtitle),
         slug: orNull(metadata.slug),
         content,
-        coverImageUrl: orNull(article?.coverImage),
+        coverImageUrl: cover,
+        coverAlt: cover ? orNull(article?.coverAlt) : null,
+        coverCaption: cover ? orNull(article?.coverCaption) : null,
+        coverCredit: credit,
+        coverCreditKind: credit ? (article?.coverCreditKind ?? 'photo') : null,
         sourceUrl: orNull(metadata.sourceUrl),
         sourceName: orNull(metadata.sourceName),
         tagIds: metadata.tags.map((tag) => tag.id),

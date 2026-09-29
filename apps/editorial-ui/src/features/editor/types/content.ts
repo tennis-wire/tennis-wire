@@ -15,6 +15,9 @@ export interface Tag {
     type: TagType
 }
 
+// What a picture's credit names; the site and the editor put the word before it
+export type CreditKind = 'photo' | 'illustration' | 'screenshot'
+
 // ===== API types =====
 
 // The fields that are saved: on the article itself, or on its pending edit
@@ -23,6 +26,10 @@ export interface ArticleCopy {
     subtitle: string | null
     content: string | null
     coverImageUrl: string | null
+    coverAlt: string | null
+    coverCaption: string | null
+    coverCredit: string | null
+    coverCreditKind: CreditKind | null
     readingTime: number | null
     sourceUrl: string | null
     sourceName: string | null
@@ -66,6 +73,10 @@ export interface CreateArticleRequest {
     slug: string | null
     content: string
     coverImageUrl: string | null
+    coverAlt: string | null
+    coverCaption: string | null
+    coverCredit: string | null
+    coverCreditKind: CreditKind | null
     sourceUrl: string | null
     sourceName: string | null
     tagIds: string[]
@@ -81,6 +92,10 @@ export interface SaveArticleRequest {
     slug: string | null
     content: string
     coverImageUrl: string | null
+    coverAlt: string | null
+    coverCaption: string | null
+    coverCredit: string | null
+    coverCreditKind: CreditKind | null
     sourceUrl: string | null
     sourceName: string | null
     tagIds: string[]
@@ -133,6 +148,11 @@ export interface ArticleMetadata extends BaseMetadata {
     type: 'article'
     subtitle: string
     coverImage?: string // URL of the uploaded cover
+    // the cover's text, each part optional
+    coverAlt?: string
+    coverCaption?: string
+    coverCredit?: string
+    coverCreditKind?: CreditKind
 }
 
 export type ContentMetadata = NewsMetadata | ArticleMetadata

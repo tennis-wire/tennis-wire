@@ -19,6 +19,13 @@ public record SaveArticleRequest(
 
         String content,
         @Size(max = 2000) String coverImageUrl,
+        @Size(max = 500) String coverAlt,
+        @Size(max = 500) String coverCaption,
+        @Size(max = 300) String coverCredit,
+
+        @Pattern(regexp = CreateArticleRequest.CREDIT_KIND_PATTERN) String coverCreditKind,
+
         @Size(max = 2000) String sourceUrl,
         @Size(max = 300) String sourceName,
-        Set<UUID> tagIds) {}
+        Set<UUID> tagIds)
+        implements ArticleFields {}

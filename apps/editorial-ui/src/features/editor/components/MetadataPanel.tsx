@@ -21,6 +21,7 @@ import { TAG_TYPE_LABELS } from '../constants/tagTypes'
 import { useTagSearch } from '../hooks/useTagSearch'
 import { IMAGE_ACCEPT, uploadErrorMessage, uploadImage } from '../api/mediaApi'
 import { RADIUS, useAppTheme } from '../../../theme'
+import { CaptionFields, type PictureText } from './CaptionFields'
 
 interface Props {
     metadata: ContentMetadata
@@ -64,16 +65,9 @@ export const MetadataPanel: React.FC<Props> = ({
                 coverImage: undefined,
             })
         } else if (newType === 'news' && metadata.type === 'article') {
-            const { subtitle, coverImage, ...rest } = metadata as ContentMetadata & {
-                subtitle?: string
-                coverImage?: string
-            }
-            void subtitle
-            void coverImage
-            onChange({
-                ...rest,
-                type: 'news',
-            })
+            // A news item has no lead and no cover, nor the cover's text
+            const { title, slug, tags, sourceUrl, sourceName, author } = metadata
+            onChange({ title, slug, tags, sourceUrl, sourceName, author, type: 'news' })
         }
     }
 
@@ -101,13 +95,32 @@ export const MetadataPanel: React.FC<Props> = ({
         }
     }
 
+    // The text goes with the picture: a new cover starts without the old one's caption
     const handleCoverRemove = () => {
         if (isArticle) {
             onChange({
                 ...metadata,
                 coverImage: undefined,
+                coverAlt: '',
+                coverCaption: '',
+                coverCredit: '',
+                coverCreditKind: 'photo',
             })
         }
+    }
+
+    const handleCoverText = (patch: Partial<PictureText>) => {
+        onChange((current) =>
+            current.type === 'article'
+                ? {
+                      ...current,
+                      ...(patch.alt !== undefined && { coverAlt: patch.alt }),
+                      ...(patch.caption !== undefined && { coverCaption: patch.caption }),
+                      ...(patch.credit !== undefined && { coverCredit: patch.credit }),
+                      ...(patch.creditKind !== undefined && { coverCreditKind: patch.creditKind }),
+                  }
+                : current
+        )
     }
 
     return (
@@ -216,33 +229,57 @@ export const MetadataPanel: React.FC<Props> = ({
                         onChange={handleCoverChange}
                     />
 
-                    {(metadata as { coverImage?: string }).coverImage ? (
-                        <Box sx={{ position: 'relative', display: 'inline-block' }}>
-                            <img
-                                src={(metadata as { coverImage?: string }).coverImage}
-                                alt="Обложка"
-                                style={{
-                                    maxWidth: '100%',
-                                    maxHeight: 200,
-                                    borderRadius: RADIUS.md,
-                                    objectFit: 'cover',
+                    {metadata.type === 'article' && metadata.coverImage ? (
+                        <Stack spacing={2}>
+                            <Box
+                                sx={{
+                                    position: 'relative',
+                                    width: '100%',
+                                    maxWidth: 480,
+                                    aspectRatio: '16 / 9',
                                 }}
-                            />
-                            <IconButton
-                                size="small"
-                                onClick={handleCoverRemove}
-                                disabled={readOnly}
-                                sx={(theme) => ({
-                                    position: 'absolute',
-                                    top: 8,
-                                    right: 8,
-                                    bgcolor: alpha(theme.palette.background.paper, 0.9),
-                                    '&:hover': { bgcolor: theme.palette.background.paper },
-                                })}
                             >
-                                <Delete fontSize="small" />
-                            </IconButton>
-                        </Box>
+                                {/* cut to 16:9 as the site shows it, so what is lost is seen here */}
+                                <img
+                                    src={metadata.coverImage}
+                                    alt="Обложка"
+                                    style={{
+                                        display: 'block',
+                                        width: '100%',
+                                        height: '100%',
+                                        borderRadius: RADIUS.md,
+                                        objectFit: 'cover',
+                                    }}
+                                />
+                                <IconButton
+                                    size="small"
+                                    onClick={handleCoverRemove}
+                                    disabled={readOnly}
+                                    sx={(theme) => ({
+                                        position: 'absolute',
+                                        top: 8,
+                                        right: 8,
+                                        bgcolor: alpha(theme.palette.background.paper, 0.9),
+                                        '&:hover': { bgcolor: theme.palette.background.paper },
+                                    })}
+                                >
+                                    <Delete fontSize="small" />
+                                </IconButton>
+                            </Box>
+                            <Typography variant="caption" color="text.secondary">
+                                На сайте обложка обрезается так же, до 16:9
+                            </Typography>
+                            <CaptionFields
+                                value={{
+                                    alt: metadata.coverAlt ?? '',
+                                    caption: metadata.coverCaption ?? '',
+                                    credit: metadata.coverCredit ?? '',
+                                    creditKind: metadata.coverCreditKind ?? 'photo',
+                                }}
+                                onChange={handleCoverText}
+                                disabled={readOnly}
+                            />
+                        </Stack>
                     ) : (
                         <Button
                             variant="outlined"

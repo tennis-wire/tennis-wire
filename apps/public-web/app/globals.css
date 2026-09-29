@@ -147,6 +147,56 @@ a:hover {
     color: var(--tw-text-secondary);
 }
 
+.tw-article-body figure {
+    margin: 1.6em 0;
+}
+
+.tw-article-body figure img {
+    display: block;
+}
+
+/* Under a picture, in the text and on the cover alike: the caption, then the credit a shade
+   quieter. Either may be missing; with neither the editor writes no figcaption at all */
+.tw-article-body figcaption,
+.tw-cover figcaption {
+    margin-top: 8px;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--tw-text-secondary);
+}
+
+.tw-article-body [data-credit],
+.tw-cover [data-credit] {
+    color: var(--tw-text-muted);
+}
+
+.tw-article-body [data-caption] + [data-credit],
+.tw-cover [data-caption] + [data-credit] {
+    margin-left: 0.4em;
+}
+
+/* The cover stands wider than the text, as wide as the page, and is cut to one shape so the head
+   keeps its height whatever the photo; on a phone it runs from edge to edge, past main's padding */
+.tw-cover {
+    margin: 28px 0 0;
+}
+
+.tw-cover img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 12px;
+}
+
+@media (max-width: 760px) {
+    .tw-cover img {
+        width: calc(100% + 40px);
+        margin: 0 -20px;
+        border-radius: 0;
+    }
+}
+
 /* The header: one line from 1025px. Narrower, the search folds into a button that opens the
    field over the line; from 900px down the sections move to a second line that scrolls
    sideways, with the menu of sections held at its end so the scroll does not cut it off. */
