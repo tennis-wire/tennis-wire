@@ -15,6 +15,7 @@ CREATE TYPE article_type AS ENUM ('news', 'article');
 CREATE TYPE article_status AS ENUM ('draft', 'published');
 CREATE TYPE tag_type AS ENUM ('player', 'tournament', 'organization', 'topic', 'section');
 CREATE TYPE media_type AS ENUM ('image', 'video', 'audio');
+CREATE TYPE credit_kind AS ENUM ('photo', 'illustration', 'screenshot');
 
 -- changeset andrei:3
 -- comment: Create articles table
@@ -30,6 +31,12 @@ CREATE TABLE articles (
                           slug                VARCHAR(500) UNIQUE,
                           content             TEXT,
                           cover_image_url     VARCHAR(2000),
+                          -- the cover's text, each part optional; kept only while there is a cover
+                          cover_alt           VARCHAR(500),
+                          cover_caption       VARCHAR(500),
+                          cover_credit        VARCHAR(300),
+                          -- what the credit names; the site puts the word before it
+                          cover_credit_kind   credit_kind,
                           reading_time        INTEGER,
 
     -- Атрибуция

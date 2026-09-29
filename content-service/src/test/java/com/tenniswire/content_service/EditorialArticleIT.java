@@ -16,6 +16,7 @@ import com.jayway.jsonpath.JsonPath;
 import com.tenniswire.content_service.entity.Tag;
 import com.tenniswire.content_service.entity.TagType;
 import com.tenniswire.content_service.repository.TagRepository;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -230,6 +231,64 @@ class EditorialArticleIT {
     }
 
     @Test
+    void theCoverTextGoesOnTheSiteAndThroughAnEdit() throws Exception {
+        var request = covered("Captioned " + UUID.randomUUID(), "Centre court");
+        var draft = body(submit(author, request)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.working.coverAlt").value("An empty court"))
+                .andExpect(jsonPath("$.working.coverCreditKind").value("photo")));
+        var article = body(
+                publish(author, read(draft, "$.id"), read(draft, "$.version")).andExpect(status().isOk()));
+        var site = PUBLIC + read(article, "$.slug");
+        mvc.perform(get(site))
+                .andExpect(jsonPath("$.coverCaption").value("Centre court"))
+                .andExpect(jsonPath("$.coverCredit").value("Andrewc013 / CC BY-SA 4.0"))
+                .andExpect(jsonPath("$.coverCreditKind").value("photo"))
+                .andExpect(jsonPath("$.coverAlt").value("An empty court"));
+
+        var edit = new HashMap<String, Object>(covered(read(article, "$.working.title"), "Centre court at night"));
+        edit.put("version", read(article, "$.version"));
+        edit.put("coverCreditKind", "screenshot");
+        var saved = body(mvc.perform(put(ARTICLES + "/" + read(article, "$.id"))
+                        .with(author.token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonMapper.writeValueAsString(edit)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.working.coverCaption").value("Centre court at night"))
+                .andExpect(jsonPath("$.live.coverCaption").value("Centre court")));
+        mvc.perform(get(site)).andExpect(jsonPath("$.coverCaption").value("Centre court"));
+
+        publish(author, read(article, "$.id"), read(saved, "$.version")).andExpect(status().isOk());
+        mvc.perform(get(site))
+                .andExpect(jsonPath("$.coverCaption").value("Centre court at night"))
+                .andExpect(jsonPath("$.coverCreditKind").value("screenshot"));
+    }
+
+    @Test
+    void coverTextWithoutACoverOrAKindWithoutACreditIsDropped() throws Exception {
+        var request = Map.of(
+                "type", "article",
+                "title", "Uncovered",
+                "coverCaption", "Nothing to caption",
+                "coverCreditKind", "screenshot");
+
+        submit(author, request)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.working.coverCaption").doesNotExist())
+                .andExpect(jsonPath("$.working.coverCreditKind").doesNotExist());
+    }
+
+    @Test
+    void anUnknownCreditKindIsRefused() throws Exception {
+        var request = new HashMap<String, Object>(covered("Drawn", "A court"));
+        request.put("coverCreditKind", "drawing");
+
+        submit(author, request)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.violations[0].field").value("coverCreditKind"));
+    }
+
+    @Test
     void aSlugSetByHandBelongsToOneArticle() throws Exception {
         var request = Map.of("type", "news", "title", "By hand", "slug", "by-hand-" + UUID.randomUUID());
 
@@ -247,6 +306,20 @@ class EditorialArticleIT {
                 .with(who.token())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonMapper.writeValueAsString(request)));
+    }
+
+    // An article with every part of the cover's text but the kind, which a credit takes as photo
+    private Map<String, Object> covered(String title, String caption) {
+        return Map.of(
+                "type", "article",
+                "title", title,
+                "subtitle", "Lead",
+                "content", "<p>Body</p>",
+                "tagIds", List.of(tag.id()),
+                "coverImageUrl", "http://localhost:9000/media/2026/09/" + UUID.randomUUID() + ".jpg",
+                "coverAlt", "An empty court",
+                "coverCaption", caption,
+                "coverCredit", "Andrewc013 / CC BY-SA 4.0");
     }
 
     private String create(Person who, String title) throws Exception {

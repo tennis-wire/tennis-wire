@@ -10,6 +10,10 @@ public record EditPayload(
         String subtitle,
         String content,
         String coverImageUrl,
+        String coverAlt,
+        String coverCaption,
+        String coverCredit,
+        String coverCreditKind,
         String sourceUrl,
         String sourceName,
         List<UUID> tagIds) {

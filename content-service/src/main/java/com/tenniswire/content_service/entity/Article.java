@@ -54,6 +54,18 @@ public class Article {
     @Column(name = "cover_image_url", length = 2000)
     private String coverImageUrl;
 
+    @Column(name = "cover_alt", length = 500)
+    private String coverAlt;
+
+    @Column(name = "cover_caption", length = 500)
+    private String coverCaption;
+
+    @Column(name = "cover_credit", length = 300)
+    private String coverCredit;
+
+    @Column(name = "cover_credit_kind", columnDefinition = "credit_kind")
+    private CreditKind coverCreditKind;
+
     @Column(name = "reading_time")
     private Integer readingTime;
 

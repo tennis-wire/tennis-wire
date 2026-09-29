@@ -14,11 +14,20 @@ public record CreateArticleRequest(
         @Size(max = 500) @Pattern(regexp = SLUG_PATTERN) String slug,
         String content,
         @Size(max = 2000) String coverImageUrl,
+        @Size(max = 500) String coverAlt,
+        @Size(max = 500) String coverCaption,
+        @Size(max = 300) String coverCredit,
+
+        @Pattern(regexp = CREDIT_KIND_PATTERN) String coverCreditKind,
+
         @Size(max = 2000) String sourceUrl,
         @Size(max = 300) String sourceName,
         Set<UUID> tagIds,
-        String aggregatorItemId) {
+        String aggregatorItemId)
+        implements ArticleFields {
 
     // What the generator produces from a title, so a slug set by hand looks the same
     public static final String SLUG_PATTERN = "^[a-z0-9]+(-[a-z0-9]+)*$";
+
+    public static final String CREDIT_KIND_PATTERN = "^(photo|illustration|screenshot)$";
 }

@@ -15,6 +15,10 @@ public record ArticleResponse(
         String slug,
         String content,
         String coverImageUrl,
+        String coverAlt,
+        String coverCaption,
+        String coverCredit,
+        String coverCreditKind,
         Integer readingTime,
         String sourceUrl,
         String sourceName,
@@ -46,6 +50,12 @@ public record ArticleResponse(
                 article.slug(),
                 article.content(),
                 article.coverImageUrl(),
+                article.coverAlt(),
+                article.coverCaption(),
+                article.coverCredit(),
+                article.coverCreditKind() == null
+                        ? null
+                        : article.coverCreditKind().value(),
                 article.readingTime(),
                 article.sourceUrl(),
                 article.sourceName(),
