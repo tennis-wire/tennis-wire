@@ -7,7 +7,7 @@ spotbugs-plugin = "6.5.12"
 spotbugs = "4.10.4"
 spotless = "8.10.3"
 testcontainers-keycloak = "4.3.1"
-twelvemonkeys = "3.15.0"
+twelvemonkeys = "3.15.2"
 wiremock = "3.13.2"
 awssdk = "2.55.6"
 
