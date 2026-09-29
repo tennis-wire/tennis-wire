@@ -1,6 +1,8 @@
 import { useCallback } from 'react'
 import type { Editor } from '@tiptap/react'
 
+import { paragraphsOf } from '../lib/paragraphs'
+
 type Severity = 'success' | 'error' | 'warning' | 'info'
 
 interface Params {
@@ -24,11 +26,7 @@ export function useEditorActions({ editor, originalContent, showSnackbar }: Para
 
     const insertBelow = useCallback(
         (text: string) => {
-            editor
-                ?.chain()
-                .focus()
-                .insertContent('\n\n' + text)
-                .run()
+            editor?.chain().focus().insertContent(paragraphsOf(text)).run()
         },
         [editor]
     )
@@ -36,7 +34,8 @@ export function useEditorActions({ editor, originalContent, showSnackbar }: Para
     const getSelectedText = useCallback((): string => {
         if (!editor) return ''
         const { from, to } = editor.state.selection
-        return editor.state.doc.textBetween(from, to, ' ')
+        // the paragraphs go to DeepL as blank lines, or the translation comes back as one
+        return editor.state.doc.textBetween(from, to, '\n\n')
     }, [editor])
 
     return { handleReset, insertBelow, getSelectedText }
