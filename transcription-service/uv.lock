@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'win32'",
@@ -352,15 +352,15 @@ wheels = [
 
 [[package]]
 name = "boto3-stubs"
-version = "1.43.104"
+version = "1.43.108"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "botocore-stubs" },
     { name = "types-s3transfer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/65/b2/755432894c28d1c36230e62503ff198dc973cfaa13c91a1c8defb842ca78/boto3_stubs-1.43.104.tar.gz", hash = "sha256:d1883ed4a78282b072e37bf08c4cfba8b220c8feb1371681eb35399b189111a3", size = 105265, upload-time = "2026-09-28T20:24:27.354Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/db/2c/b28a8cc8e4beea290fdac2323ebbdf3521ca6570cb1ab93f862d8d219738/boto3_stubs-1.43.108.tar.gz", hash = "sha256:a1ed29b4c7957568e6261fc36d4c59025c004997a229e8f01940c205f2128e4a", size = 105637, upload-time = "2026-10-02T21:05:54.272Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/97/27/06fb40548d9bc4ad30157222024fb145f088185f85862a70072346f298bb/boto3_stubs-1.43.104-py3-none-any.whl", hash = "sha256:95490f20724e0e00aa18b19625a280785bd26689c89e38363bbb9f2c6b5fa360", size = 71850, upload-time = "2026-09-28T20:24:23.449Z" },
+    { url = "https://files.pythonhosted.org/packages/57/5b/e212cbe3fc5a49d684410a195060d7152416e00d9aa24ed4d5fa4a22f94a/boto3_stubs-1.43.108-py3-none-any.whl", hash = "sha256:40f02e30f6e455ccb658dcdeb5756ce23bde767f425ab6d7f57a9ffad75a848c", size = 72039, upload-time = "2026-10-02T21:05:51.118Z" },
 ]
 
 [package.optional-dependencies]
@@ -2310,9 +2310,6 @@ wheels = [
 name = "nvidia-cufft-cu12"
 version = "11.2.1.3"
 source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "nvidia-nvjitlink-cu12" },
-]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/27/94/3266821f65b92b3138631e9c8e7fe1fb513804ac934485a8d05776e1dd43/nvidia_cufft_cu12-11.2.1.3-py3-none-manylinux2014_x86_64.whl", hash = "sha256:f083fc24912aa410be21fa16d157fed2055dab1cc4b6934a0e03cba69eb242b9", size = 211459117, upload-time = "2024-04-03T20:57:40.402Z" },
 ]
@@ -3992,6 +3989,7 @@ wheels = [
 name = "transcription-service"
 version = "0.1.0"
 source = { editable = "." }
+default-groups = ["dev", "worker"]
 dependencies = [
     { name = "arq" },
     { name = "boto3" },
