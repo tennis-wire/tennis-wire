@@ -289,6 +289,22 @@ class EditorialArticleIT {
     }
 
     @Test
+    void aPictureInTheTextFromAnywhereElseIsRefused() throws Exception {
+        var ours = "<figure><img src=\"http://localhost:9000/media/2026/09/a.jpg\"></figure>";
+        submit(author, Map.of("type", "news", "title", "Ours", "content", ours)).andExpect(status().isCreated());
+
+        for (var foreign : List.of(
+                "<p>a</p><img src=\"https://elsewhere.example/a.png\">",
+                "<img alt=\"no source at all\">",
+                "<video><source src=\"https://elsewhere.example/a.mp4\"></video>")) {
+            submit(author, Map.of("type", "news", "title", "Theirs", "content", foreign))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("FOREIGN_MEDIA"))
+                    .andExpect(jsonPath("$.violations[0].field").value("content"));
+        }
+    }
+
+    @Test
     void aSlugSetByHandBelongsToOneArticle() throws Exception {
         var request = Map.of("type", "news", "title", "By hand", "slug", "by-hand-" + UUID.randomUUID());
 

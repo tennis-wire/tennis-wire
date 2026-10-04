@@ -22,6 +22,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-liquibase")
     implementation(libs.springdoc.openapi.webmvc.ui)
     implementation(libs.awssdk.s3)
+    implementation(libs.jsoup)
 
     runtimeOnly("org.postgresql:postgresql")
 

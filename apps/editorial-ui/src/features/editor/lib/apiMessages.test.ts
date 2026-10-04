@@ -19,6 +19,14 @@ describe('messageOf', () => {
         expect(messageOf(pending)).toMatch(/незавершённую правку/)
     })
 
+    it('says where the picture from elsewhere is', () => {
+        const inText = new ContentApiError(400, 'FOREIGN_MEDIA', 'Only a file uploaded here', [
+            { field: 'content', message: 'Only a file uploaded here is accepted in content' },
+        ])
+
+        expect(messageOf(inText)).toMatch(/В тексте есть картинка с другого сайта/)
+    })
+
     it('names the missing fields in Russian', () => {
         const error = new ContentApiError(422, 'VALIDATION_FAILED', 'Article cannot be published', [
             { field: 'tags', message: 'At least one tag is required' },

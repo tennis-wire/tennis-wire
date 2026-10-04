@@ -22,6 +22,7 @@ springdoc-openapi-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starte
 spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", version.ref = "spotbugs" }
 spring-cloud-bom = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "spring-cloud" }
 findsecbugs = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version = "1.14.0" }
+jsoup = { module = "org.jsoup:jsoup", version = "1.23.2" }
 testcontainers-keycloak = { module = "com.github.dasniko:testcontainers-keycloak", version.ref = "testcontainers-keycloak" }
 twelvemonkeys-imageio-jpeg = { module = "com.twelvemonkeys.imageio:imageio-jpeg", version.ref = "twelvemonkeys" }
 twelvemonkeys-imageio-webp = { module = "com.twelvemonkeys.imageio:imageio-webp", version.ref = "twelvemonkeys" }

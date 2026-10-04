@@ -3,8 +3,11 @@ import StarterKit from '@tiptap/starter-kit'
 import Heading from '@tiptap/extension-heading'
 import Placeholder from '@tiptap/extension-placeholder'
 import Youtube from '@tiptap/extension-youtube'
+import { uploadErrorMessage, uploadImage } from '../api/mediaApi'
 import { FigureView } from '../components/FigureView'
-import { Figure, Poll, Telegram, Video } from '../extensions'
+import { Figure, PictureInput, Poll, Telegram, Video } from '../extensions'
+
+type Notify = (message: string, severity: 'success' | 'error' | 'warning' | 'info') => void
 
 // The site draws the title as the page's only h1, and the toolbar offers h2 and h3. A heading of
 // another level, pasted or from the AI chat's markdown, takes the nearest of the two rather than
@@ -21,7 +24,7 @@ const ArticleHeading = Heading.extend({
 
 // What an article may hold: no more than the toolbar can make. Code has no button and no look on
 // the site, so a backtick, a pasted <code> or a markdown fence leaves plain text.
-export function articleExtensions() {
+export function articleExtensions(notify: Notify = () => {}) {
     return [
         StarterKit.configure({
             code: false,
@@ -36,6 +39,11 @@ export function articleExtensions() {
         Video,
         Poll,
         Placeholder.configure({ placeholder: 'Начните писать...' }),
+        PictureInput.configure({
+            upload: async (file) => (await uploadImage(file)).url,
+            errorMessage: uploadErrorMessage,
+            notify,
+        }),
     ]
 }
 
@@ -45,9 +53,10 @@ export function htmlOf(editor: Editor): string {
     return editor.isEmpty ? '' : editor.getHTML()
 }
 
-export function useArticleEditor(onChange: (html: string) => void) {
+// The editor is built once, with the notify of the first render: it has to be a stable one
+export function useArticleEditor(onChange: (html: string) => void, notify: Notify) {
     return useEditor({
-        extensions: articleExtensions(),
+        extensions: articleExtensions(notify),
         content: '',
         onUpdate: ({ editor }) => onChange(htmlOf(editor)),
     })

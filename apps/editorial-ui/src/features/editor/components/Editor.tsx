@@ -15,7 +15,7 @@ import { EditorContentArea } from './EditorContentArea.tsx'
 import { EditorStatusBar } from './EditorStatusBar.tsx'
 
 import { useArticleSession, type Mode } from '../hooks/useArticleSession'
-import { useImageDrop } from '../hooks/useImageDrop'
+import { useDragHighlight } from '../hooks/useDragHighlight'
 import { useEditorActions } from '../hooks/useEditorActions'
 import { useLeaveGuard } from '../hooks/useLeaveGuard'
 import { useSnackbar } from '../hooks/useSnackbar'
@@ -94,10 +94,7 @@ export default function Editor({ articleId, sessionKey, sub }: Props) {
         onLeave: session.forgetUnsaved,
     })
 
-    const { isDragging, handleDragOver, handleDragLeave, handleDrop } = useImageDrop(
-        editor,
-        showSnackbar
-    )
+    const { isDragging, handleDragOver, handleDragLeave, handleDrop } = useDragHighlight()
 
     const { handleReset, insertBelow, getSelectedText } = useEditorActions({
         editor,

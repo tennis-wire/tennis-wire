@@ -5,13 +5,14 @@ import Paragraph from '@tiptap/extension-paragraph'
 import Text from '@tiptap/extension-text'
 import { describe, expect, it } from 'vitest'
 
+import { MEDIA_BASE_URL } from '../lib/media'
 import { Figure } from './Figure'
 
 function editor(content?: string): Editor {
     return new Editor({ extensions: [Document, Paragraph, Text, Figure], content })
 }
 
-const SRC = 'https://media.example.com/2026/09/court.jpg'
+const SRC = `${MEDIA_BASE_URL}2026/09/court.jpg`
 
 describe('Figure node', () => {
     it('writes a picture with no text as a figure with no caption under it', () => {
@@ -74,5 +75,14 @@ describe('Figure node', () => {
         expect(
             editor('<figure><img src="data:image/png;base64,AAAA"></figure>').getHTML()
         ).not.toContain('img')
+    })
+
+    it('leaves out a picture from anywhere but the bucket, caption and all', () => {
+        const e = editor(
+            '<p>a</p><figure><img src="https://elsewhere.example/a.jpg"></figure>' +
+                '<img src="https://elsewhere.example/b.jpg"><p>b</p>'
+        )
+
+        expect(e.getHTML()).toBe('<p>a</p><p>b</p>')
     })
 })
