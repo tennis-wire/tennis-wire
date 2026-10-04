@@ -80,6 +80,7 @@ erDiagram
         int width
         int height
         int duration_seconds
+        varchar source_url "the link a picture was taken from; null for an upload"
         uuid uploaded_by "user outside this DB, no FK"
         timestamptz created_at
     }
