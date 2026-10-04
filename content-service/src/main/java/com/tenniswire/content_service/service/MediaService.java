@@ -7,6 +7,7 @@ import com.tenniswire.content_service.entity.MediaType;
 import com.tenniswire.content_service.exception.UnsupportedImageException;
 import com.tenniswire.content_service.media.ImageInspector;
 import com.tenniswire.content_service.media.MediaStorage;
+import com.tenniswire.content_service.media.RemoteImageFetcher;
 import com.tenniswire.content_service.repository.MediaRepository;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -27,18 +28,34 @@ public class MediaService {
 
     private final MediaRepository mediaRepository;
     private final MediaStorage storage;
+    private final RemoteImageFetcher fetcher;
     private final String publicBaseUrl;
     private final long maxPixels;
 
-    public MediaService(MediaRepository mediaRepository, MediaStorage storage, MediaProperties properties) {
+    public MediaService(
+            MediaRepository mediaRepository,
+            MediaStorage storage,
+            RemoteImageFetcher fetcher,
+            MediaProperties properties) {
         this.mediaRepository = mediaRepository;
         this.storage = storage;
+        this.fetcher = fetcher;
         this.publicBaseUrl = properties.publicBaseUrl().toString().replaceAll("/+$", "");
         this.maxPixels = properties.maxPixels();
     }
 
     public MediaResponse uploadImage(MultipartFile file) {
-        var image = ImageInspector.inspect(bytesOf(file));
+        return store(bytesOf(file), null);
+    }
+
+    // A copy of the picture behind a link, kept as an upload is: the article then holds our copy,
+    // and the link stays on the row to say where it came from
+    public MediaResponse importImage(String link) {
+        return store(fetcher.fetch(link), link.strip());
+    }
+
+    private MediaResponse store(byte[] bytes, String sourceUrl) {
+        var image = ImageInspector.inspect(bytes);
         // The file is never decoded here, but a reader's phone has to decode it
         if ((long) image.width() * image.height() > maxPixels) {
             throw new UnsupportedImageException("The image has more than %d pixels".formatted(maxPixels));
@@ -57,6 +74,7 @@ public class MediaService {
         media.sizeBytes((long) image.bytes().length);
         media.width(image.width());
         media.height(image.height());
+        media.sourceUrl(sourceUrl);
         return MediaResponse.from(mediaRepository.save(media));
     }
 

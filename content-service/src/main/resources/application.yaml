@@ -45,6 +45,11 @@ media:
   # a domain of our own in front of the bucket: moving to another storage must not rewrite articles.
   public-base-url: ${MEDIA_PUBLIC_BASE_URL:http://localhost:9000/media}
   max-pixels: 50000000
+  # A picture taken from a link an author gives, see RemoteImageFetcher
+  remote:
+    max-size: 10MB
+    timeout: 20s
+    allow-local: false
   s3:
     endpoint: ${S3_ENDPOINT_URL:http://localhost:9000}
     region: ${S3_REGION:us-east-1}

@@ -23,6 +23,7 @@ dependencies {
     implementation(libs.springdoc.openapi.webmvc.ui)
     implementation(libs.awssdk.s3)
     implementation(libs.jsoup)
+    implementation("org.apache.httpcomponents.client5:httpclient5")
 
     runtimeOnly("org.postgresql:postgresql")
 
@@ -32,5 +33,6 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-security-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:testcontainers-postgresql")
+    testImplementation(libs.wiremock.standalone)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

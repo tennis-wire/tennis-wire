@@ -46,6 +46,10 @@ public class Media {
     @Column(name = "duration_seconds")
     private Integer durationSeconds;
 
+    // where a picture taken from a link came from; null for an upload
+    @Column(name = "source_url", length = 2000)
+    private String sourceUrl;
+
     @Column(name = "uploaded_by")
     private UUID uploadedBy;
 
