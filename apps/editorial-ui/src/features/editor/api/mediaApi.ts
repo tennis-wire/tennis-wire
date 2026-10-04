@@ -56,6 +56,48 @@ export async function uploadImage(file: File): Promise<UploadedImage> {
     return response.json()
 }
 
+// What the server says when it could not take a picture from a link, see content-service's
+// RemoteImageFetcher; the code is the server's, the words are ours
+const LINK_REFUSALS: Record<string, string> = {
+    BAD_LINK: 'Нужна ссылка вида https://…',
+    LOCAL_ADDRESS: 'По этой ссылке не скачать: адрес не в интернете',
+    LINK_UNREACHABLE: 'Сайт не ответил. Проверьте ссылку или попробуйте позже',
+    LINK_REFUSED: 'Сайт не отдал картинку: ссылка битая или скачивать оттуда нельзя',
+    LINK_TOO_LARGE: 'Картинка больше 10 МБ',
+    UNSUPPORTED_IMAGE: 'По ссылке не картинка: подходят JPEG, PNG, WebP и GIF',
+    STORAGE_UNAVAILABLE: 'Хранилище файлов недоступно, попробуйте позже',
+}
+
+async function codeOf(response: Response): Promise<string | undefined> {
+    try {
+        return ((await response.json()) as { error?: string }).error
+    } catch {
+        return undefined
+    }
+}
+
+// The server downloads the picture into the bucket and answers as for an upload
+export async function importImage(url: string): Promise<UploadedImage> {
+    let response: Response
+    try {
+        response = await apiFetch('/api/editorial/media/images/from-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url }),
+        })
+    } catch {
+        throw new ImageUploadError('Не удалось скопировать картинку: нет связи с сервером')
+    }
+    if (!response.ok) {
+        const code = await codeOf(response)
+        throw new ImageUploadError(
+            (code && LINK_REFUSALS[code]) ||
+                `Не удалось скопировать картинку (HTTP ${response.status})`
+        )
+    }
+    return response.json()
+}
+
 export function uploadErrorMessage(error: unknown): string {
     return error instanceof ImageUploadError ? error.message : 'Не удалось загрузить изображение'
 }

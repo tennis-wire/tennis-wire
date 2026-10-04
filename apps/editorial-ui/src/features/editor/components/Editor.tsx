@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import DiffViewer from 'react-diff-viewer-continued'
 import { Box, Paper, Tabs, Tab, Alert, Snackbar, IconButton, Tooltip } from '@mui/material'
 import { ArrowBack, Psychology } from '@mui/icons-material'
@@ -11,6 +11,8 @@ import { AIChatPanel } from './AIChatPanel.tsx'
 import { TranslateDialog } from './TranslateDialog.tsx'
 import { TranscribeDialog } from './TranscribeDialog.tsx'
 import { PollDialog } from './PollDialog.tsx'
+import { ImageLinkDialog } from './ImageLinkDialog.tsx'
+import { CopyPicturesDialog } from './CopyPicturesDialog.tsx'
 import { EditorContentArea } from './EditorContentArea.tsx'
 import { EditorStatusBar } from './EditorStatusBar.tsx'
 
@@ -19,6 +21,7 @@ import { useDragHighlight } from '../hooks/useDragHighlight'
 import { useEditorActions } from '../hooks/useEditorActions'
 import { useLeaveGuard } from '../hooks/useLeaveGuard'
 import { useSnackbar } from '../hooks/useSnackbar'
+import { askCaption } from '../extensions/Figure'
 import { dayOf, timeOf } from '../lib/dates'
 import type { EditorialArticle } from '../types/content'
 import { ThemeSwitcher, useAppTheme } from '../../../theme'
@@ -78,6 +81,11 @@ export default function Editor({ articleId, sessionKey, sub }: Props) {
     const [translateSession, setTranslateSession] = useState(0)
     const [transcribeDialogOpen, setTranscribeDialogOpen] = useState(false)
     const [pollDialogOpen, setPollDialogOpen] = useState(false)
+    const [imageLinkSession, setImageLinkSession] = useState<number | null>(null)
+    const [copyQuestion, setCopyQuestion] = useState<{
+        count: number
+        answer: (copy: boolean | null) => void
+    } | null>(null)
     // The source text of a parsed item; nothing sets it until parsing arrives
     const [originalContent] = useState<string | undefined>(undefined)
 
@@ -95,6 +103,16 @@ export default function Editor({ articleId, sessionKey, sub }: Props) {
     })
 
     const { isDragging, handleDragOver, handleDragLeave, handleDrop } = useDragHighlight()
+
+    // Pasted text with pictures from elsewhere asks here, see PictureInput
+    useEffect(() => {
+        if (!editor) return
+        const { pictureInput } = editor.storage
+        pictureInput.setCopyQuestion(
+            (count) => new Promise((answer) => setCopyQuestion({ count, answer }))
+        )
+        return () => pictureInput.setCopyQuestion(null)
+    }, [editor])
 
     const { handleReset, insertBelow, getSelectedText } = useEditorActions({
         editor,
@@ -278,6 +296,7 @@ export default function Editor({ articleId, sessionKey, sub }: Props) {
                                                 setTranslateDialogOpen(true)
                                             }}
                                             onPollClick={() => setPollDialogOpen(true)}
+                                            onImageLinkClick={() => setImageLinkSession(Date.now())}
                                             onTranscribeClick={() => setTranscribeDialogOpen(true)}
                                         />
                                     )}
@@ -398,6 +417,24 @@ export default function Editor({ articleId, sessionKey, sub }: Props) {
                         })
                         .run()
                 }
+            />
+            {imageLinkSession !== null && (
+                <ImageLinkDialog
+                    key={imageLinkSession}
+                    open
+                    onClose={() => setImageLinkSession(null)}
+                    onInsert={(src) => {
+                        askCaption(editor, src)
+                        editor.chain().focus().setImage({ src }).run()
+                    }}
+                />
+            )}
+            <CopyPicturesDialog
+                count={copyQuestion?.count ?? null}
+                onAnswer={(copy) => {
+                    copyQuestion?.answer(copy)
+                    setCopyQuestion(null)
+                }}
             />
             <TranscribeDialog
                 open={transcribeDialogOpen}

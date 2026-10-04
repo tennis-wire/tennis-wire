@@ -21,3 +21,31 @@ export function stripForeignMedia(html: string): { html: string; dropped: number
     }
     return dropped === 0 ? { html, dropped } : { html: doc.body.innerHTML, dropped }
 }
+
+// Where a pasted picture really is. Sites that load pictures lazily put a stand-in in src and the
+// picture in data-src or srcset, whose last entry is the largest by habit.
+function sourceOf(img: Element): string | null {
+    const srcset = img.getAttribute('srcset')?.split(',').pop()?.trim().split(/\s+/)[0]
+    const candidates = [img.getAttribute('data-src'), srcset, img.getAttribute('src')]
+    return candidates.find((link) => !!link && /^https?:\/\//i.test(link)) ?? null
+}
+
+// The pictures from elsewhere in pasted html that could be copied in, each once
+export function foreignPictureLinks(html: string): string[] {
+    const doc = new DOMParser().parseFromString(html, 'text/html')
+    const links = Array.from(doc.body.querySelectorAll('img'), sourceOf)
+    return [...new Set(links.filter((link): link is string => !!link && !isOwnMedia(link)))]
+}
+
+// The same html with the copies made in the bucket in place of the pictures they were made from
+export function withCopies(html: string, copies: Map<string, string>): string {
+    const doc = new DOMParser().parseFromString(html, 'text/html')
+    for (const img of Array.from(doc.body.querySelectorAll('img'))) {
+        const copy = copies.get(sourceOf(img) ?? '')
+        if (!copy) continue
+        img.setAttribute('src', copy)
+        img.removeAttribute('srcset')
+        img.removeAttribute('data-src')
+    }
+    return doc.body.innerHTML
+}
