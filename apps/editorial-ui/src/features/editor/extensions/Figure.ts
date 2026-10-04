@@ -1,6 +1,7 @@
 import Image from '@tiptap/extension-image'
 import type { DOMOutputSpec } from '@tiptap/pm/model'
 
+import { isOwnMedia } from '../lib/media'
 import type { CreditKind } from '../types/content'
 
 export interface FigureAttrs {
@@ -59,16 +60,19 @@ export const Figure = Image.extend({
         }
     },
 
+    // Only a picture from the bucket: the site shows no other, and the server takes no other.
+    // One from elsewhere, pasted, in an old draft or in the AI chat's markdown, is left out here.
     parseHTML() {
         return [
             {
                 tag: 'figure',
-                getAttrs: (element) => {
-                    const src = element.querySelector('img')?.getAttribute('src')
-                    return src && !src.startsWith('data:') ? null : false
-                },
+                getAttrs: (element) =>
+                    isOwnMedia(element.querySelector('img')?.getAttribute('src')) ? null : false,
             },
-            { tag: 'img[src]:not([src^="data:"])' },
+            {
+                tag: 'img',
+                getAttrs: (element) => (isOwnMedia(element.getAttribute('src')) ? null : false),
+            },
         ]
     },
 

@@ -34,6 +34,12 @@ const BY_CODE: Record<string, string> = {
     NOT_FOUND: 'Материал не найден.',
 }
 
+// The server takes pictures from the bucket alone; what to do depends on where the other one is
+const FOREIGN_MEDIA: Record<string, string> = {
+    content: 'В тексте есть картинка с другого сайта. Удалите её и загрузите файл с компьютера.',
+    coverImageUrl: 'Обложку нужно загрузить с компьютера.',
+}
+
 function fieldsOf(violations: { field: string }[]): string {
     const names = violations.map((v) => FIELDS[v.field] ?? v.field)
     return [...new Set(names)].join(', ')
@@ -43,6 +49,12 @@ export function messageOf(error: unknown): string {
     if (!(error instanceof ContentApiError)) return 'Не удалось связаться с сервером.'
     const known = BY_CODE[error.errorCode]
     if (known) return known
+    if (error.errorCode === 'FOREIGN_MEDIA') {
+        const field = error.violations?.[0]?.field
+        return (
+            (field && FOREIGN_MEDIA[field]) || 'Подходят только файлы, загруженные через редактор.'
+        )
+    }
     if (error.violations?.length) {
         return error.errorCode === 'VALIDATION_FAILED'
             ? `Для публикации не хватает: ${fieldsOf(error.violations)}.`

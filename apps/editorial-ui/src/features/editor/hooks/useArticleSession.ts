@@ -68,7 +68,7 @@ export function useArticleSession({ articleId, sessionKey, sub, showSnackbar }: 
     const [baseline, setBaseline] = useState(BLANK)
     const [busy, setBusy] = useState<Busy>(null)
 
-    const editor = useArticleEditor(setContent)
+    const editor = useArticleEditor(setContent, showSnackbar)
 
     // For callbacks that must see the latest values without being rebuilt on each keystroke
     const articleRef = useRef<EditorialArticle | null>(null)
