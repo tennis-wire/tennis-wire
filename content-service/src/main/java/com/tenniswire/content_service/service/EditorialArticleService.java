@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.jsoup.Jsoup;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -377,7 +378,7 @@ public class EditorialArticleService {
         return new EditPayload(
                 request.title(),
                 blankToNull(request.subtitle()),
-                request.content(),
+                picturesUploadedHere(request.content()),
                 cover,
                 cover == null ? null : blankToNull(request.coverAlt()),
                 cover == null ? null : blankToNull(request.coverCaption()),
@@ -395,6 +396,19 @@ public class EditorialArticleService {
             throw new ForeignMediaException(field);
         }
         return url;
+    }
+
+    // The same for every picture and video in the text. The site drops a foreign one whatever
+    // this says; refusing it here tells the author at once instead of the reader never seeing it.
+    private String picturesUploadedHere(String content) {
+        if (content != null && !content.isBlank()) {
+            for (var media : Jsoup.parseBodyFragment(content).select("img, video, source")) {
+                if (!media.attr("src").startsWith(mediaPrefix)) {
+                    throw new ForeignMediaException("content");
+                }
+            }
+        }
+        return content;
     }
 
     private EditPayload payloadOf(ArticleEdit edit) {
