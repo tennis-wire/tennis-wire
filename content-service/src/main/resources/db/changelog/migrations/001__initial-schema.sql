@@ -124,6 +124,8 @@ CREATE TABLE media (
                        width               INTEGER,
                        height              INTEGER,
                        duration_seconds    INTEGER,
+                       -- where a picture taken from a link came from; null for an upload
+                       source_url          VARCHAR(2000),
                        uploaded_by         UUID,
                        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

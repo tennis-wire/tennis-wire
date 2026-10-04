@@ -1,10 +1,13 @@
 package com.tenniswire.content_service.controller.editorial;
 
+import com.tenniswire.content_service.dto.editorial.ImageLinkRequest;
 import com.tenniswire.content_service.dto.editorial.MediaResponse;
 import com.tenniswire.content_service.service.MediaService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -25,5 +28,11 @@ public class EditorialMediaController {
     @ResponseStatus(HttpStatus.CREATED)
     public MediaResponse uploadImage(@RequestPart("file") MultipartFile file) {
         return mediaService.uploadImage(file);
+    }
+
+    @PostMapping(path = "/images/from-link", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public MediaResponse importImage(@Valid @RequestBody ImageLinkRequest request) {
+        return mediaService.importImage(request.url());
     }
 }

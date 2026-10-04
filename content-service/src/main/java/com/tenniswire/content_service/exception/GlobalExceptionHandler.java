@@ -85,6 +85,12 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse("UPLOAD_TOO_LARGE", "The file is larger than allowed", null, Instant.now()));
     }
 
+    @ExceptionHandler(ImageLinkException.class)
+    public ResponseEntity<ErrorResponse> handleImageLink(ImageLinkException ex) {
+        return ResponseEntity.status(ex.reason().status())
+                .body(new ErrorResponse(ex.reason().name(), ex.getMessage(), null, Instant.now()));
+    }
+
     @ExceptionHandler(StorageUnavailableException.class)
     public ResponseEntity<ErrorResponse> handleStorageUnavailable(StorageUnavailableException ex) {
         log.error("media upload failed", ex);
