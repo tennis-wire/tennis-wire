@@ -664,6 +664,12 @@ Adding a route Keycloak has to redirect to means editing the realm file and
 recreating the container, as above. A rejected URI shows as `Invalid parameter:
 redirect_uri` on a Keycloak page.
 
+The editor keeps only pictures from the media bucket: one pasted or dropped
+from another site is left out, and content-service refuses a save that has one.
+It knows the bucket by `VITE_MEDIA_BASE_URL` (`http://localhost:9000/media` by
+default), which has to match content-service's `MEDIA_PUBLIC_BASE_URL` on every
+stand. If they differ, the editor drops the pictures it has just uploaded.
+
 Tests run under `vitest`. The request-policy tests need no DOM and use the
 default `node` environment; component tests opt into jsdom with a
 `// @vitest-environment jsdom` comment on their first line, so there is no
