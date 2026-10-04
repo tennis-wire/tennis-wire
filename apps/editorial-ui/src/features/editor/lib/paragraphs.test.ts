@@ -43,5 +43,7 @@ describe('paragraphsOf', () => {
         e.commands.insertContent(paragraphsOf('One & two.\n\nThree.'))
 
         expect(e.getHTML()).toBe('<p>Before</p><p>One &amp; two.</p><p>Three.</p>')
+        // focus() leaves a timer that would read document after jsdom is torn down
+        e.destroy()
     })
 })
