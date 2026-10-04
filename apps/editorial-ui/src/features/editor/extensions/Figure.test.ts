@@ -85,4 +85,15 @@ describe('Figure node', () => {
 
         expect(e.getHTML()).toBe('<p>a</p><p>b</p>')
     })
+
+    it('takes the caption of a figure from another site as it stands', () => {
+        const e = editor(
+            `<figure><img src="${SRC}"><figcaption>Centre court.\n  Photo: Getty</figcaption></figure>`
+        )
+
+        expect(e.getJSON().content?.[0]?.attrs).toMatchObject({
+            caption: 'Centre court. Photo: Getty',
+            credit: null,
+        })
+    })
 })

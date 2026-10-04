@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
 
-import { MEDIA_BASE_URL, isOwnMedia, stripForeignMedia } from './media'
+import {
+    MEDIA_BASE_URL,
+    foreignPictureLinks,
+    isOwnMedia,
+    stripForeignMedia,
+    withCopies,
+} from './media'
 
 const OURS = `${MEDIA_BASE_URL}2026/10/a.jpg`
 
@@ -36,5 +42,34 @@ describe('stripForeignMedia', () => {
         const html = '<meta charset="utf-8"><p data-pm-slice="1 1 []">Copied here</p>'
 
         expect(stripForeignMedia(html)).toEqual({ html, dropped: 0 })
+    })
+})
+
+describe('foreignPictureLinks', () => {
+    it('finds where each picture from elsewhere really is, once', () => {
+        const html =
+            '<img src="https://www.atptour.com/a.jpg">' +
+            '<img src="data:image/gif;base64,R0lGOD" data-src="https://lazy.example/b.jpg">' +
+            '<img src="data:image/gif;base64,R0lGOD" srcset="https://x.example/c-400.jpg 400w, https://x.example/c-1200.jpg 1200w">' +
+            '<img src="https://www.atptour.com/a.jpg">' +
+            `<img src="${OURS}">` +
+            '<img src="data:image/png;base64,AAAA">'
+
+        expect(foreignPictureLinks(html)).toEqual([
+            'https://www.atptour.com/a.jpg',
+            'https://lazy.example/b.jpg',
+            'https://x.example/c-1200.jpg',
+        ])
+    })
+})
+
+describe('withCopies', () => {
+    it('puts each copy where its picture was', () => {
+        const html =
+            '<p>a</p><img src="data:x" data-src="https://lazy.example/b.jpg" srcset="y 1x">'
+
+        expect(withCopies(html, new Map([['https://lazy.example/b.jpg', OURS]]))).toBe(
+            `<p>a</p><img src="${OURS}">`
+        )
     })
 })

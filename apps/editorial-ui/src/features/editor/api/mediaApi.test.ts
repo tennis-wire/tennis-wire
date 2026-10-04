@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { apiFetch } from '../../../api/apiFetch'
-import { ImageUploadError, uploadErrorMessage, uploadImage } from './mediaApi'
+import { ImageUploadError, importImage, uploadErrorMessage, uploadImage } from './mediaApi'
 
 // the real one pulls in the UserManager, which wants a browser
 vi.mock('../../../api/apiFetch', () => ({ apiFetch: vi.fn() }))
@@ -54,5 +54,32 @@ describe('uploadImage', () => {
         apiFetchMock.mockRejectedValue(new TypeError('Failed to fetch'))
 
         await expect(uploadImage(file('image/png'))).rejects.toBeInstanceOf(ImageUploadError)
+    })
+})
+
+describe('importImage', () => {
+    it('asks the server to copy the picture behind the link', async () => {
+        const stored = { id: '1', url: 'http://media.test/2026/10/a.png' }
+        apiFetchMock.mockResolvedValue(Response.json(stored, { status: 201 }))
+
+        await expect(importImage('https://www.atptour.com/a.png')).resolves.toEqual(stored)
+
+        const [path, init] = apiFetchMock.mock.calls[0]
+        expect(path).toBe('/api/editorial/media/images/from-link')
+        expect(JSON.parse(init?.body as string)).toEqual({ url: 'https://www.atptour.com/a.png' })
+    })
+
+    it('says in words why nothing came', async () => {
+        apiFetchMock.mockResolvedValue(Response.json({ error: 'LINK_REFUSED' }, { status: 502 }))
+
+        await expect(importImage('https://x.example/a.png')).rejects.toThrow(
+            /Сайт не отдал картинку/
+        )
+    })
+
+    it('falls back to the status for a code it does not know', async () => {
+        apiFetchMock.mockResolvedValue(new Response('oops', { status: 500 }))
+
+        await expect(importImage('https://x.example/a.png')).rejects.toThrow('(HTTP 500)')
     })
 })

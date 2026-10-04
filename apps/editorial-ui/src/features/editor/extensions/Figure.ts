@@ -1,4 +1,5 @@
-import Image from '@tiptap/extension-image'
+import type { Editor } from '@tiptap/core'
+import Image, { type ImageOptions } from '@tiptap/extension-image'
 import type { DOMOutputSpec } from '@tiptap/pm/model'
 
 import { isOwnMedia } from '../lib/media'
@@ -12,6 +13,31 @@ export interface FigureAttrs {
     creditKind: CreditKind
 }
 
+export interface FigureStorage {
+    // a picture just copied in, whose panel opens by itself so its author gets named
+    askCaptionFor: string | null
+}
+
+declare module '@tiptap/core' {
+    interface Storage {
+        image: FigureStorage
+    }
+}
+
+// Set before the picture goes in: its view opens the panel when it first draws
+export function askCaption(editor: Editor, src: string): void {
+    editor.storage.image.askCaptionFor = src
+}
+
+export function isCaptionAsked(editor: Editor, src: string): boolean {
+    return editor.storage.image.askCaptionFor === src
+}
+
+// The panel has been shown once: a view drawn again later, after an undo, stays closed
+export function captionAnswered(editor: Editor, src: string): void {
+    if (isCaptionAsked(editor, src)) editor.storage.image.askCaptionFor = null
+}
+
 const KINDS: readonly string[] = ['photo', 'illustration', 'screenshot']
 
 // A bare <img> is read too: articles saved before captions have them
@@ -23,10 +49,22 @@ function textOf(element: HTMLElement, selector: string): string | null {
     return element.querySelector(selector)?.textContent?.trim() || null
 }
 
+// A figure from another site has a caption without our parts: all of its text is the caption,
+// credit and all, for the author to sort out in the panel
+function foreignCaptionOf(element: HTMLElement): string | null {
+    const caption = element.querySelector('figcaption')
+    if (!caption || caption.querySelector('[data-caption], [data-credit]')) return null
+    return caption.textContent?.replace(/\s+/g, ' ').trim() || null
+}
+
 // A picture in the article, with an optional caption and credit under it. Written as
 // <figure><img><figcaption><span data-caption>...</span><span data-credit="photo">...</span></figcaption></figure>,
 // with no figcaption when both are empty. The word before the credit is left to whoever draws it.
-export const Figure = Image.extend({
+export const Figure = Image.extend<ImageOptions, FigureStorage>({
+    addStorage() {
+        return { askCaptionFor: null }
+    },
+
     addAttributes() {
         return {
             src: {
@@ -41,7 +79,8 @@ export const Figure = Image.extend({
             },
             caption: {
                 default: null,
-                parseHTML: (element) => textOf(element, '[data-caption]'),
+                parseHTML: (element) =>
+                    textOf(element, '[data-caption]') ?? foreignCaptionOf(element),
                 renderHTML: () => ({}),
             },
             credit: {

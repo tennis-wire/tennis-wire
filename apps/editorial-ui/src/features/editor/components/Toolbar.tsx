@@ -25,6 +25,7 @@ import {
     SmartToy,
     Translate,
     Upload,
+    AddLink,
     YouTube,
     Telegram,
     Poll as PollIcon,
@@ -39,6 +40,7 @@ interface Props {
     editor: Editor | null
     onError: (message: string) => void
     onPollClick: () => void
+    onImageLinkClick: () => void
     onTranslateClick?: () => void
     onTranscribeClick?: () => void
 }
@@ -47,6 +49,7 @@ export const Toolbar: React.FC<Props> = ({
     editor,
     onError,
     onPollClick,
+    onImageLinkClick,
     onTranslateClick,
     onTranscribeClick,
 }) => {
@@ -417,6 +420,12 @@ export const Toolbar: React.FC<Props> = ({
                         <Upload fontSize="small" />
                     </IconButton>
                 </span>
+            </Tooltip>
+
+            <Tooltip title="Картинка по ссылке: скопируется к нам">
+                <IconButton size="small" onClick={onImageLinkClick}>
+                    <AddLink fontSize="small" />
+                </IconButton>
             </Tooltip>
 
             <Tooltip title="Вставить YouTube видео">
