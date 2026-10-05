@@ -88,7 +88,7 @@ model {
   }
 
   actor moderator 'Модератор' {
-    description 'Разбирает очередь жалоб и сигналов бота. Ограничения и снятие комментариев есть в API, экрана для них нет'
+    description 'Разбирает очередь жалоб читателей; жалобы только от бота — в отдельном окне (план, moderation.md). Ограничения и снятие комментариев есть в API, экрана для них нет'
   }
 
   actor admin 'Админ' {
@@ -130,7 +130,7 @@ model {
     }
 
     external anthropicApi 'Anthropic API' {
-      description 'Claude — помощь в редактуре, AI-чат в редакторе'
+      description 'Claude — помощь в редактуре, AI-чат в редакторе; классификатор бота-модератора (план)'
       technology 'anthropic-java'
     }
 
@@ -311,8 +311,8 @@ model {
     // ----- MODERATION BOT -----
     container moderationBot 'Moderation Bot' {
       #planned
-      description 'Автомодерация комментариев: регулярки + LLM. Самого бота нет; клиент moderation-bot, роль и API под него есть. Способ реализации и место в топологии не определены — см. auth.md §11'
-      technology 'TBD'
+      description 'Автомодерация комментариев, первым — спам: правила, затем LLM. Только жалуется, снимает человек. Комментарии читает лентой discussion-service по курсору. Самого бота нет; клиент moderation-bot, роль и жалоба под него есть — moderation.md'
+      technology 'Java, Spring Boot'
     }
 
     // ----- DISCUSSION SERVICE -----
@@ -462,7 +462,8 @@ model {
   tennisService.identity.identityOidc -> tennisService.identity.identityDb 'Realm data'
 
   // --- Moderation bot -> API Gateway ---
-  tennisService.moderationBot -> tennisService.apiGateway 'Жалобы классификатора (POST /api/discussion/moderation/reports)'
+  tennisService.moderationBot -> tennisService.apiGateway 'Жалобы классификатора (POST /api/discussion/moderation/reports); лента комментариев по курсору (план, moderation.md §6.1)'
+  tennisService.moderationBot -> externalApis.anthropicApi 'Классификация текста, который правила не решили (план)'
 
   // --- Client Apps -> API Gateway ---
   // Браузер в gateway не ходит: только в свой origin, дальше запрос собирает сервер Next.js.
