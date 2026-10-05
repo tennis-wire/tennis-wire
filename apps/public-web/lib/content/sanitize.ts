@@ -2,7 +2,7 @@ import sanitizeHtml from 'sanitize-html'
 
 import { originOf } from '@/lib/security/csp'
 
-import { EMBED_HOSTS } from './embeds'
+import { EMBED_HOSTS, embedTitle } from './embeds'
 
 // What the editor emits (editorial-ui: TipTap StarterKit, its figure, Youtube and the embeds of
 // its own), and nothing it does not. The source is staff, but a staff account is one phishing
@@ -42,7 +42,8 @@ const OPTIONS: sanitizeHtml.IOptions = {
     allowedAttributes: {
         // no target: links open where they are, and there is no rel to get wrong
         a: ['href'],
-        img: ['src', 'alt', 'width', 'height'],
+        // loading and decoding are set below, whatever the editor wrote
+        img: ['src', 'alt', 'width', 'height', 'loading', 'decoding'],
         // a figure's caption and credit; credits.ts words the credit by its kind
         span: [
             'data-caption',
@@ -53,7 +54,16 @@ const OPTIONS: sanitizeHtml.IOptions = {
             },
         ],
         div: ['data-video', 'data-telegram-post', 'data-youtube-video', 'data-poll'],
-        iframe: ['src', 'width', 'height', 'allow', 'allowfullscreen', 'frameborder'],
+        iframe: [
+            'src',
+            'width',
+            'height',
+            'allow',
+            'allowfullscreen',
+            'frameborder',
+            'loading',
+            'title',
+        ],
         video: ['src', 'controls', 'width', 'height'],
     },
     allowedClasses: {
@@ -68,9 +78,28 @@ const OPTIONS: sanitizeHtml.IOptions = {
 // media: the bucket's origin. A picture or video from anywhere else is dropped whole: the page's
 // CSP would refuse it and leave a broken box. So is a data: picture pasted before the editor had
 // uploads, and every one of them when there is no media origin.
+//
+// Pictures and frames load as the reader scrolls near them, not all at once with the page: a
+// YouTube player alone is half a megabyte or more, for a video the reader may never reach. The
+// first picture is the exception: with no cover it is what the page is about, the first thing
+// seen, and waiting for the scroll would only make it late.
 export function sanitizeArticle(html: string, media: string | null): string {
+    let pictures = 0
     return sanitizeHtml(html, {
         ...OPTIONS,
+        transformTags: {
+            // whatever loading the editor wrote gives way to the order here
+            img: (tagName, attribs) => {
+                const next: sanitizeHtml.Attributes = { ...attribs, decoding: 'async' }
+                delete next.loading
+                if (pictures++ > 0) next.loading = 'lazy'
+                return { tagName, attribs: next }
+            },
+            iframe: (tagName, attribs) => ({
+                tagName,
+                attribs: { ...attribs, loading: 'lazy', title: embedTitle(attribs.src) },
+            }),
+        },
         exclusiveFilter: (frame) => {
             // a frame from anywhere else has lost its src above and would stay as an empty box
             if (frame.tag === 'iframe') return !frame.attribs.src
