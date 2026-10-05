@@ -41,6 +41,13 @@
             "matchFileNames": ["apps/mobile/package.json"],
             "matchUpdateTypes": ["major"],
             "enabled": false
+        },
+        {
+            "description": "Public web: eslint-plugin-react (via eslint-config-next) crashes on ESLint 10; open the PR from the dashboard once it supports 10",
+            "matchFileNames": ["apps/public-web/package.json"],
+            "matchPackageNames": ["eslint"],
+            "matchUpdateTypes": ["major"],
+            "dependencyDashboardApproval": true
         }
     ]
 }
