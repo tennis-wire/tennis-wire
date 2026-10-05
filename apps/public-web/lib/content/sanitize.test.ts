@@ -15,7 +15,7 @@ describe('sanitizeArticle', () => {
             '<ul><li>one</li></ul><img src="https://media.example.com/2026/09/a.jpg" alt="court">'
         expect(sanitizeArticle(html)).toBe(
             '<h2>Title</h2><p>Text with <strong>bold</strong> and <a href="https://example.com/x">a link</a>.</p>' +
-                '<ul><li>one</li></ul><img src="https://media.example.com/2026/09/a.jpg" alt="court" />'
+                '<ul><li>one</li></ul><img src="https://media.example.com/2026/09/a.jpg" alt="court" decoding="async" />'
         )
     })
 
@@ -24,7 +24,7 @@ describe('sanitizeArticle', () => {
             '<p onclick="steal()">hi</p><script>steal()</script>' +
             '<a href="javascript:steal()">x</a><img src="https://media.example.com/x.png" onerror="steal()">'
         expect(sanitizeArticle(html)).toBe(
-            '<p>hi</p><a>x</a><img src="https://media.example.com/x.png" />'
+            '<p>hi</p><a>x</a><img src="https://media.example.com/x.png" decoding="async" />'
         )
     })
 
@@ -36,10 +36,13 @@ describe('sanitizeArticle', () => {
             '<iframe src="https://t.me/chan/1?embed=1" style="border: none"></iframe></div>'
         const foreign = '<iframe src="https://evil.example.com/"></iframe>'
 
-        expect(sanitizeArticle(youtube)).toBe(youtube)
+        expect(sanitizeArticle(youtube)).toBe(
+            '<div data-youtube-video><iframe src="https://www.youtube-nocookie.com/embed/abc" allowfullscreen ' +
+                'loading="lazy" title="Видео YouTube"></iframe></div>'
+        )
         expect(sanitizeArticle(telegram)).toBe(
             '<div data-telegram-post="chan/1" class="telegram-embed">' +
-                '<iframe src="https://t.me/chan/1?embed=1"></iframe></div>'
+                '<iframe src="https://t.me/chan/1?embed=1" loading="lazy" title="Пост в Telegram"></iframe></div>'
         )
         expect(sanitizeArticle(foreign)).toBe('')
     })
@@ -93,7 +96,11 @@ describe('sanitizeArticle', () => {
             '<span data-caption="">Centre court</span><span data-credit="photo">Getty</span>' +
             '</figcaption></figure>'
 
-        expect(sanitizeArticle(html)).toBe(html.replace('data-caption=""', 'data-caption'))
+        expect(sanitizeArticle(html)).toBe(
+            html
+                .replace('data-caption=""', 'data-caption')
+                .replace('alt="court"', 'alt="court" decoding="async"')
+        )
     })
 
     it('drops a figure whose picture is dropped, caption and all', () => {
@@ -109,5 +116,26 @@ describe('sanitizeArticle', () => {
         expect(sanitizeArticle('<span data-credit="drawing" style="x">Me</span>')).toBe(
             '<span data-credit>Me</span>'
         )
+    })
+
+    // the first may be what the page is about; the rest wait for the reader to scroll near them
+    it('loads the first picture at once and the rest as the reader scrolls', () => {
+        const html =
+            '<img src="https://media.example.com/a.jpg" loading="lazy">' +
+            '<figure><img src="https://media.example.com/b.jpg"></figure>' +
+            '<img src="https://media.example.com/c.jpg" loading="eager">'
+
+        expect(sanitizeArticle(html)).toBe(
+            '<img src="https://media.example.com/a.jpg" decoding="async" />' +
+                '<figure><img src="https://media.example.com/b.jpg" decoding="async" loading="lazy" /></figure>' +
+                '<img src="https://media.example.com/c.jpg" decoding="async" loading="lazy" />'
+        )
+    })
+
+    it('counts the pictures of each article afresh', () => {
+        const html = '<img src="https://media.example.com/a.jpg">'
+
+        expect(sanitizeArticle(html)).not.toContain('lazy')
+        expect(sanitizeArticle(html)).not.toContain('lazy')
     })
 })
