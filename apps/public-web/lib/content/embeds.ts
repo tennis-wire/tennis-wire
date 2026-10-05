@@ -6,8 +6,9 @@ export const EMBED_HOSTS = ['www.youtube.com', 'www.youtube-nocookie.com', 't.me
 export function embedTitle(src: string | undefined): string {
     try {
         const host = new URL(src ?? '').hostname
+        // exact hosts, as the sanitizer lets through: a suffix would match evilyoutube.com too
         if (host === 't.me') return 'Пост в Telegram'
-        if (host.endsWith('youtube.com') || host.endsWith('youtube-nocookie.com')) {
+        if (host === 'www.youtube.com' || host === 'www.youtube-nocookie.com') {
             return 'Видео YouTube'
         }
     } catch {
