@@ -24,6 +24,11 @@ subprojects {
     // published with it. The dependency-management plugin reads this in place of the BOM's value.
     // Remove once Spring Boot itself manages 11.0.25 or later.
     extra["tomcat.version"] = "11.0.26"
+    // Spring Boot 4.1.1 manages Jackson 3.1.5 and 2.21.5, which carry the jackson-core and
+    // jackson-databind advisories of late September 2026 (CVE-2026-89407 among them). Same
+    // mechanism as Tomcat above. Remove once Spring Boot manages 3.1.7 and 2.21.7 or later.
+    extra["jackson-bom.version"] = "3.1.7"
+    extra["jackson-2-bom.version"] = "2.21.7"
 
     apply(plugin = "java")
     apply(plugin = "com.github.spotbugs")
