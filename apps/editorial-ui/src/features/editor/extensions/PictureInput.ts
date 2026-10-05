@@ -1,6 +1,7 @@
 import { Extension } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 
+import type { StoredPicture } from '../api/mediaApi'
 import { foreignPictureLinks, stripForeignMedia, withCopies } from '../lib/media'
 import { askCaption } from './Figure'
 
@@ -22,10 +23,10 @@ declare module '@tiptap/core' {
 }
 
 export interface PictureInputOptions {
-    // the file uploaded, its address in the bucket back
-    upload: (file: File) => Promise<string>
-    // the picture behind a link copied into the bucket, its address there back
-    copy: (link: string) => Promise<string>
+    // the file uploaded; where it is in the bucket and its size back
+    upload: (file: File) => Promise<StoredPicture>
+    // the picture behind a link copied into the bucket; the same back
+    copy: (link: string) => Promise<StoredPicture>
     errorMessage: (error: unknown) => string
     notify: (message: string, severity: Severity) => void
 }
@@ -72,22 +73,23 @@ export const PictureInput = Extension.create<PictureInputOptions, PictureInputSt
 
         const insert = async (files: File[], at: number) => {
             const results = await Promise.allSettled(files.map((file) => upload(file)))
-            const urls = results.flatMap((result) =>
+            const pictures = results.flatMap((result) =>
                 result.status === 'fulfilled' ? [result.value] : []
             )
-            if (urls.length > 0) {
+            if (pictures.length > 0) {
                 editor
                     .chain()
                     .focus()
                     .insertContentAt(
                         clamp(at),
-                        urls.map((src) => ({ type: 'image', attrs: { src } }))
+                        pictures.map((attrs) => ({ type: 'image', attrs }))
                     )
                     .run()
             }
             const failed = results.find((result) => result.status === 'rejected')
             if (failed) {
-                const rest = urls.length > 0 ? `. Добавлено: ${urls.length} из ${files.length}` : ''
+                const rest =
+                    pictures.length > 0 ? `. Добавлено: ${pictures.length} из ${files.length}` : ''
                 notify(`${errorMessage(failed.reason)}${rest}`, 'error')
             }
         }
@@ -98,7 +100,7 @@ export const PictureInput = Extension.create<PictureInputOptions, PictureInputSt
             const answer = storage.askToCopy ? await storage.askToCopy(links.length) : false
             if (answer === null) return
 
-            const copies = new Map<string, string>()
+            const copies = new Map<string, StoredPicture>()
             let failure: unknown = null
             if (answer) {
                 const results = await Promise.allSettled(links.map((link) => copy(link)))
@@ -109,7 +111,7 @@ export const PictureInput = Extension.create<PictureInputOptions, PictureInputSt
             }
 
             const kept = stripForeignMedia(withCopies(html, copies)).html
-            if (copies.size === 1) askCaption(editor, [...copies.values()][0])
+            if (copies.size === 1) askCaption(editor, [...copies.values()][0].src)
             editor
                 .chain()
                 .focus()

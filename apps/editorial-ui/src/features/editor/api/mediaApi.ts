@@ -9,6 +9,18 @@ export interface UploadedImage {
     height: number
 }
 
+// A picture as the text holds it: where it is and its size, so that the reader's browser keeps
+// room for it before it loads and the text under it does not jump
+export interface StoredPicture {
+    src: string
+    width: number
+    height: number
+}
+
+export function pictureOf(image: UploadedImage): StoredPicture {
+    return { src: image.url, width: image.width, height: image.height }
+}
+
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const MAX_BYTES = 10 * 1024 * 1024
 

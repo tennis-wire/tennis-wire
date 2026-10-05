@@ -35,6 +35,8 @@ describe('Figure node', () => {
             type: 'image',
             attrs: {
                 src: SRC,
+                width: null,
+                height: null,
                 alt: 'An empty court',
                 caption: 'Centre court',
                 credit: 'Andrewc013 / CC BY-SA 4.0',
@@ -95,5 +97,15 @@ describe('Figure node', () => {
             caption: 'Centre court. Photo: Getty',
             credit: null,
         })
+    })
+
+    it('keeps the size of a picture, and no size it cannot trust', () => {
+        const sized = editor(`<figure><img src="${SRC}" width="1200" height="800"></figure>`)
+        const junk = editor(`<img src="${SRC}" width="abc" height="-5">`)
+
+        expect(sized.getHTML()).toBe(
+            `<figure><img src="${SRC}" alt="" width="1200" height="800"></figure>`
+        )
+        expect(junk.getHTML()).toBe(`<figure><img src="${SRC}" alt=""></figure>`)
     })
 })

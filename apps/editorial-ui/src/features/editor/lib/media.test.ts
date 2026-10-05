@@ -64,12 +64,13 @@ describe('foreignPictureLinks', () => {
 })
 
 describe('withCopies', () => {
-    it('puts each copy where its picture was', () => {
+    it('puts each copy where its picture was, with the size of the copy', () => {
         const html =
-            '<p>a</p><img src="data:x" data-src="https://lazy.example/b.jpg" srcset="y 1x">'
+            '<p>a</p><img src="data:x" data-src="https://lazy.example/b.jpg" srcset="y 1x" width="300">'
+        const copy = { src: OURS, width: 1200, height: 800 }
 
-        expect(withCopies(html, new Map([['https://lazy.example/b.jpg', OURS]]))).toBe(
-            `<p>a</p><img src="${OURS}">`
+        expect(withCopies(html, new Map([['https://lazy.example/b.jpg', copy]]))).toBe(
+            `<p>a</p><img src="${OURS}" width="1200" height="800">`
         )
     })
 })
