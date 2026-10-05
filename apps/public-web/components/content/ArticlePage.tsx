@@ -5,6 +5,7 @@ import { fetchArticle, type ArticleType } from '@/lib/content/articles'
 import { labelCredits } from '@/lib/content/credits'
 import { splitPolls } from '@/lib/content/polls'
 import { sanitizeArticle } from '@/lib/content/sanitize'
+import { articleJsonLd, jsonLdScript } from '@/lib/content/seo'
 import { mediaOrigin } from '@/lib/security/csp'
 
 import ArticleHead from './ArticleHead'
@@ -20,6 +21,11 @@ export default async function ArticlePage({ slug, type }: { slug: string; type: 
     return (
         // The text runs in a column; only the cover, in the head, takes the page's full width
         <article>
+            {/* what search engines read the article as, see seo.ts */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: jsonLdScript(articleJsonLd(article)) }}
+            />
             <div style={{ maxWidth: 760, margin: '0 auto' }}>
                 <EditArticleLink articleId={article.id} />
             </div>

@@ -41,4 +41,18 @@ describe('LocalDay', () => {
         expect(errors).not.toHaveBeenCalled()
         errors.mockRestore()
     })
+
+    it('writes the hour in UTC too, and puts the device hour in its place', async () => {
+        const box = document.createElement('div')
+        box.innerHTML = renderToString(<LocalDay iso={PUBLISHED} withTime />)
+        expect(box.textContent).toMatch(/24 сентября 2026 г\.,? в 20:30/)
+        document.body.append(box)
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+
+        await act(async () => {
+            hydrateRoot(box, <LocalDay iso={PUBLISHED} withTime />)
+        })
+
+        expect(box.querySelector('time')?.textContent).toMatch(/25 сентября 2026 г\.,? в 06:30/)
+    })
 })

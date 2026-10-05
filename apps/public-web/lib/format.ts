@@ -23,6 +23,20 @@ export function formatWhen(iso: string): string {
     return dateTime.format(new Date(iso))
 }
 
+const dateTimeInUtc = new Intl.DateTimeFormat('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC',
+})
+
+// As formatDayInUtc, with the hour: what the server writes until LocalDay puts the reader's own
+export function formatWhenInUtc(iso: string): string {
+    return dateTimeInUtc.format(new Date(iso))
+}
+
 export function formatUntil(iso: string): string {
     return until.format(new Date(iso))
 }

@@ -71,6 +71,11 @@ export default function ArticleHead({ article }: { article: Article }) {
                 )}
                 <div style={meta}>
                     <LocalDay iso={article.publishedAt} />
+                    {article.revisedAt && (
+                        <span>
+                            обновлено <LocalDay iso={article.revisedAt} withTime />
+                        </span>
+                    )}
                     {article.readingTime != null && article.readingTime > 0 && (
                         <span>{readingTime(article.readingTime)}</span>
                     )}
