@@ -27,6 +27,8 @@ export type Article = {
     sourceName: string | null
     tags: Tag[]
     publishedAt: string
+    // when an edit last went on the site after publication; null until one has
+    revisedAt: string | null
 }
 
 // What a list shows of an article: content-service's ArticleSummaryResponse, less what no list draws
