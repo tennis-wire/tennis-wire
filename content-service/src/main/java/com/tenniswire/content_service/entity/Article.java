@@ -99,6 +99,11 @@ public class Article {
     @Column(name = "first_published_at")
     private Instant firstPublishedAt;
 
+    // When an edit last went on the site: what the reader is told was updated, and when.
+    // updated_at will not do for that, it moves with any write to the row.
+    @Column(name = "revised_at")
+    private Instant revisedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

@@ -7,6 +7,7 @@ import static com.tenniswire.content_service.repository.ArticleSpecification.has
 import com.tenniswire.content_service.dto.ArticleResponse;
 import com.tenniswire.content_service.dto.ArticleSummaryResponse;
 import com.tenniswire.content_service.dto.pub.ArticleRefResponse;
+import com.tenniswire.content_service.dto.pub.SitemapEntryResponse;
 import com.tenniswire.content_service.entity.ArticleStatus;
 import com.tenniswire.content_service.entity.ArticleType;
 import com.tenniswire.content_service.exception.ResourceNotFoundException;
@@ -14,6 +15,7 @@ import com.tenniswire.content_service.repository.ArticleRepository;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -27,6 +29,9 @@ public class ArticleService {
 
     // Held well under the request line the gateway accepts: every id spends 37 bytes of it.
     public static final int MAX_REF_IDS = 100;
+
+    // What one sitemap file may hold. Past it the site will need a sitemap index, and this a page.
+    public static final int MAX_SITEMAP_ENTRIES = 50_000;
 
     private final ArticleRepository articleRepository;
 
@@ -56,6 +61,13 @@ public class ArticleService {
         }
         return articleRepository.findByIdInAndStatus(ids, ArticleStatus.PUBLISHED).stream()
                 .map(ArticleRefResponse::from)
+                .toList();
+    }
+
+    // Every published article, newest first, as far as one sitemap goes
+    public List<SitemapEntryResponse> findSitemap() {
+        return articleRepository.findSitemapRows(ArticleStatus.PUBLISHED, Limit.of(MAX_SITEMAP_ENTRIES)).stream()
+                .map(SitemapEntryResponse::from)
                 .toList();
     }
 

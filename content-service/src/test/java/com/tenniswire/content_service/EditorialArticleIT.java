@@ -305,6 +305,44 @@ class EditorialArticleIT {
     }
 
     @Test
+    void theSitemapNamesPublishedArticlesOnly() throws Exception {
+        var article = published(author, "Mapped " + UUID.randomUUID());
+        // a draft has no address unless one is set by hand
+        var unmapped = "unmapped-" + UUID.randomUUID();
+        submit(author, Map.of("type", "news", "title", "Unmapped", "slug", unmapped))
+                .andExpect(status().isCreated());
+
+        mvc.perform(get("/api/public/sitemap/articles"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].slug", hasItem(read(article, "$.slug"))))
+                .andExpect(jsonPath("$[*].slug", not(hasItem(unmapped))))
+                .andExpect(jsonPath("$[0].type").exists())
+                .andExpect(jsonPath("$[0].publishedAt").exists())
+                .andExpect(jsonPath("$[0].content").doesNotExist());
+    }
+
+    // what the reader is told was updated: an edit going on the site, not one being saved
+    @Test
+    void anArticleIsRevisedWhenAnEditGoesOnTheSite() throws Exception {
+        var article = published(author, "Revised " + UUID.randomUUID());
+        var id = read(article, "$.id");
+        var site = PUBLIC + read(article, "$.slug");
+        mvc.perform(get(site)).andExpect(jsonPath("$.revisedAt").doesNotExist());
+
+        var edit = body(save(author, id, read(article, "$.version"), "news", "Revised text")
+                .andExpect(status().isOk()));
+        mvc.perform(get(site)).andExpect(jsonPath("$.revisedAt").doesNotExist());
+
+        publish(author, id, read(edit, "$.version")).andExpect(status().isOk());
+        mvc.perform(get(site)).andExpect(jsonPath("$.revisedAt").isNotEmpty());
+
+        unpublish(chief, id).andExpect(status().isNoContent());
+        var back = body(open(author, id));
+        publish(author, id, read(back, "$.version")).andExpect(status().isOk());
+        mvc.perform(get(site)).andExpect(jsonPath("$.revisedAt").doesNotExist());
+    }
+
+    @Test
     void aSlugSetByHandBelongsToOneArticle() throws Exception {
         var request = Map.of("type", "news", "title", "By hand", "slug", "by-hand-" + UUID.randomUUID());
 
