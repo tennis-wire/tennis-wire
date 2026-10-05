@@ -423,9 +423,9 @@ export default function Editor({ articleId, sessionKey, sub }: Props) {
                     key={imageLinkSession}
                     open
                     onClose={() => setImageLinkSession(null)}
-                    onInsert={(src) => {
-                        askCaption(editor, src)
-                        editor.chain().focus().setImage({ src }).run()
+                    onInsert={(picture) => {
+                        askCaption(editor, picture.src)
+                        editor.chain().focus().setImage(picture).run()
                     }}
                 />
             )}

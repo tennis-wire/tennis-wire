@@ -37,13 +37,19 @@ export function foreignPictureLinks(html: string): string[] {
     return [...new Set(links.filter((link): link is string => !!link && !isOwnMedia(link)))]
 }
 
-// The same html with the copies made in the bucket in place of the pictures they were made from
-export function withCopies(html: string, copies: Map<string, string>): string {
+// The same html with the copies made in the bucket in place of the pictures they were made from,
+// and the copies' sizes: the other site's width and height were for its own layout
+export function withCopies(
+    html: string,
+    copies: Map<string, { src: string; width: number; height: number }>
+): string {
     const doc = new DOMParser().parseFromString(html, 'text/html')
     for (const img of Array.from(doc.body.querySelectorAll('img'))) {
         const copy = copies.get(sourceOf(img) ?? '')
         if (!copy) continue
-        img.setAttribute('src', copy)
+        img.setAttribute('src', copy.src)
+        img.setAttribute('width', String(copy.width))
+        img.setAttribute('height', String(copy.height))
         img.removeAttribute('srcset')
         img.removeAttribute('data-src')
     }

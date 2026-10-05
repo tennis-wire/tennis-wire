@@ -3,7 +3,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Heading from '@tiptap/extension-heading'
 import Placeholder from '@tiptap/extension-placeholder'
 import Youtube from '@tiptap/extension-youtube'
-import { importImage, uploadErrorMessage, uploadImage } from '../api/mediaApi'
+import { importImage, pictureOf, uploadErrorMessage, uploadImage } from '../api/mediaApi'
 import { FigureView } from '../components/FigureView'
 import { Figure, PictureInput, Poll, Telegram, Video } from '../extensions'
 
@@ -40,8 +40,8 @@ export function articleExtensions(notify: Notify = () => {}) {
         Poll,
         Placeholder.configure({ placeholder: 'Начните писать...' }),
         PictureInput.configure({
-            upload: async (file) => (await uploadImage(file)).url,
-            copy: async (link) => (await importImage(link)).url,
+            upload: async (file) => pictureOf(await uploadImage(file)),
+            copy: async (link) => pictureOf(await importImage(link)),
             errorMessage: uploadErrorMessage,
             notify,
         }),

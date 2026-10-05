@@ -33,7 +33,7 @@ import {
 } from '@mui/icons-material'
 import type { Editor } from '@tiptap/react'
 import { useAppTheme } from '../../../theme'
-import { IMAGE_ACCEPT, uploadErrorMessage, uploadImage } from '../api/mediaApi'
+import { IMAGE_ACCEPT, pictureOf, uploadErrorMessage, uploadImage } from '../api/mediaApi'
 import { extractTelegramData } from '../extensions'
 
 interface Props {
@@ -89,8 +89,11 @@ export const Toolbar: React.FC<Props> = ({
 
         setImageUploading(true)
         try {
-            const { url } = await uploadImage(file)
-            editor.chain().focus().setImage({ src: url }).run()
+            editor
+                .chain()
+                .focus()
+                .setImage(pictureOf(await uploadImage(file)))
+                .run()
         } catch (error) {
             onError(uploadErrorMessage(error))
         } finally {

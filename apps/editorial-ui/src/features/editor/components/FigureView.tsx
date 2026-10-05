@@ -56,6 +56,8 @@ export const FigureView: React.FC<NodeViewProps> = ({ node, editor, updateAttrib
             <img
                 ref={picture}
                 src={attrs.src}
+                width={attrs.width ?? undefined}
+                height={attrs.height ?? undefined}
                 alt={attrs.alt ?? ''}
                 onClick={open}
                 data-drag-handle

@@ -13,10 +13,11 @@ import { PictureInput } from './PictureInput'
 const picture = (name: string) => new File(['x'], name, { type: 'image/png' })
 
 const ours = (name: string) => `${MEDIA_BASE_URL}2026/10/${name}`
+const stored = (name: string) => ({ src: ours(name), width: 800, height: 600 })
 
 function setUp(
-    upload = (file: File) => Promise.resolve(ours(file.name)),
-    copy = (link: string) => Promise.resolve(ours(link.split('/').pop() ?? 'x'))
+    upload = (file: File) => Promise.resolve(stored(file.name)),
+    copy = (link: string) => Promise.resolve(stored(link.split('/').pop() ?? 'x'))
 ) {
     const notify = vi.fn()
     const copyMock = vi.fn(copy)
@@ -67,8 +68,11 @@ describe('PictureInput', () => {
 
         expect(paste(editor, [picture('a.png')])).toBe(true)
 
+        // with its size, so the reader's browser keeps room for it before it loads
         await vi.waitFor(() =>
-            expect(editor.getHTML()).toContain(`<img src="${MEDIA_BASE_URL}2026/10/a.png"`)
+            expect(editor.getHTML()).toContain(
+                `<img src="${MEDIA_BASE_URL}2026/10/a.png" alt="" width="800" height="600">`
+            )
         )
     })
 
@@ -93,7 +97,7 @@ describe('PictureInput', () => {
         const { editor, notify } = setUp((file) =>
             file.name === 'big.png'
                 ? Promise.reject(new Error('too large'))
-                : Promise.resolve(`${MEDIA_BASE_URL}2026/10/${file.name}`)
+                : Promise.resolve(stored(file.name))
         )
 
         paste(editor, [picture('a.png'), picture('big.png')])
@@ -152,7 +156,7 @@ describe('PictureInput', () => {
         const { editor, notify } = setUp(undefined, (link) =>
             link.endsWith('b.jpg')
                 ? Promise.reject(new Error('refused'))
-                : Promise.resolve(ours('a.jpg'))
+                : Promise.resolve(stored('a.jpg'))
         )
         editor.storage.pictureInput.setCopyQuestion(() => Promise.resolve(true))
 

@@ -11,13 +11,13 @@ import {
     TextField,
 } from '@mui/material'
 
-import { importImage, uploadErrorMessage } from '../api/mediaApi'
+import { importImage, pictureOf, uploadErrorMessage, type StoredPicture } from '../api/mediaApi'
 
 interface Props {
     open: boolean
     onClose: () => void
     // the copy in our storage, to put in the text
-    onInsert: (src: string) => void
+    onInsert: (picture: StoredPicture) => void
 }
 
 // A picture by its link: the server copies it into our storage, and the text gets the copy.
@@ -33,8 +33,7 @@ export const ImageLinkDialog: React.FC<Props> = ({ open, onClose, onInsert }) =>
         setBusy(true)
         setError(null)
         try {
-            const { url } = await importImage(link.trim())
-            onInsert(url)
+            onInsert(pictureOf(await importImage(link.trim())))
             onClose()
         } catch (failure) {
             setError(uploadErrorMessage(failure))

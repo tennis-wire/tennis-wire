@@ -7,6 +7,9 @@ import type { CreditKind } from '../types/content'
 
 export interface FigureAttrs {
     src: string
+    // the picture's own size in pixels, from the upload; null for one saved before sizes were kept
+    width: number | null
+    height: number | null
     alt: string | null
     caption: string | null
     credit: string | null
@@ -45,6 +48,11 @@ function imageOf(element: HTMLElement): HTMLElement | null {
     return element.tagName === 'IMG' ? element : element.querySelector('img')
 }
 
+function sizeOf(element: HTMLElement, name: 'width' | 'height'): number | null {
+    const value = Number(imageOf(element)?.getAttribute(name))
+    return Number.isInteger(value) && value > 0 ? value : null
+}
+
 function textOf(element: HTMLElement, selector: string): string | null {
     return element.querySelector(selector)?.textContent?.trim() || null
 }
@@ -70,6 +78,16 @@ export const Figure = Image.extend<ImageOptions, FigureStorage>({
             src: {
                 default: null,
                 parseHTML: (element) => imageOf(element)?.getAttribute('src') ?? null,
+                renderHTML: () => ({}),
+            },
+            width: {
+                default: null,
+                parseHTML: (element) => sizeOf(element, 'width'),
+                renderHTML: () => ({}),
+            },
+            height: {
+                default: null,
+                parseHTML: (element) => sizeOf(element, 'height'),
                 renderHTML: () => ({}),
             },
             alt: {
@@ -116,14 +134,14 @@ export const Figure = Image.extend<ImageOptions, FigureStorage>({
     },
 
     renderHTML({ node }) {
-        const { src, alt, caption, credit, creditKind } = node.attrs as FigureAttrs
+        const { src, width, height, alt, caption, credit, creditKind } = node.attrs as FigureAttrs
         const text: DOMOutputSpec[] = []
         if (caption) text.push(['span', { 'data-caption': '' }, caption])
         if (credit) text.push(['span', { 'data-credit': creditKind }, credit])
         return [
             'figure',
             {},
-            ['img', { src, alt: alt ?? '' }],
+            ['img', { src, alt: alt ?? '', ...(width && height && { width, height }) }],
             ...(text.length > 0 ? [['figcaption', {}, ...text] as DOMOutputSpec] : []),
         ]
     },
