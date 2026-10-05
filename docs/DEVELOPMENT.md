@@ -641,6 +641,11 @@ Expo dependencies are updated with `expo install --fix`, never with
 `npm update`. Renovate is configured accordingly: mobile packages are grouped
 into one PR and majors are disabled, because a major there means an SDK bump.
 
+public-web stays on ESLint 9: `eslint-plugin-react`, which `eslint-config-next`
+brings in, crashes on ESLint 10. Renovate does not open that major by itself; it
+waits in the Dependency Dashboard, and its checkbox opens the PR once the plugin
+supports 10.
+
 #### editorial-ui and Keycloak
 
 Signing in needs the realm running: `docker compose up -d keycloak`. `/desk` and
