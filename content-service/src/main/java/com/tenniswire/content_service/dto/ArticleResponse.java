@@ -28,6 +28,8 @@ public record ArticleResponse(
         String sourceLanguage,
         Instant parsedAt,
         Instant publishedAt,
+        // set once an edit has gone on the site after publication
+        Instant revisedAt,
         Instant updatedAt,
         Instant createdAt) {
 
@@ -65,6 +67,7 @@ public record ArticleResponse(
                 article.sourceLanguage(),
                 article.parsedAt(),
                 article.publishedAt(),
+                article.revisedAt(),
                 article.updatedAt(),
                 article.createdAt());
     }

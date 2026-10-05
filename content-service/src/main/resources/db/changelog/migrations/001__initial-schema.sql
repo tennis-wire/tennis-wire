@@ -53,6 +53,8 @@ CREATE TABLE articles (
                           published_at        TIMESTAMPTZ,
                           -- set once and kept through unpublishing: from then on slug and type are frozen
                           first_published_at  TIMESTAMPTZ,
+                          -- when an edit last went on the site; null until one has, and again after a republication
+                          revised_at          TIMESTAMPTZ,
                           created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                           updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                           version             BIGINT NOT NULL DEFAULT 0,

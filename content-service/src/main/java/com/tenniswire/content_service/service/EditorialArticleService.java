@@ -185,6 +185,8 @@ public class EditorialArticleService {
             if (article.firstPublishedAt() == null) {
                 article.firstPublishedAt(now);
             }
+            // published anew: whatever was revised before is part of this publication
+            article.revisedAt(null);
         } else {
             var edit = editRepository
                     .findById(id)
@@ -194,6 +196,7 @@ public class EditorialArticleService {
             // A failed check below rolls this back along with everything else
             apply(article, payloadOf(edit));
             validateForPublishing(article);
+            article.revisedAt(Instant.now());
             editRepository.delete(edit);
         }
         return view(articleRepository.saveAndFlush(article), staff);

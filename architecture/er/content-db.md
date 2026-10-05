@@ -32,6 +32,7 @@ erDiagram
         timestamptz parsed_at
         timestamptz published_at
         timestamptz first_published_at "never cleared: slug and type frozen"
+        timestamptz revised_at "last edit put on the site; null until then and after a republication"
         timestamptz created_at
         timestamptz updated_at "set by trigger"
         bigint version "optimistic lock"
