@@ -132,5 +132,30 @@ def test_find_embeds_recognises_the_usual_markup() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("src", "expected"),
+    [
+        (
+            "https://m.youtube.com/watch?v=abcdefGHIJK",
+            "https://www.youtube.com/watch?v=abcdefGHIJK",
+        ),
+        (
+            "https://youtube.com/watch?v=abcdefGHIJK&t=30",
+            "https://www.youtube.com/watch?v=abcdefGHIJK",
+        ),
+        # Only youtube.com and its subdomains
+        ("https://evilyoutube.com/watch?v=abcdefGHIJK", None),
+        ("https://youtube.com.evil.org/watch?v=abcdefGHIJK", None),
+        # The id goes into a URL as is, so it must look like one
+        ("https://www.youtube.com/watch?v=abc#x", None),
+        ("https://www.youtube.com/watch?v=abcdef%22onload", None),
+    ],
+)
+def test_youtube_watch_links(src: str, expected: str | None) -> None:
+    tree = lxml.html.document_fromstring(f'<html><body><iframe src="{src}"></iframe></body></html>')
+
+    assert find_embeds(tree) == ((expected,) if expected else ())
+
+
 def _page(body: str) -> bytes:
     return f"<html><head><title>T</title></head><body>{body}</body></html>".encode()

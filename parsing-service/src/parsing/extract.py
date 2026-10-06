@@ -15,6 +15,7 @@ from lxml.etree import ParserError
 from trafilatura.metadata import extract_metadata
 
 from parsing.sources import ExtractRules
+from parsing.urls import host_allowed
 
 
 class ExtractionError(Exception):
@@ -101,6 +102,7 @@ _YOUTUBE = re.compile(
     r"([\w-]{6,})",
     re.IGNORECASE,
 )
+_VIDEO_ID = re.compile(r"[\w-]{6,}")
 _PERMALINK = re.compile(r'data-instgrm-permalink="([^"]+)"')
 
 
@@ -136,9 +138,9 @@ def _canonical_embed(url: str) -> str | None:
         tweet = parse_qs(parts.query).get("id", [""])[0]
         if tweet.isdigit():
             return f"https://x.com/i/status/{tweet}"
-    if host.endswith("youtube.com") and parts.path == "/watch":
+    if host_allowed(url, ["youtube.com"]) and parts.path == "/watch":
         video = parse_qs(parts.query).get("v", [""])[0]
-        if video:
+        if _VIDEO_ID.fullmatch(video):
             return f"https://www.youtube.com/watch?v={video}"
     return None
 
