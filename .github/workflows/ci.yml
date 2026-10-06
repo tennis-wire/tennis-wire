@@ -26,6 +26,7 @@ jobs:
     outputs:
       java: ${{ steps.areas.outputs.java }}
       python: ${{ steps.areas.outputs.python }}
+      parsing: ${{ steps.areas.outputs.parsing }}
       editorial_ui: ${{ steps.areas.outputs.editorial_ui }}
       public_web: ${{ steps.areas.outputs.public_web }}
       mobile: ${{ steps.areas.outputs.mobile }}
@@ -59,6 +60,7 @@ jobs:
           {
             echo "java=$(touched "$all|$java")"
             echo "python=$(touched "$all|^transcription-service/")"
+            echo "parsing=$(touched "$all|^parsing-service/")"
             echo "editorial_ui=$(touched "$all|$frontend|^apps/editorial-ui/")"
             echo "public_web=$(touched "$all|$frontend|^apps/public-web/")"
             echo "mobile=$(touched "$all|$frontend|^apps/mobile/")"
@@ -111,6 +113,42 @@ jobs:
       # dev group only: linters + tests run without the GPU/ML worker stack
       - name: Install dependencies
         run: uv sync --frozen --no-default-groups --group dev
+
+      - name: Lint
+        run: uv run --no-sync ruff check .
+
+      - name: Format check
+        run: uv run --no-sync ruff format --check .
+
+      - name: Type check
+        run: uv run --no-sync mypy src
+
+      - name: Tests
+        run: uv run --no-sync pytest
+
+  parsing-service:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.parsing != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: parsing-service
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: parsing-service/uv.lock
+
+      - name: Install Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --frozen
 
       - name: Lint
         run: uv run --no-sync ruff check .
