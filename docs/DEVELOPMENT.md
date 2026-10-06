@@ -24,6 +24,7 @@ Individual components, when the full stack is not needed:
 ```bash
 docker compose up -d postgres keycloak mailpit   # java services only
 docker compose up -d redis minio minio-init      # transcription, avatars
+docker compose up -d redis                       # parsing
 docker compose up -d postgres keycloak minio minio-init   # content-service with uploads
 ```
 
@@ -485,6 +486,7 @@ intended behaviour, not a misconfiguration.
 | discussion-service | 8093 | requires PostgreSQL |
 | user-service | 8092 | requires PostgreSQL |
 | transcription-service | 8001 | requires Redis + MinIO |
+| parsing-service | — | a worker, no port; requires Redis |
 | editorial-ui (Vite) | 5173 | |
 | public-web (Next.js) | 3000 | |
 | mobile (Expo dev server) | 8081 | |
@@ -597,6 +599,39 @@ Like the Java services, it validates the token itself against Keycloak
 path that works without it. A job is visible only to the author who started
 it, and `GET /api/transcribe/jobs` lists the caller's own.
 
+### Parsing service
+
+```bash
+cd parsing-service
+cp .env.example .env
+uv sync
+uv run python -m parsing run-once                       # every enabled source, once
+uv run python -m parsing run-once --source bounces --limit 10 --ignore-seen
+uv run arq parsing.worker.WorkerSettings                # on schedule
+```
+
+It collects news from the sources in `sources.yaml`
+([architecture/aggregator.md](../architecture/aggregator.md)). Until the
+aggregator exists it writes to `OUTPUT_DIR` (`out/`): `items-<date>.jsonl`,
+`changes.jsonl`, `runs.jsonl`, and the pages the text came from under `html/`.
+Nothing is deployed; it runs locally to check sources.
+
+State — feed validators, articles seen, the schedule, pauses after a block —
+lives in Redis database 1, and the worker's jobs in the queue `arq:parsing`. The
+transcription worker uses database 0 and arq's default queue, so neither takes
+the other's jobs. `run-once` shares the state with the worker: a source run by
+hand is not collected again on schedule. `--ignore-seen` collects it anyway, and
+with `--limit 10` it is the check of a new source on its last ten articles
+(design §4.3). To start from nothing:
+`docker compose exec redis redis-cli -n 1 flushdb`.
+
+A tick once a minute enqueues the sources whose `interval` has passed, reading
+`sources.yaml` afresh, so an edit applies without a restart. A source that
+refuses us (403, 429, an anti-bot page, a consent wall) is paused, from one
+minute doubling up to an hour, and its line in `runs.jsonl` says how it was
+refused. `BOT_CONTACT` goes into the User-Agent
+(`TennisWireBot/0.1.0 (+contact)`) and is filled before deployment.
+
 ### Frontends
 
 Each app under `apps/` has its own `package-lock.json` and is installed
@@ -690,7 +725,7 @@ compile and belongs in `sx`.
 ./gradlew :<module>:build             # the same for one module
 ./gradlew :<module>:test              # tests only — no PMD, no SpotBugs
 
-cd transcription-service
+cd transcription-service              # and parsing-service: the same four
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy src
@@ -707,8 +742,8 @@ npm run build                         # editorial-ui, public-web (next build typ
 ## CI
 
 One workflow, `.github/workflows/ci.yml`, running the same checks as above. Its
-jobs `java`, `transcription-service`, `editorial-ui`, `public-web` and `mobile`
-are the required checks on `main`.
+jobs `java`, `transcription-service`, `parsing-service`, `editorial-ui`,
+`public-web` and `mobile` are the required checks on `main`.
 
 On a pull request a first job, `changes`, looks at what the pull request changes
 against the base branch as it stands, and each area job runs only if its files
