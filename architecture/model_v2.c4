@@ -107,7 +107,7 @@ model {
 
     external sportsMedia 'Спортивные медиа' {
       #planned
-      description 'ESPN, Tennis.com, Eurosport и др.'
+      description 'Eurosport / TNT Sports, sports.ru, Tennis Majors, Bounces и др. ESPN — за антибот-защитой. Список — architecture/aggregator.md §4.1'
     }
 
     external socialMedia 'Соцсети' {
@@ -143,34 +143,41 @@ model {
   system tennisService 'Tennis News Service' {
     description 'Теннисный новостной сервис'
 
-    // ----- PARSING SUBSYSTEM -----
-    container parsingSubsystem 'Парсинг' {
+    // ----- PARSING SERVICE -----
+    // architecture/aggregator.md: профили источников, ступени, поведение на сайтах
+    container parsingSubsystem 'Parsing Service' {
       #planned
-      description 'Сбор данных из внешних источников'
-      technology 'Python'
+      description 'parsing-service: сбор новостей из внешних источников по профилям. Открытые сайты — RSS, news-sitemap, HTML-лента; закрытые сайты и соцсети — позже. До агрегатора пишет в локальные файлы'
+      technology 'Python, uv, arq'
 
-      service parserOrchestrator 'Parser Orchestrator' {
+      service parserScheduler 'Scheduler' {
         #planned
-        description 'Управление парсерами, расписание, мониторинг'
-        technology 'Python'
+        description 'Cron раз в минуту ставит задачи источникам, у которых подошёл срок; одна задача на источник. run-once — прогон одного источника для проверки'
+        technology 'arq'
       }
 
-      service atpParser 'ATP/WTA Parser' {
+      service feedAdapters 'Feed Adapters' {
         #planned
-        description 'Парсер официальных источников'
-        technology 'Python, Scrapy'
+        description 'Новые записи источника по его ступени: RSS, news-sitemap, HTML-лента. Условный GET, канонический URL, фильтры профиля, виденные пропускаются'
+        technology 'httpx, feedparser, lxml'
       }
 
-      service mediaParser 'Media Parser' {
+      service extractor 'Extractor' {
         #planned
-        description 'Парсер спортивных медиа'
-        technology 'Python, BeautifulSoup'
+        description 'Страница статьи -> текст в markdown, метаданные, ссылки на встроенные посты. Только хосты из профиля'
+        technology 'trafilatura'
+      }
+
+      queue parserState 'Job Queue' {
+        #planned
+        description 'Задачи прогонов, ETag и Last-Modified лент, виденные URL, паузы после блокировок'
+        technology 'Redis, arq'
       }
 
       service socialParser 'Social Parser' {
         #planned
-        description 'Парсер соцсетей'
-        technology 'Python, API clients'
+        description 'Соцсети — часть 6, способ не выбран'
+        technology 'TBD'
       }
     }
 
@@ -187,13 +194,13 @@ model {
 
       service deduplicator 'Deduplicator' {
         #planned
-        description 'Дедупликация и нормализация данных'
+        description 'Одна статья — одна запись (канонический URL, id из ленты). Сюжеты — после замера'
       }
 
       database aggregatorDb 'Aggregator DB' {
         #planned
-        description 'Сырые данные, статусы обработки'
-        technology 'PostgreSQL / MongoDB'
+        description 'Реестр источников, новости, статусы обработки'
+        technology 'PostgreSQL, Liquibase'
       }
     }
 
@@ -377,20 +384,23 @@ model {
   admin -> tennisService.identity 'Заводит сотрудников, роли, отзыв доступа (admin-консоль)'
   admin -> tennisService.apiGateway 'DELETE /api/users/{id}: удаление аккаунта через поддержку, без интерфейса'
 
-  // --- External sources -> Parsers ---
-  tennisDataSources.atpWta -> tennisService.parsingSubsystem.atpParser 'Данные'
-  tennisDataSources.sportsMedia -> tennisService.parsingSubsystem.mediaParser 'Данные'
-  tennisDataSources.socialMedia -> tennisService.parsingSubsystem.socialParser 'Данные'
-  tennisDataSources.telegramChannels -> tennisService.parsingSubsystem.socialParser 'Данные'
+  // --- External sources -> Parsing service ---
+  tennisDataSources.sportsMedia -> tennisService.parsingSubsystem.feedAdapters 'RSS, news-sitemap, HTML-лента'
+  tennisDataSources.sportsMedia -> tennisService.parsingSubsystem.extractor 'Страницы статей'
+  tennisDataSources.atpWta -> tennisService.parsingSubsystem.feedAdapters 'За антибот-защитой — часть 5'
+  tennisDataSources.socialMedia -> tennisService.parsingSubsystem.socialParser 'Посты, сторис, ответы'
+  tennisDataSources.telegramChannels -> tennisService.parsingSubsystem.socialParser 'Посты'
 
-  // --- Parsers -> Aggregator ---
-  tennisService.parsingSubsystem.parserOrchestrator -> tennisService.parsingSubsystem.atpParser 'Управляет'
-  tennisService.parsingSubsystem.parserOrchestrator -> tennisService.parsingSubsystem.mediaParser 'Управляет'
-  tennisService.parsingSubsystem.parserOrchestrator -> tennisService.parsingSubsystem.socialParser 'Управляет'
+  // --- Parsing service internal ---
+  tennisService.parsingSubsystem.parserScheduler -> tennisService.parsingSubsystem.parserState 'Ставит задачи'
+  tennisService.parsingSubsystem.feedAdapters -> tennisService.parsingSubsystem.parserState 'Забирает задачи; ETag, виденные URL, паузы'
+  tennisService.parsingSubsystem.feedAdapters -> tennisService.parsingSubsystem.extractor 'Новые записи'
 
-  tennisService.parsingSubsystem.atpParser -> tennisService.aggregator.aggregatorApi 'Сырые данные'
-  tennisService.parsingSubsystem.mediaParser -> tennisService.aggregator.aggregatorApi 'Сырые данные'
-  tennisService.parsingSubsystem.socialParser -> tennisService.aggregator.aggregatorApi 'Сырые данные'
+  // --- Parsing service -> Aggregator ---
+  // Часть 2: до неё сборщик пишет в локальные файлы
+  tennisService.parsingSubsystem.parserScheduler -> tennisService.aggregator.aggregatorApi 'Реестр источников, /internal/**'
+  tennisService.parsingSubsystem.extractor -> tennisService.aggregator.aggregatorApi 'Новости пачкой, /internal/**'
+  tennisService.parsingSubsystem.socialParser -> tennisService.aggregator.aggregatorApi 'Посты, /internal/**'
 
   // --- Aggregator internal ---
   tennisService.aggregator.aggregatorApi -> tennisService.aggregator.deduplicator 'Обработка'
