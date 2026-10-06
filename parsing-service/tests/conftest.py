@@ -1,6 +1,5 @@
 """Shared fixtures: settings without .env, fake Redis, a profile factory, saved pages."""
 
-import gzip
 from collections.abc import AsyncIterator, Callable
 from datetime import timedelta
 from pathlib import Path
@@ -20,8 +19,7 @@ ProfileFactory = Callable[..., SourceProfile]
 
 
 def fixture_bytes(name: str) -> bytes:
-    data = (FIXTURES / name).read_bytes()
-    return gzip.decompress(data) if name.endswith(".gz") else data
+    return (FIXTURES / name).read_bytes()
 
 
 @pytest.fixture

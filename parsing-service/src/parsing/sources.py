@@ -24,6 +24,10 @@ class ExtractRules(BaseModel):
 
     body: str | None = None
     drop: tuple[str, ...] = ()
+    # Promos and "read also" lines written into the body as ordinary paragraphs: CSS cannot
+    # tell them apart, their text can
+    paragraph: str = "p"
+    drop_paragraphs: tuple[re.Pattern[str], ...] = ()
 
 
 class SourceProfile(BaseModel):
@@ -31,7 +35,7 @@ class SourceProfile(BaseModel):
 
     key: str = Field(pattern=r"^[a-z0-9]+(-[a-z0-9]+)*$")
     name: str
-    kind: Literal["rss"]
+    kind: Literal["rss", "news_sitemap"]
     url: HttpUrl
     hosts: tuple[str, ...] = Field(min_length=1)
     language: str = Field(pattern=r"^[a-z]{2,3}$")
