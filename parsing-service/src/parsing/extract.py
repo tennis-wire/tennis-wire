@@ -49,6 +49,11 @@ def extract_article(
     for selector in rules.drop:
         for element in content.cssselect(selector):
             element.drop_tree()
+    if rules.drop_paragraphs:
+        for element in content.cssselect(rules.paragraph):
+            paragraph = " ".join(element.text_content().split())
+            if any(pattern.search(paragraph) for pattern in rules.drop_paragraphs):
+                element.drop_tree()
 
     text = trafilatura.extract(
         content,

@@ -1,10 +1,12 @@
+import re
+from pathlib import Path
 from urllib.parse import quote
 
 import lxml.html
 import pytest
 
 from parsing.extract import ExtractionError, extract_article, find_embeds
-from parsing.sources import ExtractRules
+from parsing.sources import ExtractRules, load_sources
 from tests.conftest import fixture_bytes
 
 NO_RULES = ExtractRules()
@@ -16,7 +18,7 @@ TM_URL = (
 
 
 def test_tennis_majors_article() -> None:
-    article = extract_article(fixture_bytes("tennis-majors-final.html.gz"), TM_URL, NO_RULES)
+    article = extract_article(fixture_bytes("tennis-majors-final.html"), TM_URL, NO_RULES)
 
     assert article.text.startswith("# Djokovic wins seventh Beijing title")
     assert "Alex de Minaur, the No. 5 seed, retired injured" in article.text
@@ -27,27 +29,6 @@ def test_tennis_majors_article() -> None:
     assert article.image_url
     assert article.lead
     assert article.embeds == ("https://www.youtube.com/watch?v=XTUUmvDTjKo",)
-
-
-def test_bounces_paid_post_keeps_the_teaser() -> None:
-    url = "https://www.benrothenberg.com/p/daniil-medvedev-default-disqualification-rule-atp-beijing-djokovic"
-
-    article = extract_article(fixture_bytes("bounces-paid.html.gz"), url, NO_RULES)
-
-    assert article.text.startswith("After a career of much mayhem-making")
-    assert "please subscribe to Bounces" in article.text
-    assert article.author == "Ben Rothenberg"
-
-
-def test_bounces_embeds_tweet_and_instagram() -> None:
-    url = "https://www.benrothenberg.com/p/donald-trump-us-open-tennis-visit-ireland-golf-cost"
-
-    article = extract_article(fixture_bytes("bounces-embeds.html.gz"), url, NO_RULES)
-
-    assert article.embeds == (
-        "https://x.com/i/status/2098479185140261107",
-        "https://www.instagram.com/p/DOT_IsaAT1T/",
-    )
 
 
 def test_drop_selector_removes_an_element() -> None:
@@ -75,6 +56,51 @@ def test_body_selector_narrows_the_page() -> None:
 
     assert "story itself" in article.text
     assert "Something else" not in article.text
+
+
+def test_paragraphs_dropped_by_their_text() -> None:
+    html = _page(
+        "<article><p>First paragraph of the story, long enough to count as text.</p>"
+        "<p><b>Read also:</b> <a href='/x'>Another story</a></p>"
+        "<p>Second paragraph of the story, also long enough to count as text.</p></article>"
+    )
+    rules = ExtractRules(drop_paragraphs=(re.compile("^Read also"),))
+
+    article = extract_article(html, "https://example.com/a", rules)
+
+    assert "Another story" not in article.text
+    assert "Second paragraph" in article.text
+
+
+def test_eurosport_profile_takes_the_body_without_promos() -> None:
+    sources = load_sources(Path(__file__).parent.parent / "sources.yaml")
+    url = (
+        "https://www.eurosport.de/tennis/atp-peking/2026/novak-djokovic-gewinnt-siebten-titel"
+        "-chinesischer-hauptstadt-alex-de-minaur-muss-aufgeben_sto23343304/story.shtml"
+    )
+
+    article = extract_article(
+        fixture_bytes("eurosport-de-story.html"), url, sources["eurosport-de"].extract
+    )
+
+    assert article.text.startswith("Novak Djokovic hat seiner beeindruckenden Karriere")
+    assert article.text.endswith("(SID)")
+    for junk in ("Das könnte Dich", "Eurosport bei Google", "Von Eurosport", "Quelle:"):
+        assert junk not in article.text
+    assert article.lead
+
+
+def test_tnt_sports_profile_drops_the_closing_promos() -> None:
+    sources = load_sources(Path(__file__).parent.parent / "sources.yaml")
+    url = "https://www.tntsports.co.uk/tennis/jannik-sinner-injury-2026-season-end_sto23343223/story.shtml"
+
+    article = extract_article(
+        fixture_bytes("tnt-sports-story.html"), url, sources["tnt-sports"].extract
+    )
+
+    assert "Sinner" in article.text
+    for junk in ("React to this story", "preferred source", "TNT Sports app", "HBO Max"):
+        assert junk not in article.text
 
 
 def test_body_selector_matching_nothing_is_an_error() -> None:

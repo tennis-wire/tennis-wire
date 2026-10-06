@@ -18,3 +18,89 @@ sources:
     hosts: [benrothenberg.com]
     language: en
     interval: PT30M
+
+  # Eurosport: one platform, six editions with their own newsrooms. No RSS; the news sitemap
+  # holds every sport for 48 hours, so tennis is picked by section and videos are dropped.
+  # Checked on 10 articles each (architecture/aggregator.md 4.3): on the whole page the generic
+  # extraction takes the byline, the "on Google" button, video teasers, related cards and the
+  # promos at the end along with the text; the platform's data-testid markers drop them.
+  - key: tnt-sports
+    name: TNT Sports (Eurosport UK)
+    kind: news_sitemap
+    url: https://www.tntsports.co.uk/sitemaps/news/sitemap-news-recent.xml
+    hosts: [tntsports.co.uk]
+    language: en
+    include: ['^https://www\.tntsports\.co\.uk/tennis/']
+    exclude: ['_vid\d+/']
+    interval: PT1M
+    extract: &eurosport-extract
+      # The body alone: with the page around it the generic extraction keeps or drops the
+      # heading and the standfirst from one article to the next. The title comes from the
+      # sitemap, the standfirst as the lead (og:description, cut at 160 characters).
+      body: '[data-testid="body"]'
+      drop:
+        - '[data-testid="body-thumbnail"]'
+        - '[data-testid="body-list"]'
+        - '[data-testid="secondary-card-content"]'
+      paragraph: '[data-testid="body-paragraph"], [data-testid="body-subtitle"]'
+      drop_paragraphs:
+        - 'HBO Max\.?$'
+        - '^Add TNT Sports as a preferred source'
+        - '^Download the TNT Sports app'
+        - '^Das könnte Dich (auch|ebenfalls) interessieren'
+        - '^Waar kijk je\?$'
+
+  - key: eurosport-fr
+    name: Eurosport France
+    kind: news_sitemap
+    url: https://www.eurosport.fr/sitemaps/news/sitemap-news-recent.xml
+    hosts: [eurosport.fr]
+    language: fr
+    include: ['^https://www\.eurosport\.fr/tennis/']
+    exclude: ['_vid\d+/']
+    interval: PT1M
+    extract: *eurosport-extract
+
+  - key: eurosport-de
+    name: Eurosport Deutschland
+    kind: news_sitemap
+    url: https://www.eurosport.de/sitemaps/news/sitemap-news-recent.xml
+    hosts: [eurosport.de]
+    language: de
+    include: ['^https://www\.eurosport\.de/tennis/']
+    exclude: ['_vid\d+/']
+    interval: PT1M
+    extract: *eurosport-extract
+
+  - key: eurosport-it
+    name: Eurosport Italia
+    kind: news_sitemap
+    url: https://www.eurosport.it/sitemaps/news/sitemap-news-recent.xml
+    hosts: [eurosport.it]
+    language: it
+    include: ['^https://www\.eurosport\.it/tennis/']
+    exclude: ['_vid\d+/']
+    interval: PT1M
+    extract: *eurosport-extract
+
+  - key: eurosport-es
+    name: Eurosport España
+    kind: news_sitemap
+    url: https://www.eurosport.es/sitemaps/news/sitemap-news-recent.xml
+    hosts: [eurosport.es]
+    language: es
+    include: ['^https://www\.eurosport\.es/tenis/']
+    exclude: ['_vid\d+/']
+    interval: PT1M
+    extract: *eurosport-extract
+
+  - key: eurosport-nl
+    name: Eurosport Nederland
+    kind: news_sitemap
+    url: https://www.eurosport.nl/sitemaps/news/sitemap-news-recent.xml
+    hosts: [eurosport.nl]
+    language: nl
+    include: ['^https://www\.eurosport\.nl/tennis/']
+    exclude: ['_vid\d+/']
+    interval: PT1M
+    extract: *eurosport-extract
