@@ -1,0 +1,20 @@
+# Source profiles: architecture/aggregator.md section 4.2.
+# A new source is checked before it goes in: section 4.3.
+
+sources:
+  - key: tennis-majors
+    name: Tennis Majors
+    kind: rss
+    url: https://www.tennismajors.com/feed
+    hosts: [tennismajors.com]
+    language: en
+    interval: PT1M
+
+  # Columns, not news. Paid posts reach the feed and the page cut short: a lead is all there is.
+  - key: bounces
+    name: Bounces (Ben Rothenberg)
+    kind: rss
+    url: https://www.benrothenberg.com/feed
+    hosts: [benrothenberg.com]
+    language: en
+    interval: PT30M
