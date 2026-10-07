@@ -12,7 +12,7 @@ REPO_SOURCES = Path(__file__).parent.parent / "sources.yaml"
 def test_the_committed_sources_file_loads() -> None:
     sources = load_sources(REPO_SOURCES)
 
-    assert {"tennis-majors", "bounces", "tnt-sports", "eurosport-es"} <= sources.keys()
+    assert {"tennis-majors", "bounces", "tnt-sports", "eurosport-es", "sports-ru"} <= sources.keys()
     # Eurosport editions share one set of extraction rules through a YAML anchor
     assert sources["eurosport-fr"].extract == sources["tnt-sports"].extract
     assert all(profile.enabled for profile in sources.values())

@@ -11,7 +11,8 @@ from parsing.sources import SourceProfile
 from parsing.text import html_to_text
 
 
-def parse_rss(body: bytes, profile: SourceProfile) -> list[FeedEntry]:
+def parse_rss(body: bytes, profile: SourceProfile, encoding: str | None = None) -> list[FeedEntry]:
+    # XML declares its own encoding
     feed = feedparser.parse(body)
     # bozo alone is common (a stray entity, a wrong content type); no entries with it is not
     if feed.bozo and not feed.entries:

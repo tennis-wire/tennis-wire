@@ -158,7 +158,7 @@ async def _run_feed(
     if response.status != 200:
         raise FetchError(f"feed answered {response.status}")
 
-    entries = ADAPTERS[profile.kind](response.body, profile)
+    entries = ADAPTERS[profile.kind](response.body, profile, response.charset)
     report.entries = len(entries)
     taken = 0
     for entry in entries:
@@ -328,6 +328,7 @@ async def _fill_text(
     item.lead = item.lead or article.lead
     item.author = item.author or article.author
     item.image_url = article.image_url
+    item.published_at = item.published_at or article.published
     item.categories = list(dict.fromkeys([*item.categories, *article.tags]))
     item.embeds = list(article.embeds)
     item.extraction = ExtractionStatus.OK

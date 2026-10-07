@@ -16,7 +16,10 @@ _NS = {
 _PARSER = etree.XMLParser(resolve_entities=False, no_network=True, load_dtd=False, huge_tree=False)
 
 
-def parse_news_sitemap(body: bytes, profile: SourceProfile) -> list[FeedEntry]:
+def parse_news_sitemap(
+    body: bytes, profile: SourceProfile, encoding: str | None = None
+) -> list[FeedEntry]:
+    # XML declares its own encoding
     try:
         root = etree.fromstring(body, parser=_PARSER)
     except etree.XMLSyntaxError as error:
