@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { Editor } from '@tiptap/core'
+import type { Editor } from '@tiptap/core'
 import Document from '@tiptap/extension-document'
 import Paragraph from '@tiptap/extension-paragraph'
 import Text from '@tiptap/extension-text'
@@ -7,6 +7,7 @@ import { Slice } from '@tiptap/pm/model'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { MEDIA_BASE_URL } from '../lib/media'
+import { destroyEditors, testEditor } from '../testEditor'
 import { Figure } from './Figure'
 import { PictureInput } from './PictureInput'
 
@@ -21,7 +22,7 @@ function setUp(
 ) {
     const notify = vi.fn()
     const copyMock = vi.fn(copy)
-    const editor = new Editor({
+    const editor = testEditor({
         extensions: [
             Document,
             Paragraph,
@@ -61,6 +62,8 @@ beforeEach(() => {
 afterEach(() => {
     vi.restoreAllMocks()
 })
+
+afterEach(destroyEditors)
 
 describe('PictureInput', () => {
     it('uploads a pasted picture and puts it in the text', async () => {

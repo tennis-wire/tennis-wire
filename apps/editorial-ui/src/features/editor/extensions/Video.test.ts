@@ -1,15 +1,18 @@
 // @vitest-environment jsdom
-import { Editor } from '@tiptap/core'
+import type { Editor } from '@tiptap/core'
 import Document from '@tiptap/extension-document'
 import Paragraph from '@tiptap/extension-paragraph'
 import Text from '@tiptap/extension-text'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
+import { destroyEditors, testEditor } from '../testEditor'
 import { Video } from './Video'
 
 function editor(content?: string): Editor {
-    return new Editor({ extensions: [Document, Paragraph, Text, Video], content })
+    return testEditor({ extensions: [Document, Paragraph, Text, Video], content })
 }
+
+afterEach(destroyEditors)
 
 const SRC = 'https://media.example.com/2026/09/v.mp4'
 

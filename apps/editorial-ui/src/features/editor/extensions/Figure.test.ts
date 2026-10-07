@@ -1,16 +1,19 @@
 // @vitest-environment jsdom
-import { Editor } from '@tiptap/core'
+import type { Editor } from '@tiptap/core'
 import Document from '@tiptap/extension-document'
 import Paragraph from '@tiptap/extension-paragraph'
 import Text from '@tiptap/extension-text'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import { MEDIA_BASE_URL } from '../lib/media'
+import { destroyEditors, testEditor } from '../testEditor'
 import { Figure } from './Figure'
 
 function editor(content?: string): Editor {
-    return new Editor({ extensions: [Document, Paragraph, Text, Figure], content })
+    return testEditor({ extensions: [Document, Paragraph, Text, Figure], content })
 }
+
+afterEach(destroyEditors)
 
 const SRC = `${MEDIA_BASE_URL}2026/09/court.jpg`
 

@@ -1,13 +1,16 @@
 // @vitest-environment jsdom
-import { Editor } from '@tiptap/core'
-import { describe, expect, it } from 'vitest'
+import type { Editor } from '@tiptap/core'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import { markdownToHtml } from '../lib/markdown'
+import { destroyEditors, testEditor } from '../testEditor'
 import { articleExtensions } from './useArticleEditor'
 
 function editor(content?: string): Editor {
-    return new Editor({ extensions: articleExtensions(), content })
+    return testEditor({ extensions: articleExtensions(), content })
 }
+
+afterEach(destroyEditors)
 
 describe('article schema', () => {
     it('drops code from a heading and keeps the heading', () => {
