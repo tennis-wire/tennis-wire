@@ -1,4 +1,5 @@
 import re
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import quote
 
@@ -101,6 +102,67 @@ def test_tnt_sports_profile_drops_the_closing_promos() -> None:
     assert "Sinner" in article.text
     for junk in ("React to this story", "preferred source", "TNT Sports app", "HBO Max"):
         assert junk not in article.text
+
+
+def test_publication_time_from_the_page() -> None:
+    html = _page(
+        '<time data-test="published-date" datetime="2026-10-07T22:03:00+03:00">сегодня</time>'
+        "<article><p>Text of the story, long enough to be kept as the article body.</p></article>"
+    )
+    rules = ExtractRules(published='time[data-test="published-date"]')
+
+    article = extract_article(html, "https://example.com/a", rules)
+
+    assert article.published == datetime(2026, 10, 7, 19, 3, tzinfo=UTC)
+
+
+def test_publication_time_from_meta_and_without_a_zone() -> None:
+    body = (
+        "<article><p>Text of the story, long enough to be kept as the article body.</p></article>"
+    )
+    with_zone = (
+        '<html><head><meta property="article:published_time" content="2026-10-07T10:00:00Z">'
+        f"</head><body>{body}</body></html>"
+    ).encode()
+    without = (
+        '<html><head><meta property="article:published_time" content="2026-10-07T10:00:00">'
+        f"</head><body>{body}</body></html>"
+    ).encode()
+
+    assert extract_article(with_zone, "https://example.com/a", NO_RULES).published == datetime(
+        2026, 10, 7, 10, 0, tzinfo=UTC
+    )
+    assert extract_article(without, "https://example.com/a", NO_RULES).published is None
+
+
+def test_a_chosen_body_keeps_its_short_paragraphs() -> None:
+    html = _page(
+        "<div class='content'><p>Сафиуллин победил Хиджикату.</p><p>Руне уступил Альтмайеру.</p>"
+        "<p>Призовой фонд – 9 415 725 долларов</p></div>"
+    )
+
+    article = extract_article(html, "https://example.com/a", ExtractRules(body="div.content"))
+
+    assert "Руне уступил Альтмайеру." in article.text
+    assert "Призовой фонд" in article.text
+
+
+def test_sports_ru_profile() -> None:
+    sources = load_sources(Path(__file__).parent.parent / "sources.yaml")
+    url = (
+        "https://www.sports.ru/tennis/1117392679-vashero-o-tom-chto-mozhet-poteryat-ochki-za-titul"
+        "-v-shanxae-ya-obsuzhd.html"
+    )
+
+    article = extract_article(
+        fixture_bytes("sports-ru-news.html"), url, sources["sports-ru"].extract
+    )
+
+    assert "Валентин Вашеро рассказал о давлении" in article.text
+    assert article.text.endswith("дадут новые возможности».")
+    for junk in ("Опубликовал", "Источник", "Синнер завершил сезон"):
+        assert junk not in article.text
+    assert article.published == datetime(2026, 10, 7, 18, 2, tzinfo=UTC)
 
 
 def test_body_selector_matching_nothing_is_an_error() -> None:

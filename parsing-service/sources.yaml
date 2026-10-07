@@ -48,6 +48,7 @@ sources:
         - 'HBO Max\.?$'
         - '^Add TNT Sports as a preferred source'
         - '^Download the TNT Sports app'
+        - '^The streaming home for TNT Sports'
         - '^Das könnte Dich (auch|ebenfalls) interessieren'
         - '^Waar kijk je\?$'
 
@@ -105,3 +106,43 @@ sources:
     exclude: ['_vid\d+/']
     interval: PT1M
     extract: *eurosport-extract
+
+  # sports.ru: no tennis RSS (the rubric feed is empty, the common one holds 20 items of every
+  # sport), no sitemap, /api/ closed by robots.txt. The list pages are rendered on the server.
+  # The precise time comes from the article page.
+  - key: sports-ru
+    name: Sports.ru, news
+    kind: html
+    url: https://www.sports.ru/tennis/news/
+    hosts: [sports.ru]
+    language: ru
+    # News addresses only: the list carries promos too (/special/...)
+    include: ['^https://www\.sports\.ru/tennis/\d+-']
+    interval: PT1M
+    listing:
+      item: 'div.short-news p'
+      link: 'a.short-text'
+      title: 'a.short-text strong'
+      lead_attr: title
+    extract:
+      # Without it the extraction also takes the title, the comment counter and the
+      # "recommended" block, and on a page with a long comment thread loses the text entirely
+      body: 'div.news-content'
+      # The byline, and "read also" links set as a bold paragraph of their own
+      drop: ['.news-source', 'a.sb-link.sb-text--bold']
+      published: 'time[data-test="published-date"]'
+
+  # Posts the editors put on the tennis front page: columns, interviews, analysis. Pinned old
+  # ones (the season calendar) come once, at the first run.
+  - key: sports-ru-posts
+    name: Sports.ru, posts
+    kind: html
+    url: https://www.sports.ru/tennis/
+    hosts: [sports.ru]
+    language: ru
+    include: ['^https://www\.sports\.ru/tennis/blogs/\d+\.html$']
+    interval: PT10M
+    listing:
+      link: 'a[href*="/tennis/blogs/"]'
+    extract:
+      published: 'time[data-test="published-date"]'

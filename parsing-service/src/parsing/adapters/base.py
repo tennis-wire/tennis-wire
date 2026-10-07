@@ -24,4 +24,7 @@ class FeedEntry:
 
 
 class Adapter(Protocol):
-    def __call__(self, body: bytes, profile: SourceProfile) -> list[FeedEntry]: ...
+    # encoding: the charset of the response, for formats that do not carry their own
+    def __call__(
+        self, body: bytes, profile: SourceProfile, encoding: str | None = None
+    ) -> list[FeedEntry]: ...

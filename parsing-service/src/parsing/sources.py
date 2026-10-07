@@ -28,6 +28,24 @@ class ExtractRules(BaseModel):
     # tell them apart, their text can
     paragraph: str = "p"
     drop_paragraphs: tuple[re.Pattern[str], ...] = ()
+    # An element whose datetime attribute is the publication time, where the page has a precise
+    # one and the feed has none (an HTML list page)
+    published: str | None = None
+
+
+class ListingRules(BaseModel):
+    """Selectors for a list page (kind: html)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    # One entry of the list; without it every link matching `link` on the page is an entry
+    item: str | None = None
+    # The link to the article, inside the item when there is one
+    link: str
+    # The title inside the item; the link text otherwise
+    title: str | None = None
+    # An attribute of the link that holds the lead
+    lead_attr: str | None = None
 
 
 class SourceProfile(BaseModel):
@@ -35,7 +53,7 @@ class SourceProfile(BaseModel):
 
     key: str = Field(pattern=r"^[a-z0-9]+(-[a-z0-9]+)*$")
     name: str
-    kind: Literal["rss", "news_sitemap"]
+    kind: Literal["rss", "news_sitemap", "html"]
     url: HttpUrl
     hosts: tuple[str, ...] = Field(min_length=1)
     language: str = Field(pattern=r"^[a-z]{2,3}$")
@@ -47,6 +65,7 @@ class SourceProfile(BaseModel):
     quiet_after: timedelta = timedelta(days=1)
     respect_robots: bool = True
     extract: ExtractRules = ExtractRules()
+    listing: ListingRules | None = None
     enabled: bool = True
 
     @field_validator("hosts")
@@ -60,6 +79,8 @@ class SourceProfile(BaseModel):
             raise ValueError(f"{self.key}: url is outside hosts")
         if self.interval < MIN_INTERVAL:
             raise ValueError(f"{self.key}: interval is shorter than {MIN_INTERVAL}")
+        if (self.kind == "html") != (self.listing is not None):
+            raise ValueError(f"{self.key}: listing goes with kind html, and only with it")
         return self
 
     def wants(self, url: str) -> bool:

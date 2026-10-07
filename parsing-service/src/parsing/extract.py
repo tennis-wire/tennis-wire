@@ -7,6 +7,7 @@ gets a site wrong. architecture/aggregator.md sections 4.3 and 4.4.
 import copy
 import re
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from urllib.parse import parse_qs, unquote, urlsplit
 
 import lxml.html
@@ -15,6 +16,7 @@ from lxml.etree import ParserError
 from trafilatura.metadata import extract_metadata
 
 from parsing.sources import ExtractRules
+from parsing.text import parse_html
 from parsing.urls import host_allowed
 
 
@@ -31,6 +33,7 @@ class Article:
     canonical_url: str | None
     tags: tuple[str, ...]
     embeds: tuple[str, ...]
+    published: datetime | None = None
 
 
 def extract_article(
@@ -39,6 +42,7 @@ def extract_article(
     tree = _parse(html, encoding)
     meta = extract_metadata(copy.deepcopy(tree), default_url=url)
     embeds = find_embeds(tree)
+    published = _published(tree, rules.published)
 
     content = copy.deepcopy(tree)
     if rules.body:
@@ -63,7 +67,9 @@ def extract_article(
         include_tables=True,
         include_images=False,
         include_links=False,
-        favor_precision=True,
+        # Over a whole page precision keeps menus and teasers out; over a body the profile already
+        # chose it would only drop short paragraphs, such as the lines of a results digest
+        favor_precision=rules.body is None,
     )
     if not text or not text.strip():
         raise ExtractionError("no article text found")
@@ -75,19 +81,33 @@ def extract_article(
         canonical_url=_clean(meta.url),
         tags=tuple(dict.fromkeys([*(meta.categories or []), *(meta.tags or [])])),
         embeds=embeds,
+        published=published,
     )
 
 
+def _published(tree: lxml.html.HtmlElement, selector: str | None) -> datetime | None:
+    """A precise publication time: the profile's element, else article:published_time.
+
+    trafilatura gives the date alone, which is not enough to order the news of one day.
+    """
+    candidates: list[str] = []
+    if selector:
+        candidates += [element.get("datetime", "") for element in tree.cssselect(selector)[:1]]
+    candidates += _strings(tree.xpath("//meta[@property='article:published_time']/@content"))
+    for value in candidates:
+        try:
+            when = datetime.fromisoformat(value.strip())
+        except ValueError:
+            continue
+        # A time without a zone could be anywhere; better none than a wrong one
+        if when.tzinfo is not None:
+            return when.astimezone(UTC)
+    return None
+
+
 def _parse(html: bytes, encoding: str | None) -> lxml.html.HtmlElement:
-    # The charset of the response wins over a <meta> in the page, as in a browser
     try:
-        if encoding:
-            try:
-                parser = lxml.html.HTMLParser(encoding=encoding)
-            except LookupError:
-                return lxml.html.document_fromstring(html)
-            return lxml.html.document_fromstring(html, parser=parser)
-        return lxml.html.document_fromstring(html)
+        return parse_html(html, encoding)
     except (ParserError, ValueError) as error:
         raise ExtractionError(f"unparsable page: {error}") from error
 
