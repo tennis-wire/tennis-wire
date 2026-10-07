@@ -111,19 +111,22 @@ public interface ReportRepository extends JpaRepository<Report, UUID> {
             @Param("resolution") ReportResolution resolution,
             @Param("resolvedBy") @Nullable UUID resolvedBy);
 
-    // The batch twin of closeOpen, for what the service closes on its own: a whole reader's worth of
-    // comments on an erase, a batch of texts past their term on the wipe. Nobody decided these, so
-    // there is no resolvedBy to record. By the time an erase runs it, the comments nothing stood on
-    // are gone and their reports with them; what it closes is what survived.
+    // The batch twin of closeOpen: a whole reader's worth of comments on an erase, a batch of texts
+    // past their term on the wipe, everything a banned author had standing on a sweep. Only the sweep
+    // is somebody's decision; the other two pass no resolvedBy. By the time an erase runs it, the
+    // comments nothing stood on are gone and their reports with them; what it closes is what survived.
     @Modifying
     @Query("""
         update Report r
         set r.resolvedAt = current_timestamp,
             r.resolution = :resolution,
-            r.resolvedBy = null,
+            r.resolvedBy = :resolvedBy,
             r.reporterHash = null,
             r.bodyAtReport = null
         where r.commentId in :commentIds and r.resolvedAt is null
         """)
-    int closeOpenOn(@Param("commentIds") Collection<UUID> commentIds, @Param("resolution") ReportResolution resolution);
+    int closeOpenOn(
+            @Param("commentIds") Collection<UUID> commentIds,
+            @Param("resolution") ReportResolution resolution,
+            @Param("resolvedBy") @Nullable UUID resolvedBy);
 }

@@ -68,7 +68,7 @@ class ErasedReaderWriter {
         comments.anonymize(batch);
         // read back: anonymize wrote around the entities and cleared the context behind it
         collapse.of(comments.findAllById(batch), wereShown);
-        reports.closeOpenOn(batch, ReportResolution.VOIDED);
+        reports.closeOpenOn(batch, ReportResolution.VOIDED, null);
     }
 
     @Transactional

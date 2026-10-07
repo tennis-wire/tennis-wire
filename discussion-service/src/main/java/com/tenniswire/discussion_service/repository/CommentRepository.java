@@ -158,6 +158,10 @@ where author_id = :authorId and deleted_at is null
     @Query("select c.id from Comment c where c.authorId = :authorId")
     List<UUID> findIdsByAuthor(@Param("authorId") UUID authorId);
 
+    // Ids for the same reason: the sweep that takes them down locks their trees before reading a row
+    @Query("select c.id from Comment c where c.authorId = :authorId and c.deletedAt is null")
+    List<UUID> findStandingIdsByAuthor(@Param("authorId") UUID authorId);
+
     // Bare ids rather than entities: nothing lands in the persistence context before the tree lock,
     // so the comments read once it is held come from the database.
     @Query("select distinct c.rootId from Comment c where c.id in :ids")

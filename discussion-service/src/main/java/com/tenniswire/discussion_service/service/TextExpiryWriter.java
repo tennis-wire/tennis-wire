@@ -39,7 +39,7 @@ class TextExpiryWriter {
         treeLock.hold(due);
         comments.eraseTextOf(due, cutoff);
         // The whole batch: a comment the update skipped has no report open, an erase voided them first
-        reports.closeOpenOn(due, ReportResolution.EXPIRED);
+        reports.closeOpenOn(due, ReportResolution.EXPIRED, null);
         return OptionalInt.of(due.size());
     }
 }

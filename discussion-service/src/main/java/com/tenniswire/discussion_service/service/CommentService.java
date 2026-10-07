@@ -243,6 +243,33 @@ public class CommentService {
         hide(findOrThrow(commentId), moderatorId);
     }
 
+    /**
+     * Everything an author has standing, taken down at once and signed by the moderator who banned
+     * him: a wave of spam is one decision, not a removal per comment. What he deleted himself stays
+     * his own deletion.
+     */
+    void hideAllBy(UUID authorId, UUID moderatorId) {
+        var ids = comments.findStandingIdsByAuthor(authorId);
+        if (ids.isEmpty()) {
+            return;
+        }
+        // In the order hideByModerator takes them, trees before counters, and every one of both
+        // before a row is read. Counters by id: two sweeps crossing the same comments queue up.
+        treeLock.hold(ids);
+        ids.stream().sorted().forEach(comments::lockCounters);
+        // Read again under the locks: one of them may have come down while they were being taken
+        var standing = comments.findAllById(ids).stream()
+                .filter(comment -> !comment.isDeleted())
+                .toList();
+        var now = Instant.now();
+        standing.forEach(comment -> comment.deletedAt(now).hiddenAt(now).hiddenBy(moderatorId));
+        reactions.wipeAll(standing);
+        var taken = standing.stream().map(Comment::id).collect(Collectors.toSet());
+        reports.closeOpenOn(taken, ReportResolution.HIDDEN, moderatorId);
+        comments.flush();
+        collapse.of(standing, taken);
+    }
+
     // One page of top-level comments, oldest first. A limit outside the allowed range is brought
     // into it rather than refused: a limit is a request for how much, not a claim about the world,
     // and no client is served by a 400 where 200 rows would do.
