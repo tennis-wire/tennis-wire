@@ -53,6 +53,9 @@ async def tick(ctx: dict[str, Any]) -> None:
 
     sources = load_sources(settings.sources_file)
     await schedule_due(sources.values(), deps.state, enqueue)
+    for profile in sources.values():
+        if profile.enabled:
+            await deps.health.check(profile)
 
 
 async def fetch_source(ctx: dict[str, Any], key: str) -> None:

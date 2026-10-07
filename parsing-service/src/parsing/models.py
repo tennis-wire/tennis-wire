@@ -88,5 +88,9 @@ class RunReport(BaseModel):
     # Pages asked again after a passing failure, and how many of them gave the text this time
     retried: int = 0
     recovered: int = 0
+    # Final outcomes for pages, the source's extraction health: text got (at once or on a retry)
+    # and text lost (a lasting failure or retries given up). A page still to be retried is neither
+    extracted: int = 0
+    lost: int = 0
     block: Block | None = None
     error: str | None = None

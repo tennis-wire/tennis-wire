@@ -43,6 +43,8 @@ class SourceProfile(BaseModel):
     include: tuple[re.Pattern[str], ...] = ()
     exclude: tuple[re.Pattern[str], ...] = ()
     interval: timedelta
+    # Longer than this without a new item, and the source counts as gone quiet
+    quiet_after: timedelta = timedelta(days=1)
     respect_robots: bool = True
     extract: ExtractRules = ExtractRules()
     enabled: bool = True
