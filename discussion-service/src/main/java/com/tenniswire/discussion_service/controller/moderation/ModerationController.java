@@ -121,7 +121,8 @@ public class ModerationController {
                 moderatorId,
                 request.expiresAt(),
                 request.reason(),
-                Boolean.TRUE.equals(request.clearReactions()));
+                Boolean.TRUE.equals(request.clearReactions()),
+                Boolean.TRUE.equals(request.removeComments()));
         return RestrictionResponse.from(restriction);
     }
 

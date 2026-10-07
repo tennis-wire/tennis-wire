@@ -20,10 +20,13 @@ public class RestrictionService {
 
     private final UserRestrictionRepository restrictions;
     private final ReactionService reactions;
+    private final CommentService comments;
 
-    public RestrictionService(UserRestrictionRepository restrictions, ReactionService reactions) {
+    public RestrictionService(
+            UserRestrictionRepository restrictions, ReactionService reactions, CommentService comments) {
         this.restrictions = restrictions;
         this.reactions = reactions;
+        this.comments = comments;
     }
 
     public UserRestriction restrictCommenting(
@@ -31,21 +34,40 @@ public class RestrictionService {
         return restrictCommenting(userId, issuedBy, expiresAt, reason, false);
     }
 
-    /**
-     * clearReactions takes back everything he ever put anywhere. Only with an indefinite ban, and
-     * there is no undoing it: the rows are gone, and lifting the ban does not bring them back.
-     */
     public UserRestriction restrictCommenting(
             UUID userId, UUID issuedBy, @Nullable Instant expiresAt, @Nullable String reason, boolean clearReactions) {
+        return restrictCommenting(userId, issuedBy, expiresAt, reason, clearReactions, false);
+    }
+
+    /**
+     * clearReactions takes back everything he ever put anywhere, removeComments takes down
+     * everything he has standing. Both only with an indefinite ban. Reactions are gone for good;
+     * the removals are signed by the issuer and come back only through a rollback of his actions.
+     */
+    public UserRestriction restrictCommenting(
+            UUID userId,
+            UUID issuedBy,
+            @Nullable Instant expiresAt,
+            @Nullable String reason,
+            boolean clearReactions,
+            boolean removeComments) {
         if (expiresAt != null && !expiresAt.isAfter(Instant.now())) {
             throw new IllegalArgumentException("expiresAt must be in the future");
         }
         if (clearReactions && expiresAt != null) {
             throw new IllegalArgumentException("clearReactions is only allowed on an indefinite restriction");
         }
+        if (removeComments && expiresAt != null) {
+            throw new IllegalArgumentException("removeComments is only allowed on an indefinite restriction");
+        }
         // One ban at a time. A new one replaces what stands, which is how a ban is extended,
         // shortened or made permanent; the one replaced is lifted by whoever issued the new one.
         restrictions.lockReader(userId.hashCode());
+        if (removeComments) {
+            // Before clearReactions: that one takes counters on other people's comments, and the
+            // sweep's tree locks have to come first, as everywhere a tree and its counters are taken
+            comments.hideAllBy(userId, issuedBy);
+        }
         var now = Instant.now();
         for (var standing : restrictions.findActive(userId, UserRestriction.CAPABILITY_COMMENT, now)) {
             standing.liftedAt(now).liftedBy(issuedBy);
