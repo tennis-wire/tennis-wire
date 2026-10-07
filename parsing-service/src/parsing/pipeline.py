@@ -20,6 +20,7 @@ from parsing.fetch import (
     TooLargeError,
     TooManyRedirectsError,
 )
+from parsing.health import HealthBook
 from parsing.models import ExtractionStatus, Item, ItemChange, RunReport, RunStatus
 from parsing.output import FileSink, Sink
 from parsing.robots import Robots
@@ -49,6 +50,7 @@ class Deps:
     robots: Robots
     state: State
     sink: Sink
+    health: HealthBook
 
 
 def build_deps(settings: Settings, client: httpx.AsyncClient, redis: Redis) -> Deps:
@@ -58,6 +60,7 @@ def build_deps(settings: Settings, client: httpx.AsyncClient, redis: Redis) -> D
         robots=Robots(fetcher, settings.robots_ttl),
         state=State(redis, settings),
         sink=FileSink(settings.output_dir),
+        health=HealthBook(redis, settings),
     )
 
 
@@ -101,6 +104,7 @@ async def run_source(
         await deps.state.resume(profile.key)
     report.finished_at = _now()
     await deps.sink.run(report)
+    await deps.health.record(report)
     log.info(
         "run_finished",
         status=report.status,
@@ -180,10 +184,15 @@ async def _run_feed(
             profile.key, {url, item.url}, SeenRecord(entry.title, entry.published_at)
         )
         report.new += 1
-        if item.extraction is ExtractionStatus.FAILED:
+        if item.extraction is ExtractionStatus.OK:
+            report.extracted += 1
+        elif item.extraction is ExtractionStatus.FAILED:
             report.extraction_failed += 1
-        if retry:
-            await _schedule_retry(profile, RetryRecord(url=url, attempt=1, item=item), deps, log)
+            if retry:
+                first = RetryRecord(url=url, attempt=1, item=item)
+                await _schedule_retry(profile, first, deps, report, log)
+            else:
+                report.lost += 1
 
     # Saved last: a run cut short must not leave a 304 over the entries it did not get to
     await deps.state.save_validators(
@@ -208,21 +217,24 @@ async def _run_retries(profile: SourceProfile, deps: Deps, report: RunReport, lo
             )
             await deps.state.drop_retry(profile.key, record.url)
             report.recovered += 1
+            report.extracted += 1
             log.info("retry_recovered", url=record.url, attempt=record.attempt)
         elif retry:
             next_record = RetryRecord(url=record.url, attempt=record.attempt + 1, item=record.item)
-            await _schedule_retry(profile, next_record, deps, log)
+            await _schedule_retry(profile, next_record, deps, report, log)
         else:
             await deps.state.drop_retry(profile.key, record.url)
+            report.lost += 1
             log.info("retry_dropped", url=record.url, error=item.extraction_error)
 
 
 async def _schedule_retry(
-    profile: SourceProfile, record: RetryRecord, deps: Deps, log: Log
+    profile: SourceProfile, record: RetryRecord, deps: Deps, report: RunReport, log: Log
 ) -> None:
     delays = deps.state.retry_delays
     if record.attempt > len(delays):
         await deps.state.drop_retry(profile.key, record.url)
+        report.lost += 1
         log.warning("retry_gave_up", url=record.url, attempts=len(delays))
         return
     await deps.state.schedule_retry(profile.key, record, _now() + delays[record.attempt - 1])

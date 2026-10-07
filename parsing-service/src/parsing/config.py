@@ -54,6 +54,14 @@ class Settings(BaseSettings):
         timedelta(hours=3),
     )
 
+    # When a source counts as unhealthy (architecture/aggregator.md section 4.11)
+    health_blocked_after: timedelta = timedelta(hours=1)
+    health_failures_in_row: int = 5
+    # Share of pages lost among the last ones; judged once there are enough of them
+    health_extraction_window: int = 50
+    health_extraction_min: int = 20
+    health_extraction_lost_share: float = 0.3
+
     @property
     def user_agent(self) -> str:
         contact = f" (+{self.bot_contact})" if self.bot_contact else ""

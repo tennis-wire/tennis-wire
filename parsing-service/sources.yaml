@@ -18,6 +18,7 @@ sources:
     hosts: [benrothenberg.com]
     language: en
     interval: PT30M
+    quiet_after: P10D
 
   # Eurosport: one platform, six editions with their own newsrooms. No RSS; the news sitemap
   # holds every sport for 48 hours, so tennis is picked by section and videos are dropped.

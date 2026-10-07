@@ -57,9 +57,12 @@ async def test_the_text_arrives_on_a_retry(
     second = await run_source(profile, deps)
 
     assert (first.new, first.extraction_failed, first.retried) == (1, 1, 0)
+    # Neither got nor lost yet: the page is still to be asked again
+    assert (first.extracted, first.lost) == (0, 0)
     # Not before its time
     assert early.retried == 0
     assert (second.new, second.retried, second.recovered) == (0, 1, 1)
+    assert (second.extracted, second.lost) == (1, 0)
     before, after = written(settings, "items-*.jsonl")
     assert (before["url"], before["extraction"], before["lead"]) == (A, "failed", "Lead of A")
     assert (after["url"], after["extraction"]) == (A, "ok")
@@ -110,6 +113,8 @@ async def test_retries_give_up(
 
     assert page_route.call_count == 1 + len(settings.retry_delays)
     assert last.retried == 0
+    health = await deps.health.get("example")
+    assert (health.extracted, health.lost) == (0, 1)
     assert len(written(settings, "items-*.jsonl")) == 1
 
 
@@ -136,7 +141,7 @@ async def test_a_permanent_failure_is_not_retried(
     clock.advance(hours=6)
     await run_source(profile, deps)
 
-    assert report.extraction_failed == 1
+    assert (report.extraction_failed, report.lost) == (1, 1)
     assert page_route.call_count == 1
     [item] = written(settings, "items-*.jsonl")
     assert item["extraction"] == ExtractionStatus.FAILED

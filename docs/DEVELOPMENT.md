@@ -632,6 +632,12 @@ minute doubling up to an hour, and its line in `runs.jsonl` says how it was
 refused. `BOT_CONTACT` goes into the User-Agent
 (`TennisWireBot/0.1.0 (+contact)`) and is filled before deployment.
 
+`uv run python -m parsing health` prints one line per source — last run, last
+new item, failures in a row, the share of pages lost — and its problems:
+blocked for over an hour, failing in a row, losing pages, gone quiet. The exit
+code is 1 when any source has one. The worker logs `source_unhealthy` when a
+problem appears and `source_recovered` when it clears (design §4.11).
+
 ### Frontends
 
 Each app under `apps/` has its own `package-lock.json` and is installed
