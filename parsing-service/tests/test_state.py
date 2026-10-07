@@ -3,8 +3,8 @@ from datetime import UTC, datetime, timedelta
 from fakeredis import FakeAsyncRedis
 
 from parsing.config import Settings
-from parsing.models import Block, BlockKind
-from parsing.state import SeenRecord, State
+from parsing.models import Block, BlockKind, ExtractionStatus, Item
+from parsing.state import RetryRecord, SeenRecord, State
 
 FORBIDDEN = Block(kind=BlockKind.FORBIDDEN, http_status=403, url="https://example.com/a")
 
@@ -71,3 +71,26 @@ async def test_retry_after_lengthens_the_pause(redis: FakeAsyncRedis, settings: 
     )
 
     assert await state.pause("s", block) == timedelta(minutes=10)
+
+
+async def test_retry_queue(redis: FakeAsyncRedis, settings: Settings) -> None:
+    state = State(redis, settings)
+    now = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
+    item = Item(
+        source="s",
+        external_id="https://example.com/a",
+        url="https://example.com/a",
+        title="A",
+        first_seen_at=now,
+        language="en",
+        extraction=ExtractionStatus.FAILED,
+        extraction_error="page answered 503",
+    )
+    record = RetryRecord(url="https://example.com/a", attempt=2, item=item)
+
+    await state.schedule_retry("s", record, now + timedelta(minutes=5))
+
+    assert await state.due_retries("s", now, 10) == []
+    assert await state.due_retries("s", now + timedelta(minutes=5), 10) == [record]
+    await state.drop_retry("s", "https://example.com/a")
+    assert await state.due_retries("s", now + timedelta(days=1), 10) == []

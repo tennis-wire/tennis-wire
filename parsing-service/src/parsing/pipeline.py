@@ -11,15 +11,32 @@ from redis.asyncio import Redis
 from parsing.adapters import ADAPTERS, FeedEntry
 from parsing.config import Settings
 from parsing.extract import ExtractionError, extract_article
-from parsing.fetch import BlockedError, Fetcher, FetchError, HostThrottle
+from parsing.fetch import (
+    BlockedError,
+    Fetcher,
+    FetchError,
+    HostNotAllowedError,
+    HostThrottle,
+    TooLargeError,
+    TooManyRedirectsError,
+)
 from parsing.models import ExtractionStatus, Item, ItemChange, RunReport, RunStatus
 from parsing.output import FileSink, Sink
 from parsing.robots import Robots
 from parsing.sources import SourceProfile
-from parsing.state import SeenRecord, State
+from parsing.state import RetryRecord, SeenRecord, State
 from parsing.urls import canonical_url, host_allowed
 
 logger = structlog.get_logger()
+
+Log = structlog.typing.FilteringBoundLogger
+
+# A page that may well answer next time: the site's own hiccup, not a verdict on the article
+_TRANSIENT_STATUSES = frozenset({404, 408, 425, *range(500, 600)})
+# Not worth asking again: the answer will be the same
+_PERMANENT_ERRORS = (HostNotAllowedError, TooLargeError, TooManyRedirectsError)
+# Retries done in one run of a source, on top of its new entries
+_RETRIES_PER_RUN = 20
 
 
 class RobotsDisallowedError(Exception):
@@ -91,6 +108,8 @@ async def run_source(
         new=report.new,
         changed=report.changed,
         extraction_failed=report.extraction_failed,
+        retried=report.retried,
+        recovered=report.recovered,
     )
     return report
 
@@ -99,7 +118,20 @@ async def _run(
     profile: SourceProfile,
     deps: Deps,
     report: RunReport,
-    log: structlog.typing.FilteringBoundLogger,
+    log: Log,
+    *,
+    limit: int | None,
+    ignore_seen: bool,
+) -> None:
+    await _run_feed(profile, deps, report, log, limit=limit, ignore_seen=ignore_seen)
+    await _run_retries(profile, deps, report, log)
+
+
+async def _run_feed(
+    profile: SourceProfile,
+    deps: Deps,
+    report: RunReport,
+    log: Log,
     *,
     limit: int | None,
     ignore_seen: bool,
@@ -142,7 +174,7 @@ async def _run(
                     report.changed += 1
                 continue
 
-        item, html = await _collect(profile, entry, url, deps, log)
+        item, html, retry = await _collect(profile, entry, url, deps, log)
         await deps.sink.item(item, html)
         await deps.state.mark_seen(
             profile.key, {url, item.url}, SeenRecord(entry.title, entry.published_at)
@@ -150,11 +182,50 @@ async def _run(
         report.new += 1
         if item.extraction is ExtractionStatus.FAILED:
             report.extraction_failed += 1
+        if retry:
+            await _schedule_retry(profile, RetryRecord(url=url, attempt=1, item=item), deps, log)
 
     # Saved last: a run cut short must not leave a 304 over the entries it did not get to
     await deps.state.save_validators(
         profile.key, response.headers.get("etag"), response.headers.get("last-modified")
     )
+
+
+async def _run_retries(profile: SourceProfile, deps: Deps, report: RunReport, log: Log) -> None:
+    """Pages that failed for a passing reason are asked again, apart from the feed.
+
+    The item was written at once with its lead; a page that answers now writes it again with the
+    text, under the same URL (architecture/aggregator.md section 4.4).
+    """
+    for record in await deps.state.due_retries(profile.key, _now(), _RETRIES_PER_RUN):
+        report.retried += 1
+        item = record.item.model_copy(deep=True)
+        html, retry = await _fill_text(profile, item, record.url, deps, log)
+        if item.extraction is ExtractionStatus.OK:
+            await deps.sink.item(item, html)
+            await deps.state.mark_seen(
+                profile.key, [item.url], SeenRecord(item.title, item.published_at)
+            )
+            await deps.state.drop_retry(profile.key, record.url)
+            report.recovered += 1
+            log.info("retry_recovered", url=record.url, attempt=record.attempt)
+        elif retry:
+            next_record = RetryRecord(url=record.url, attempt=record.attempt + 1, item=record.item)
+            await _schedule_retry(profile, next_record, deps, log)
+        else:
+            await deps.state.drop_retry(profile.key, record.url)
+            log.info("retry_dropped", url=record.url, error=item.extraction_error)
+
+
+async def _schedule_retry(
+    profile: SourceProfile, record: RetryRecord, deps: Deps, log: Log
+) -> None:
+    delays = deps.state.retry_delays
+    if record.attempt > len(delays):
+        await deps.state.drop_retry(profile.key, record.url)
+        log.warning("retry_gave_up", url=record.url, attempts=len(delays))
+        return
+    await deps.state.schedule_retry(profile.key, record, _now() + delays[record.attempt - 1])
 
 
 async def _record_change(
@@ -179,12 +250,9 @@ async def _record_change(
 
 
 async def _collect(
-    profile: SourceProfile,
-    entry: FeedEntry,
-    url: str,
-    deps: Deps,
-    log: structlog.typing.FilteringBoundLogger,
-) -> tuple[Item, bytes | None]:
+    profile: SourceProfile, entry: FeedEntry, url: str, deps: Deps, log: Log
+) -> tuple[Item, bytes | None, bool]:
+    """A new item: lead from the feed, text from the page. The flag asks for a retry."""
     item = Item(
         source=profile.key,
         external_id=entry.external_id or url,
@@ -199,39 +267,60 @@ async def _collect(
         extraction=ExtractionStatus.SKIPPED,
     )
     if profile.content_mode == "lead":
-        return item, None
+        return item, None, False
+    html, retry = await _fill_text(profile, item, url, deps, log)
+    return item, html, retry
+
+
+async def _fill_text(
+    profile: SourceProfile, item: Item, url: str, deps: Deps, log: Log
+) -> tuple[bytes | None, bool]:
+    """Fetch the page at url and put its text into the item.
+
+    Returns the page and whether a failure is worth retrying. A block is raised: it stops the
+    run, the source is paused.
+    """
     if not await _robots_allow(profile, url, deps, log):
+        item.extraction = ExtractionStatus.SKIPPED
         item.extraction_error = "robots.txt"
-        return item, None
+        return None, False
 
     try:
         response = await deps.fetcher.get(url, profile.hosts)
     except BlockedError:
-        # Stops the run: the source is paused, the entries left are taken after the pause
         raise
+    except _PERMANENT_ERRORS as error:
+        _failed(item, str(error))
+        return None, False
     except FetchError as error:
-        return _failed(item, str(error)), None
+        # Timeouts and dropped connections
+        _failed(item, str(error))
+        return None, True
     if response.status != 200:
-        return _failed(item, f"page answered {response.status}"), None
+        _failed(item, f"page answered {response.status}")
+        return None, response.status in _TRANSIENT_STATUSES
 
     try:
         article = extract_article(response.body, response.url, profile.extract, response.charset)
     except ExtractionError as error:
-        return _failed(item, str(error)), response.body
+        _failed(item, str(error))
+        return response.body, False
     except Exception as error:
         # A page that breaks the extractor would otherwise fail every run at the same entry
         log.exception("extractor_crashed", url=url)
-        return _failed(item, f"{type(error).__name__}: {error}"), response.body
+        _failed(item, f"{type(error).__name__}: {error}")
+        return response.body, False
 
     item.url = _article_url(article.canonical_url, response.url, profile)
     item.text = article.text
     item.lead = item.lead or article.lead
     item.author = item.author or article.author
     item.image_url = article.image_url
-    item.categories = list(dict.fromkeys([*entry.categories, *article.tags]))
+    item.categories = list(dict.fromkeys([*item.categories, *article.tags]))
     item.embeds = list(article.embeds)
     item.extraction = ExtractionStatus.OK
-    return item, response.body
+    item.extraction_error = None
+    return response.body, False
 
 
 def _article_url(declared: str | None, fetched: str, profile: SourceProfile) -> str:
@@ -250,9 +339,7 @@ def _failed(item: Item, error: str) -> Item:
     return item
 
 
-async def _robots_allow(
-    profile: SourceProfile, url: str, deps: Deps, log: structlog.typing.FilteringBoundLogger
-) -> bool:
+async def _robots_allow(profile: SourceProfile, url: str, deps: Deps, log: Log) -> bool:
     if await deps.robots.allowed(url, profile.hosts):
         return True
     if profile.respect_robots:

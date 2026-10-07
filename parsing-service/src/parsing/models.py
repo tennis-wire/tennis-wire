@@ -85,5 +85,8 @@ class RunReport(BaseModel):
     new: int = 0
     changed: int = 0
     extraction_failed: int = 0
+    # Pages asked again after a passing failure, and how many of them gave the text this time
+    retried: int = 0
+    recovered: int = 0
     block: Block | None = None
     error: str | None = None

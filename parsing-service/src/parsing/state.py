@@ -9,7 +9,7 @@ from typing import cast
 from redis.asyncio import Redis
 
 from parsing.config import Settings
-from parsing.models import Block
+from parsing.models import Block, Item
 from parsing.urls import url_digest
 
 _PREFIX = "parsing"
@@ -23,6 +23,15 @@ _PAUSE_LEVEL_TTL = timedelta(days=1)
 class SeenRecord:
     title: str
     published_at: datetime | None
+
+
+@dataclass(frozen=True)
+class RetryRecord:
+    """A page to ask again: where to fetch it, which attempt this is, the item as written."""
+
+    url: str
+    attempt: int
+    item: Item
 
 
 class State:
@@ -92,6 +101,54 @@ class State:
             pause = max(pause, timedelta(seconds=block.retry_after_seconds))
         await self._redis.set(f"{_PREFIX}:pause:{source}", block.model_dump_json(), ex=pause)
         return pause
+
+    @property
+    def retry_delays(self) -> tuple[timedelta, ...]:
+        return self._settings.retry_delays
+
+    async def schedule_retry(self, source: str, record: RetryRecord, when: datetime) -> None:
+        digest = url_digest(record.url)
+        payload = json.dumps(
+            {
+                "url": record.url,
+                "attempt": record.attempt,
+                "item": record.item.model_dump(mode="json"),
+            }
+        )
+        # Outlives the last attempt, so a record never lingers if the source is switched off
+        ttl = sum(self._settings.retry_delays, timedelta()) + timedelta(days=1)
+        async with self._redis.pipeline(transaction=True) as pipe:
+            pipe.set(f"{_PREFIX}:retry:{source}:{digest}", payload, ex=ttl)
+            pipe.zadd(f"{_PREFIX}:retries:{source}", {digest: when.timestamp()})
+            await pipe.execute()
+
+    async def due_retries(self, source: str, now: datetime, limit: int) -> list[RetryRecord]:
+        queue = f"{_PREFIX}:retries:{source}"
+        digests = await self._redis.zrangebyscore(
+            queue, "-inf", now.timestamp(), start=0, num=limit
+        )
+        records: list[RetryRecord] = []
+        for digest in digests:
+            raw = await self._redis.get(f"{_PREFIX}:retry:{source}:{_text(digest)}")
+            if raw is None:
+                await self._redis.zrem(queue, digest)
+                continue
+            data = json.loads(raw)
+            records.append(
+                RetryRecord(
+                    url=data["url"],
+                    attempt=data["attempt"],
+                    item=Item.model_validate(data["item"]),
+                )
+            )
+        return records
+
+    async def drop_retry(self, source: str, url: str) -> None:
+        digest = url_digest(url)
+        async with self._redis.pipeline(transaction=True) as pipe:
+            pipe.delete(f"{_PREFIX}:retry:{source}:{digest}")
+            pipe.zrem(f"{_PREFIX}:retries:{source}", digest)
+            await pipe.execute()
 
     async def resume(self, source: str) -> None:
         """A run went through: the next block starts the pauses from the shortest again."""

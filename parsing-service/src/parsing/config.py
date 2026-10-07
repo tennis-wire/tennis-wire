@@ -46,6 +46,13 @@ class Settings(BaseSettings):
     robots_ttl: timedelta = timedelta(hours=24)
     pause_min: timedelta = timedelta(minutes=1)
     pause_max: timedelta = timedelta(hours=1)
+    # A page that failed for a passing reason is asked again after each of these, then given up
+    retry_delays: tuple[timedelta, ...] = (
+        timedelta(minutes=5),
+        timedelta(minutes=15),
+        timedelta(hours=1),
+        timedelta(hours=3),
+    )
 
     @property
     def user_agent(self) -> str:
