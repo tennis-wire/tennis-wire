@@ -72,6 +72,26 @@ discussion:
     # not from the last edit: the rules put no ceiling on how many edits fit inside the window.
     edit-window: 15m
 
+  # Against spam and scripts, out of a person's way: nobody arguing at full speed posts every five
+  # seconds for an hour. architecture/moderation.md §4.
+  posting:
+    # Since the author's last comment still standing
+    interval: 5s
+    hourly-ceiling: 120
+    max-links: 3
+    newcomer:
+      # Until this many of his comments have stood this long. Removed ones do not count, and the
+      # age of the account does not either: an old account is for sale.
+      standing-comments: 3
+      standing-for: 24h
+      # Links are held back from him altogether
+      interval: 20s
+    duplicate:
+      # Shorter texts repeat for real: "Break!" twice in one match is two breaks
+      min-length: 20
+      # In the same discussion a text is never taken twice; elsewhere, not within this
+      elsewhere-within: 1h
+
   reaction:
     # Keys, not glyphs: the drawing belongs to the client, and changing it must not touch stored
     # counts. Anything outside this list is a 400.

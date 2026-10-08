@@ -9,3 +9,13 @@ discussion:
     # TextExpiryIT drives the pass itself. A scheduled one starts with the context and could be holding
     # the wipe lock at the moment a test runs its own.
     enabled: false
+
+  # The pace and the newcomer are PostingRulesIT's, which sets its own. Everywhere else one author
+  # writes comment after comment, and as a newcomer, which every test author is, could post no link.
+  # The duplicate rule stays on.
+  posting:
+    interval: 0s
+    hourly-ceiling: 1000000
+    newcomer:
+      standing-comments: 0
+      interval: 0s

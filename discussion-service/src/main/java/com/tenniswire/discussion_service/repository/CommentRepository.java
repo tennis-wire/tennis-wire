@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -158,6 +159,49 @@ where author_id = :authorId and deleted_at is null
     @Query("select c.id from Comment c where c.authorId = :authorId")
     List<UUID> findIdsByAuthor(@Param("authorId") UUID authorId);
 
+    // The posting rules count what still stands, which idx_comment_author serves: a comment taken
+    // down no longer adds to anyone's pace, and a newcomer does not settle in on what was removed
+    @Query("select max(c.createdAt) from Comment c where c.authorId = :authorId and c.deletedAt is null")
+    @Nullable Instant findLastStandingCreatedAt(@Param("authorId") UUID authorId);
+
+    @Query("""
+        select count(c) from Comment c
+        where c.authorId = :authorId and c.deletedAt is null and c.createdAt > :since
+        """)
+    long countStandingSince(@Param("authorId") UUID authorId, @Param("since") Instant since);
+
+    @Query("""
+        select min(c.createdAt) from Comment c
+        where c.authorId = :authorId and c.deletedAt is null and c.createdAt > :since
+        """)
+    @Nullable Instant findFirstStandingCreatedAtSince(@Param("authorId") UUID authorId, @Param("since") Instant since);
+
+    // Capped: whether he has that many is all the caller asks, and a regular has thousands
+    @Query(value = """
+select count(*) from (
+    select 1 from comment
+    where author_id = :authorId and deleted_at is null and created_at <= :before
+    limit :enough
+) settled
+""", nativeQuery = true)
+    long countStandingBefore(
+            @Param("authorId") UUID authorId, @Param("before") Instant before, @Param("enough") int enough);
+
+    // What a new text must not repeat: his own still standing or taken down by moderation, so a
+    // removed text cannot simply be sent again. What he deleted himself is his to post anew.
+    @Query("""
+        select new com.tenniswire.discussion_service.repository.AuthoredText(c.id, c.body)
+        from Comment c
+        where c.authorId = :authorId and c.body is not null
+          and (c.deletedAt is null or c.hiddenAt is not null)
+          and ((c.subjectType = :subjectType and c.subjectId = :subjectId) or c.createdAt > :since)
+        """)
+    List<AuthoredText> findTextsToCompare(
+            @Param("authorId") UUID authorId,
+            @Param("subjectType") String subjectType,
+            @Param("subjectId") UUID subjectId,
+            @Param("since") Instant since);
+
     // Ids for the same reason: the sweep that takes them down locks their trees before reading a row
     @Query("select c.id from Comment c where c.authorId = :authorId and c.deletedAt is null")
     List<UUID> findStandingIdsByAuthor(@Param("authorId") UUID authorId);
@@ -187,6 +231,12 @@ where author_id = :authorId and deleted_at is null
     @Transactional(propagation = Propagation.MANDATORY)
     @Query(value = "select pg_try_advisory_xact_lock(2, 0)", nativeQuery = true)
     boolean tryLockTextExpiry();
+
+    // One author's sends one at a time, so two at once cannot both find the pace free; 4 is this
+    // lock's name. Taken before the tree wherever both are. Held until the transaction ends.
+    @Transactional(propagation = Propagation.MANDATORY)
+    @Query(value = "select 1 from pg_advisory_xact_lock(4, :key)", nativeQuery = true)
+    int lockAuthorPosting(@Param("key") int key);
 
     // Depth-capped and budgeted: an unbounded subtree makes the work of one request a property of
     // how far the thread grew, and a depth cap alone does not fix that - a comment with five
