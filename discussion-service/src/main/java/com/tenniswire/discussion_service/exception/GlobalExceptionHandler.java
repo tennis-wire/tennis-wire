@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -113,6 +114,34 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(
                         "BLOCK_LIST_FULL", ex.getMessage(), null, Map.of("limit", ex.limit()), Instant.now()));
+    }
+
+    @ExceptionHandler(PostingTooFastException.class)
+    public ResponseEntity<ErrorResponse> handlePostingTooFast(PostingTooFastException ex) {
+        // The header for whatever honours it, details for the form that says how long
+        var seconds = ex.retryAfterSeconds();
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(seconds))
+                .body(new ErrorResponse(
+                        "TOO_FAST", ex.getMessage(), null, Map.of("retryAfter", seconds), Instant.now()));
+    }
+
+    @ExceptionHandler(LinksNotYetException.class)
+    public ResponseEntity<ErrorResponse> handleLinksNotYet(LinksNotYetException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
+                .body(ErrorResponse.of("LINKS_NOT_YET", ex.getMessage()));
+    }
+
+    @ExceptionHandler(TooManyLinksException.class)
+    public ResponseEntity<ErrorResponse> handleTooManyLinks(TooManyLinksException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
+                .body(new ErrorResponse(
+                        "TOO_MANY_LINKS", ex.getMessage(), null, Map.of("limit", ex.limit()), Instant.now()));
+    }
+
+    @ExceptionHandler(DuplicateCommentException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateComment(DuplicateCommentException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of("DUPLICATE_COMMENT", ex.getMessage()));
     }
 
     @ExceptionHandler(UnknownSubjectTypeException.class)

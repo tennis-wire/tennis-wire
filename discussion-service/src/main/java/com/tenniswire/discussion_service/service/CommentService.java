@@ -71,6 +71,7 @@ public class CommentService {
     private final ReactionService reactions;
     private final DomainEventPublisher events;
     private final SubjectTypes subjects;
+    private final PostingRules rules;
     private final Duration editWindow;
 
     public CommentService(
@@ -83,6 +84,7 @@ public class CommentService {
             ReactionService reactions,
             DomainEventPublisher events,
             SubjectTypes subjects,
+            PostingRules rules,
             CommentProperties properties) {
         this.comments = comments;
         this.collapse = collapse;
@@ -93,6 +95,7 @@ public class CommentService {
         this.reactions = reactions;
         this.events = events;
         this.subjects = subjects;
+        this.rules = rules;
         this.editWindow = properties.editWindow();
     }
 
@@ -120,6 +123,11 @@ public class CommentService {
             return new CreatedComment(sent, false);
         }
         assertMayComment(authorId);
+        var newcomer = rules.isNewcomer(authorId);
+        rules.assertLinks(newcomer, body);
+        rules.holdPace(authorId, newcomer);
+        // Under the author's lock: two identical sends at once, and the second finds the first
+        rules.assertNotRepeated(authorId, body, subjectType, subjectId, null);
 
         var comment = new Comment()
                 .subjectType(subjectType)
@@ -149,6 +157,9 @@ public class CommentService {
             return new CreatedComment(sent, mutedByParentAuthor(sent, authorId));
         }
         assertMayComment(authorId);
+        var newcomer = rules.isNewcomer(authorId);
+        rules.assertLinks(newcomer, body);
+        rules.holdPace(authorId, newcomer);
         // Before the parent is read: a delete that got to the tree first has committed by the time
         // this goes on, and the check below finds the parent down or gone.
         treeLock.hold(parentId);
@@ -159,6 +170,8 @@ public class CommentService {
         if (parent.isDeleted()) {
             throw new ParentDeletedException(parentId);
         }
+        // The discussion is the parent's, so this waits for it
+        rules.assertNotRepeated(authorId, body, parent.subjectType(), parent.subjectId(), null);
 
         var comment = new Comment()
                 .subjectType(parent.subjectType())
@@ -204,6 +217,11 @@ public class CommentService {
         if (body.equals(comment.body())) {
             return comment;
         }
+        // The text rules, not the pace: an edit adds no comment. Without the author's lock, which
+        // comes before the tree and could not be taken under it
+        var newcomer = rules.isNewcomer(actorId);
+        rules.assertLinks(newcomer, body);
+        rules.assertNotRepeated(actorId, body, comment.subjectType(), comment.subjectId(), commentId);
         // Before the old text is gone: it is what a moderator has to be shown on any card still open
         // on this comment, and nothing else keeps a copy of it.
         reports.snapshotOpen(commentId, comment.body());

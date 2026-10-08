@@ -5,3 +5,11 @@ springdoc:
     enabled: true
   swagger-ui:
     enabled: true
+
+# smoke.sh posts as the same two readers within seconds, and both are newcomers on a fresh realm.
+# Only the pace is off: links and repeated texts are refused here as anywhere.
+discussion:
+  posting:
+    interval: 0s
+    newcomer:
+      interval: 0s
