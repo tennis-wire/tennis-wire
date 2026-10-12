@@ -76,6 +76,7 @@ superuser.
 | content-service | `tennis_content` | `content` | `content` |
 | discussion-service | `tennis_discussion` | `discussion` | `discussion` |
 | user-service | `tennis_users` | `users` | `users` |
+| aggregator-service | `tennis_aggregator` | `aggregator` | `aggregator` |
 
 To add a service, append a `create_service_db` line to the init script, then
 either recreate the volume:
@@ -488,6 +489,7 @@ intended behaviour, not a misconfiguration.
 | user-service | 8092 | requires PostgreSQL |
 | transcription-service | 8001 | requires Redis + MinIO |
 | parsing-service | — | a worker, no port; requires Redis |
+| aggregator-service | 8095 | requires PostgreSQL; not routed through the gateway yet |
 | editorial-ui (Vite) | 5173 | |
 | public-web (Next.js) | 3000 | |
 | mobile (Expo dev server) | 8081 | |
@@ -498,6 +500,7 @@ intended behaviour, not a misconfiguration.
 ./gradlew :content-service:bootRun
 ./gradlew :discussion-service:bootRun
 ./gradlew :user-service:bootRun
+./gradlew :aggregator-service:bootRun
 ./gradlew :editorial-bff:bootRun
 ./gradlew :api-gateway:bootRun
 ```
@@ -547,6 +550,22 @@ with `USER_SERVICE_CLIENT_SECRET` — the server root and not the issuer, becaus
 the admin API sits above the realm. And discussion-service over
 `DISCUSSION_SERVICE_URL` (`http://localhost:8093`), on its own port and never
 through the gateway, to take away what a reader who has left wrote.
+
+aggregator-service keeps the newsroom's working feed: the catalog of sources and
+the news the collector sends (design §5.1). Today it has `/internal/**` alone,
+for the collector's token (`parsing-service`, role `parser`): the source list
+(`PUT /internal/sources`), health snapshots (`PUT /internal/sources/{key}/health`)
+and news in batches of up to 100 (`POST /internal/items`), each item answered on
+its own — created, updated, ignored (an update of a deleted item) or rejected.
+The gateway does not route it; the newsroom's API comes with part 3. An item is
+deleted whole 30 days after it arrived, by a job once an hour
+(`aggregator.expiry.*`). To try it with `curl`, a collector token:
+
+```bash
+curl -s -d grant_type=client_credentials -d client_id=parsing-service \
+  -d client_secret=dev-parsing-service-secret \
+  http://localhost:8180/realms/tennis-wire/protocol/openid-connect/token
+```
 
 Avatars live in the `avatars` bucket, which user-service writes over the S3 API
 (`tw.media.*` in `application.yaml`, overridden by `MEDIA_PUBLIC_BASE_URL`,

@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: aggregator-service
+
+  datasource:
+    # stringtype=unspecified: the health snapshot is written as text and cast to jsonb by the server
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:tennis_aggregator}?stringtype=unspecified
+    username: ${DB_USERNAME:aggregator}
+    password: ${DB_PASSWORD:aggregator}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Same issuer and audience as everywhere: the collector's token is checked here, not
+          # trusted because it arrived. /internal/** is never routed through the gateway.
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/tennis-wire}
+          audiences:
+            - tennis-wire-api
+
+aggregator:
+  expiry:
+    # A working feed, not an archive: an item goes whole this long after it arrived
+    # (architecture/aggregator.md 5.1)
+    after: 30d
+    # ISO-8601: @Scheduled reads it as a plain string
+    interval: PT1H
+    batch-size: 500
+
+server:
+  port: 8095
+
+springdoc:
+  # Off by default, as in the other services; the local profile turns it on
+  api-docs:
+    enabled: false
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: false
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method

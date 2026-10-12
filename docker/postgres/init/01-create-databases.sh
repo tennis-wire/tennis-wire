@@ -20,5 +20,6 @@ EOSQL
 create_service_db tennis_content content content
 create_service_db tennis_discussion discussion discussion
 create_service_db tennis_users users users
+create_service_db tennis_aggregator aggregator aggregator
 
 echo "service databases ready"

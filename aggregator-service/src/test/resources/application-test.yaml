@@ -1,0 +1,6 @@
+# Test profile, activated for the whole module in build.gradle.kts.
+
+aggregator:
+  expiry:
+    # ExpiryIT drives the job itself; left running it would delete under other tests
+    enabled: false
