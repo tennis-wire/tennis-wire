@@ -10,6 +10,8 @@ public final class Roles {
     public static final String ADMIN = "admin";
 
     public static final String SERVICE = "service";
+    // The news collector: aggregator-service /internal/** and nothing else
+    public static final String PARSER = "parser";
 
     private Roles() {}
 }

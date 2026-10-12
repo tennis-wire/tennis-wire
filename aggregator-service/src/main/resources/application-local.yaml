@@ -1,0 +1,14 @@
+# Development profile: enables the OpenAPI docs at http://localhost:8095/swagger-ui.html.
+# Not for a deployed environment. Same pattern as the other services.
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+# Bound values carry the texts of other sites: never outside local
+logging:
+  level:
+    com.tenniswire.aggregator_service: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
