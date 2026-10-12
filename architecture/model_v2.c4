@@ -184,22 +184,28 @@ model {
     // ----- AGGREGATOR -----
     container aggregator 'Aggregator Service' {
       #planned
-      description 'Агрегация и первичная обработка сырых данных'
+      description 'Рабочая лента для редакции, не архив: каталог источников и новости от сборщика. architecture/aggregator.md §5.1'
       technology 'Java, Spring Boot'
 
       service aggregatorApi 'Aggregator API' {
         #planned
-        description 'API для вкладки «Источники» в редакции и внутренних сервисов'
+        description '/internal/**: каталог источников, снимки здоровья, приём новостей (новая или обновление) от сборщика. /api/aggregator/** для вкладки «Источники» — часть 3'
       }
 
       service deduplicator 'Deduplicator' {
         #planned
-        description 'Одна статья — одна запись (канонический URL, id из ленты). Сюжеты — после замера'
+        description 'Одна статья — одна запись: ключ — канонический URL. Обновление удалённой отбрасывается. Сюжеты — часть 4'
+      }
+
+      service aggregatorCleanup 'Cleanup Job' {
+        #planned
+        description 'Удаляет новости старше 30 дней, целиком'
+        technology 'Spring @Scheduled, advisory lock'
       }
 
       database aggregatorDb 'Aggregator DB' {
         #planned
-        description 'Реестр источников, новости, статусы обработки'
+        description 'Каталог источников (название, язык, «скрыт из ленты», снимок здоровья) и новости, текущее состояние. HTML не хранится'
         technology 'PostgreSQL, Liquibase'
       }
     }
@@ -398,14 +404,15 @@ model {
 
   // --- Parsing service -> Aggregator ---
   // Часть 2: до неё сборщик пишет в локальные файлы
-  tennisService.parsingSubsystem.parserScheduler -> tennisService.aggregator.aggregatorApi 'Реестр источников, /internal/**'
-  tennisService.parsingSubsystem.extractor -> tennisService.aggregator.aggregatorApi 'Новости пачкой, /internal/**'
+  tennisService.parsingSubsystem.parserScheduler -> tennisService.aggregator.aggregatorApi 'Свои источники и снимки здоровья, /internal/**'
+  tennisService.parsingSubsystem.extractor -> tennisService.aggregator.aggregatorApi 'Новости: новая или обновление, /internal/**'
   tennisService.parsingSubsystem.socialParser -> tennisService.aggregator.aggregatorApi 'Посты, /internal/**'
 
   // --- Aggregator internal ---
   tennisService.aggregator.aggregatorApi -> tennisService.aggregator.deduplicator 'Обработка'
   tennisService.aggregator.deduplicator -> tennisService.aggregator.aggregatorDb 'Сохранение'
   tennisService.aggregator.aggregatorApi -> tennisService.aggregator.aggregatorDb 'CRUD'
+  tennisService.aggregator.aggregatorCleanup -> tennisService.aggregator.aggregatorDb 'Удаление старше 30 дней'
 
   // --- Editorial ---
   // Весь редакторский трафик идёт через gateway: apiConfig.ts знает только GATEWAY_URL.
