@@ -89,9 +89,9 @@ public class AccountErasure {
                         "erasing account {} has failed {} times and is now retried at the slowest rate: {}",
                         userId,
                         record.attempts(),
-                        e.getMessage());
+                        shorten(e));
             } else {
-                log.warn("erasing account {} did not get further this pass: {}", userId, e.getMessage());
+                log.warn("erasing account {} did not get further this pass: {}", userId, shorten(e));
             }
         }
     }
