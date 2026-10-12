@@ -4,6 +4,7 @@ Run with ``uv run arq parsing.worker.WorkerSettings``.
 """
 
 from collections.abc import Awaitable, Callable, Iterable
+from datetime import UTC, datetime
 from typing import Any, ClassVar
 
 import structlog
@@ -11,6 +12,13 @@ from arq.connections import ArqRedis, RedisSettings
 from arq.cron import cron
 from arq.worker import func
 
+from parsing.aggregator import (
+    AggregatorClient,
+    AggregatorSink,
+    CatalogPublisher,
+    ServiceToken,
+    make_aggregator_client,
+)
 from parsing.config import get_settings
 from parsing.fetch import make_client
 from parsing.logs import configure_logging
@@ -56,6 +64,9 @@ async def tick(ctx: dict[str, Any]) -> None:
     for profile in sources.values():
         if profile.enabled:
             await deps.health.check(profile)
+    catalog: CatalogPublisher | None = ctx.get("catalog")
+    if catalog is not None:
+        await catalog.publish(sources.values(), deps.health, datetime.now(UTC))
 
 
 async def fetch_source(ctx: dict[str, Any], key: str) -> None:
@@ -71,12 +82,21 @@ async def startup(ctx: dict[str, Any]) -> None:
     configure_logging(settings)
     client = make_client(settings)
     ctx["client"] = client
-    ctx["deps"] = build_deps(settings, client, ctx["redis"])
-    logger.info("worker_started", sources_file=str(settings.sources_file))
+    sink = None
+    if settings.sink == "aggregator":
+        aggregator_http = make_aggregator_client(settings)
+        ctx["aggregator_http"] = aggregator_http
+        aggregator = AggregatorClient(aggregator_http, ServiceToken(aggregator_http, settings))
+        sink = AggregatorSink(aggregator)
+        ctx["catalog"] = CatalogPublisher(aggregator, settings)
+    ctx["deps"] = build_deps(settings, client, ctx["redis"], sink)
+    logger.info("worker_started", sources_file=str(settings.sources_file), sink=settings.sink)
 
 
 async def shutdown(ctx: dict[str, Any]) -> None:
     await ctx["client"].aclose()
+    if "aggregator_http" in ctx:
+        await ctx["aggregator_http"].aclose()
 
 
 def _build_worker_settings() -> type[object]:

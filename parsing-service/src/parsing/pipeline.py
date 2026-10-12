@@ -53,13 +53,16 @@ class Deps:
     health: HealthBook
 
 
-def build_deps(settings: Settings, client: httpx.AsyncClient, redis: Redis) -> Deps:
+def build_deps(
+    settings: Settings, client: httpx.AsyncClient, redis: Redis, sink: Sink | None = None
+) -> Deps:
+    """Files unless another sink is given: the worker passes the aggregator."""
     fetcher = Fetcher(client, settings, HostThrottle(settings.host_delay))
     return Deps(
         fetcher=fetcher,
         robots=Robots(fetcher, settings.robots_ttl),
         state=State(redis, settings),
-        sink=FileSink(settings.output_dir),
+        sink=sink or FileSink(settings.output_dir),
         health=HealthBook(redis, settings),
     )
 
@@ -211,9 +214,13 @@ async def _run_retries(profile: SourceProfile, deps: Deps, report: RunReport, lo
         item = record.item.model_copy(deep=True)
         html, retry = await _fill_text(profile, item, record.url, deps, log)
         if item.extraction is ExtractionStatus.OK:
-            await deps.sink.item(item, html)
+            # The page may name another canonical URL, but the aggregator knows the item by the one
+            # it was sent with: an update under a new address would be taken for a deleted item
+            page_url = item.url
+            item.url = record.item.url
+            await deps.sink.item(item, html, update=True)
             await deps.state.mark_seen(
-                profile.key, [item.url], SeenRecord(item.title, item.published_at)
+                profile.key, {page_url, item.url}, SeenRecord(item.title, item.published_at)
             )
             await deps.state.drop_retry(profile.key, record.url)
             report.recovered += 1
