@@ -18,6 +18,7 @@
 - **Email читателей и сотрудников живут только в Keycloak**, в БД и логах сервисов их нет.
     - `article_edits.owner_name` — claim `name`. Без имени в Keycloak туда попадёт `preferred_username`, то есть email, поэтому имя при заведении обязательно (§6).
     - `transcription-service` знает владельца задачи только по `sub`, и в лог пишет его же.
+- **SQL с параметрами в лог не пишется.** `org.hibernate.orm.jdbc.bind: TRACE`, `org.hibernate.SQL` и DEBUG пакетов сервиса включены только в `application-local.yaml` у `content-`, `discussion-`, `user-service` (§4, п. 16).
 - **Модерация подписана.** `hidden_by`/`hidden_at`, `issued_by`, `lifted_by`, `resolved_by`/`resolved_at`. Засчитанное вручную (`counted_at`) подписано через жалобу: `markCounted` вызывается только из `resolve` с `COUNTED`, и тот же вызов закрывает жалобы с `resolved_by`. Кроме снятий ботом: `hideByBot` передаёт `null` в `hidden_by` и `resolved_by`. После `bot-rights` новых таких снятий не будет.
 - **Сотрудник на сайте — читатель.** У `public-web` и `mobile` `fullScopeAllowed: false` и в scope только `user`: ни одна роль сотрудника в их токены не попадает.
 - **Журнал админ-действий Keycloak** включён, 90 дней, без представлений.
@@ -61,7 +62,7 @@
 | 13 | `admin` — composite над `user`, `author`, `moderator`, `chief-editor` | realm | `chore/keycloak/admin-split` |
 | 14 | У `editorial-ui` `fullScopeAllowed` не задан, то есть `true`. После `realm-admin` у `/staff/admins` access-токен админ-учётки в редакции понесёт роли `realm-management`, а токен живёт в браузере: XSS в редакции — захват realm | realm | `chore/keycloak/staff-groups` |
 | 15 | `DELETE /api/users/{id}` (`admin`) не проверяет `recentLogin`, ничего не пишет и удалит учётку сотрудника, хотя её только выключают (§6) | `AdminUserController.delete` | `fix/user-service/staff-self-delete` |
-| 16 | `org.hibernate.orm.jdbc.bind: TRACE` в базовом `application.yaml`: в лог уходят тела комментариев, причины жалоб, текст статей, никнеймы. При retention 90 дней лог переживёт 30-дневное стирание текста и стирание аккаунта | `content-`, `discussion-`, `user-service` | деплой-чеклист (§15) |
+| 16 | `org.hibernate.orm.jdbc.bind: TRACE` в базовом `application.yaml`: в лог уходят тела комментариев, причины жалоб, текст статей, никнеймы. При retention 90 дней лог переживёт 30-дневное стирание текста и стирание аккаунта | `content-`, `discussion-`, `user-service` | `fix/services/logging` |
 
 ## 5. Роли и группы
 
@@ -399,7 +400,6 @@
 - `security/keycloak/fgap` — забор, IT (читателя гасит, на сотрудника отказ, выдача `admin` — отказ), флаг фичи в образе;
 - `chore/staff-audit` — логгер `staff.audit` в `content-`, `discussion-`, `user-service`. В минимуме до найма он был, сюда перенесён сознательно: до стока строке некуда падать, а сотрудники появляются не раньше деплоя. Если кто-то появится раньше — ветка уходит в рубеж найма;
 - `chore/keycloak/events-to-logs`;
-- `org.hibernate.orm.jdbc.bind: TRACE` — из базового `application.yaml` в `application-local.yaml` у `content-`, `discussion-`, `user-service`, до появления стока (§4, п. 16);
 - сток логов с retention 90 дней, Telegram-канал;
 - prod-realm из репозитория, роли БД, PITR-бэкапы, версионирование бакета, лимиты провайдеров, break-glass, удаление бутстрап-админа.
 
