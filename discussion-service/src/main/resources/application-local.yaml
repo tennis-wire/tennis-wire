@@ -13,3 +13,10 @@ discussion:
     interval: 0s
     newcomer:
       interval: 0s
+
+# Bound values carry user-written text and names: never outside local
+logging:
+  level:
+    com.tenniswire.discussion_service: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE

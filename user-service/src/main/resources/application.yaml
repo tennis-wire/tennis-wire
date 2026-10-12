@@ -132,12 +132,6 @@ server:
   # 8 KB overflows and Tomcat answers 400 before the application ever sees the request.
   max-http-request-header-size: 16KB
 
-logging:
-  level:
-    com.tenniswire.user_service: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: TRACE
-
 springdoc:
   # Off by default: the docs are not routed through the gateway and describe the
   # whole API to anyone who reaches the service port. The local profile turns them on.

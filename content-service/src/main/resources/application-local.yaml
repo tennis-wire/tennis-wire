@@ -5,3 +5,10 @@ springdoc:
     enabled: true
   swagger-ui:
     enabled: true
+
+# Bound values carry user-written text and names: never outside local
+logging:
+  level:
+    com.tenniswire.content_service: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE

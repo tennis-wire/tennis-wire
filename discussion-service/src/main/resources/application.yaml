@@ -119,12 +119,6 @@ discussion:
     # Comments per transaction. Every tree a batch reaches is locked until it commits.
     batch-size: 250
 
-logging:
-  level:
-    com.tenniswire.discussion_service: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: TRACE
-
 springdoc:
   # Off by default: the docs are not routed through the gateway and describe the
   # whole API to anyone who reaches the service port. The local profile turns them on.

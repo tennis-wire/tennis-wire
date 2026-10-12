@@ -59,12 +59,6 @@ media:
     # MinIO and most S3-compatible stores address a bucket by path, not by subdomain
     path-style: ${S3_PATH_STYLE:true}
 
-logging:
-  level:
-    com.tenniswire.content_service: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: TRACE
-
 springdoc:
   # Off by default: the docs are not routed through the gateway and describe the
   # whole API to anyone who reaches the service port. The local profile turns them on.
