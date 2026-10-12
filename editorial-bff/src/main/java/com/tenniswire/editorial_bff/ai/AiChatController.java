@@ -8,8 +8,7 @@ import java.io.UncheckedIOException;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,9 +19,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 @RestController
 @RequestMapping("/api/ai")
+@Slf4j
 public class AiChatController {
-
-    private static final Logger log = LoggerFactory.getLogger(AiChatController.class);
 
     /**
      * Kept below the gateway's response-timeout of 120 s on purpose: we want to

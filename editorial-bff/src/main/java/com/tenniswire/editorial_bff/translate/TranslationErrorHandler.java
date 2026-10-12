@@ -3,8 +3,7 @@ package com.tenniswire.editorial_bff.translate;
 import com.deepl.api.DeepLClient;
 import com.deepl.api.DeepLException;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,26 +12,26 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackageClasses = TranslationController.class)
 @ConditionalOnBean(DeepLClient.class)
+@Slf4j
 public class TranslationErrorHandler {
-
-    private static final Logger log = LoggerFactory.getLogger(TranslationErrorHandler.class);
 
     @ExceptionHandler(DeepLException.class)
     public ResponseEntity<Map<String, String>> handleDeepLError(DeepLException ex) {
-        log.error("DeepL API error: {}", ex.getMessage());
-
         // DeepLException doesn't expose HTTP status directly,
         // but the message often contains "Too many requests" or "Quota exceeded"
         HttpStatus status;
         String message;
 
         if (ex.getMessage() != null && ex.getMessage().contains("Too many requests")) {
+            log.warn("DeepL rate limit exceeded");
             status = HttpStatus.TOO_MANY_REQUESTS;
             message = "Слишком много запросов к сервису перевода. Попробуйте позже.";
         } else if (ex.getMessage() != null && ex.getMessage().contains("Quota")) {
+            log.error("DeepL quota exceeded");
             status = HttpStatus.TOO_MANY_REQUESTS;
             message = "Лимит переводов исчерпан.";
         } else {
+            log.error("DeepL API error", ex);
             status = HttpStatus.BAD_GATEWAY;
             message = "Сервис перевода временно недоступен. Попробуйте позже.";
         }

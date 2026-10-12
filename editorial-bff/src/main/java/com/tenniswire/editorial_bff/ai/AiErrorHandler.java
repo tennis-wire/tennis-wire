@@ -4,17 +4,15 @@ import com.anthropic.errors.AnthropicServiceException;
 import com.anthropic.errors.RateLimitException;
 import com.anthropic.errors.UnauthorizedException;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackageClasses = AiChatController.class)
+@Slf4j
 public class AiErrorHandler {
-
-    private static final Logger log = LoggerFactory.getLogger(AiErrorHandler.class);
 
     @ExceptionHandler(RateLimitException.class)
     public ResponseEntity<Map<String, String>> handleRateLimit(RateLimitException ex) {
@@ -30,7 +28,7 @@ public class AiErrorHandler {
 
     @ExceptionHandler(AnthropicServiceException.class)
     public ResponseEntity<Map<String, String>> handleAnthropicError(AnthropicServiceException ex) {
-        log.error("Claude API error: {} {}", ex.statusCode(), ex.getMessage());
+        log.error("Claude API error: status={}", ex.statusCode(), ex);
         return error(HttpStatus.BAD_GATEWAY, "AI-сервис временно недоступен. Попробуйте позже.");
     }
 

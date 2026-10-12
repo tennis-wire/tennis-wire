@@ -501,6 +501,11 @@ intended behaviour, not a misconfiguration.
 ./gradlew :api-gateway:bootRun
 ```
 
+SQL with bound values and DEBUG from the service's own package are logged only
+under the `local` profile, since the bound values carry reader texts and names:
+`./gradlew :discussion-service:bootRun --args='--spring.profiles.active=local'`.
+The same goes for content-service and user-service.
+
 Datasource settings are overridable via `DB_HOST`, `DB_PORT`, `DB_NAME`,
 `DB_USERNAME` and `DB_PASSWORD`.
 
