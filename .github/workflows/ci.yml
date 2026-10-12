@@ -56,7 +56,7 @@ jobs:
           all='^\.github/workflows/ci\.yml$'
           frontend='^(\.nvmrc|\.prettierrc|\.editorconfig)$'
           # docker/keycloak: the realm file is a test resource of api-gateway and user-service
-          java='^(build|settings)\.gradle\.kts$|^gradle(\.properties|w|w\.bat)?$|^gradle/|^(lombok\.config|pmd\.xml|spotbugs-excludes\.xml)$|^(auth-support|editorial-bff|api-gateway|content-service|discussion-service|user-service|docker/keycloak)/'
+          java='^(build|settings)\.gradle\.kts$|^gradle(\.properties|w|w\.bat)?$|^gradle/|^(lombok\.config|pmd\.xml|spotbugs-excludes\.xml)$|^(auth-support|editorial-bff|api-gateway|content-service|discussion-service|user-service|aggregator-service|docker/keycloak)/'
           {
             echo "java=$(touched "$all|$java")"
             echo "python=$(touched "$all|^transcription-service/")"
