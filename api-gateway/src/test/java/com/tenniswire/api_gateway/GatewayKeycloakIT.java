@@ -320,6 +320,27 @@ class GatewayKeycloakIT {
     }
 
     @Test
+    void theCollectorCarriesParserAloneAndTheGatewayKeepsItOut() {
+        var tokens = tokens(Map.of(
+                "grant_type", "client_credentials",
+                "client_id", "parsing-service",
+                "client_secret", "dev-parsing-service-secret"));
+        var token = tokens.path("access_token").asText();
+        var access = claims(tokens, "access_token");
+
+        // Its one door is aggregator-service /internal/**: not service, which opens the
+        // /internal/** of user-service and discussion-service as well
+        assertThat(roles(access)).contains("parser").doesNotContain("service", "user", "author", "moderator");
+        assertThat(access.path("aud").toString()).contains("tennis-wire-api");
+        client.get()
+                .uri(EDITORIAL)
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .exchange()
+                .expectStatus()
+                .isForbidden();
+    }
+
+    @Test
     void tokenForAnotherAudienceIsUnauthorized() {
         // Correctly signed by our realm, for a real user with the author role, but carrying
         // no aud=tennis-wire-api. Rejected before authorities are ever considered, so this
