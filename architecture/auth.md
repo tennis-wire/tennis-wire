@@ -22,6 +22,7 @@ Realm-роли (client-роли не используем — проще мап�
 | `moderator` | Сотрудник-модератор | Группа `/staff/moderators` | Модерация комментариев: скрытие, бан, разбор жалоб и сигналов бота |
 | `moderator-bot` | Service account бота | Назначается клиенту `moderation-bot` | Только жалоба от классификатора (`POST /moderation/reports`); комментарии не снимает, ограничений и чтения очереди нет |
 | `service` | Service account'ы `user-service` и `discussion-service` | Назначается сервисному аккаунту клиента | Вызовы `/internal/**` между сервисами (§6) |
+| `parser` | Service account сборщика новостей | Назначается клиенту `parsing-service` | Только `/internal/**` `aggregator-service`: каталог источников, снимки здоровья, новости ([aggregator.md](aggregator.md) §5.1). Не `service`: сборщик ходит по чужим сайтам, и `/internal/**` `user-service` и `discussion-service` ему закрыты |
 | `admin` | Администратор | Группа `/staff/admins`; composite из `user`, `author`, `moderator`, `chief-editor` | Управление пользователями и системой |
 | `staff` | Любой сотрудник | Группа `/staff` | Ничего: маркер для условия OTP ([staff.md](staff.md) §7). Сервисы его не проверяют, в scope сайта, приложения и редакции его нет |
 
@@ -54,6 +55,7 @@ Realm-роли (client-роли не используем — проще мап�
 | `moderation-bot` | бот-модератор | confidential, service account | `client_credentials` | — |
 | `user-service` | `user-service` | confidential, service account | `client_credentials` | Spring Security OAuth2 Client; роль `service` и client-роли `realm-management` `manage-users`, `view-realm` — гашение и удаление учёток, чтение групп цели перед удалением её `admin`'ом, чтение `accessTokenLifespan` |
 | `discussion-service` | `discussion-service` | confidential, service account | `client_credentials` | Spring Security OAuth2 Client; роль `service` |
+| `parsing-service` | `parsing-service` (сборщик новостей) | confidential, service account | `client_credentials` | httpx; роль `parser` |
 
 Путь к `author` / `chief-editor` / `moderator` — только через администратора, членством в `/staff/*`.
 
@@ -185,7 +187,7 @@ Realm-роли (client-роли не используем — проще мап�
 
 CORS терминируется в gateway (сделано).
 
-**`/internal/**` через gateway не ходит.** Маршрута на него нет, а без правила запрос упал бы в `denyAll`. Сервисы вызывают друг друга напрямую по кластерному DNS: `discussion-service` → `user-service` (`POST /internal/identities/resolve`, `GET /internal/users?ids=`) и `user-service` → `discussion-service` (`DELETE /internal/users/{id}`). В самих сервисах `/internal/**` требует роль `service`: её несут только сервисные аккаунты `user-service` и `discussion-service`, токен они получают по `client_credentials`, и проверяется он как любой другой, вместе с `aud`. Исключение — resolve: он требует `user`, потому что потребитель пересылает токен самого читателя (§5), и в `user-service` это правило объявлено раньше общего. Сетевой изоляции пока нет: до NetworkPolicy в Kubernetes `/internal/**` держится на ролях и на отсутствии маршрута.
+**`/internal/**` через gateway не ходит.** Маршрута на него нет, а без правила запрос упал бы в `denyAll`. Сервисы вызывают друг друга напрямую по кластерному DNS: `discussion-service` → `user-service` (`POST /internal/identities/resolve`, `GET /internal/users?ids=`) и `user-service` → `discussion-service` (`DELETE /internal/users/{id}`). В самих сервисах `/internal/**` требует роль `service`: её несут только сервисные аккаунты `user-service` и `discussion-service`, токен они получают по `client_credentials`, и проверяется он как любой другой, вместе с `aud`. Исключение — resolve: он требует `user`, потому что потребитель пересылает токен самого читателя (§5), и в `user-service` это правило объявлено раньше общего. `/internal/**` `aggregator-service` требует роль `parser`: её несёт только сервисный аккаунт сборщика, клиент `parsing-service`. Сетевой изоляции пока нет: до NetworkPolicy в Kubernetes `/internal/**` держится на ролях и на отсутствии маршрута.
 
 ## 7. Валидация в сервисах
 

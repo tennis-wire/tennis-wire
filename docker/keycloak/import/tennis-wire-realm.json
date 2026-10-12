@@ -301,6 +301,34 @@
             ]
         },
         {
+            "clientId": "parsing-service",
+            "name": "Parsing Service",
+            "description": "Service account of the news collector: sources, health and news into aggregator-service /internal/**.",
+            "enabled": true,
+            "publicClient": false,
+            "secret": "dev-parsing-service-secret",
+            "standardFlowEnabled": false,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": false,
+            "serviceAccountsEnabled": true,
+            "defaultClientScopes": ["acr", "basic", "email", "profile", "roles", "web-origins"],
+            "optionalClientScopes": ["address", "microprofile-jwt", "organization", "phone"],
+            "protocolMappers": [
+                {
+                    "name": "tennis-wire-api-audience",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-audience-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "included.custom.audience": "tennis-wire-api",
+                        "access.token.claim": "true",
+                        "id.token.claim": "false",
+                        "introspection.token.claim": "true"
+                    }
+                }
+            ]
+        },
+        {
             "clientId": "moderation-bot",
             "name": "Moderation Bot",
             "enabled": true,
@@ -434,6 +462,12 @@
             "enabled": true,
             "serviceAccountClientId": "discussion-service",
             "realmRoles": ["service"]
+        },
+        {
+            "username": "service-account-parsing-service",
+            "enabled": true,
+            "serviceAccountClientId": "parsing-service",
+            "realmRoles": ["parser"]
         }
     ],
 
@@ -457,6 +491,7 @@
             { "name": "staff", "description": "Marker of /staff for the staff OTP condition; no service checks it" },
             { "name": "moderator-bot", "description": "Service account of the automatic moderator" },
             { "name": "service", "description": "Service account: calls into /internal/**" },
+            { "name": "parser", "description": "Service account of the news collector: aggregator /internal/** only" },
             {
                 "name": "admin",
                 "description": "Administrator",
