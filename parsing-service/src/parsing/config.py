@@ -5,7 +5,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, RedisDsn
+from pydantic import Field, RedisDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from parsing import __version__
@@ -32,6 +32,17 @@ class Settings(BaseSettings):
     sources_file: Path = Path("sources.yaml")
     output_dir: Path = Path("out")
 
+    # Where the worker sends news. Files are for run-once, checking sources without the aggregator
+    sink: Literal["aggregator", "files"] = "aggregator"
+    aggregator_url: str = "http://localhost:8095"
+    aggregator_timeout: timedelta = timedelta(seconds=10)
+    # The collector's own token, client_credentials (auth.md 3)
+    keycloak_issuer_uri: str = "http://localhost:8180/realms/tennis-wire"
+    client_id: str = "parsing-service"
+    client_secret: SecretStr = SecretStr("dev-parsing-service-secret")
+    # A health snapshot goes on every change, and at least this often: "last run" stays fresh
+    health_resend: timedelta = timedelta(minutes=15)
+
     # Where a site finds who runs the bot; filled before deployment
     bot_contact: str = ""
 
@@ -42,7 +53,9 @@ class Settings(BaseSettings):
     # Pages of one host go one at a time, this far apart
     host_delay: timedelta = timedelta(seconds=1)
 
-    seen_ttl: timedelta = timedelta(days=30)
+    # Longer than an item lives in the aggregator (30 days): an article that stays in a feed past
+    # its term, a pinned season calendar, must not come back as new (architecture/aggregator.md 5.1)
+    seen_ttl: timedelta = timedelta(days=90)
     robots_ttl: timedelta = timedelta(hours=24)
     pause_min: timedelta = timedelta(minutes=1)
     pause_max: timedelta = timedelta(hours=1)
@@ -66,6 +79,10 @@ class Settings(BaseSettings):
     def user_agent(self) -> str:
         contact = f" (+{self.bot_contact})" if self.bot_contact else ""
         return f"{BOT_NAME}/{__version__}{contact}"
+
+    @property
+    def token_url(self) -> str:
+        return f"{self.keycloak_issuer_uri.rstrip('/')}/protocol/openid-connect/token"
 
     @property
     def is_development(self) -> bool:

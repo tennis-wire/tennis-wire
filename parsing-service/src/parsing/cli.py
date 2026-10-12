@@ -11,6 +11,13 @@ from datetime import UTC, datetime
 
 from redis.asyncio import Redis
 
+from parsing.aggregator import (
+    AggregatorClient,
+    AggregatorSink,
+    CatalogPublisher,
+    ServiceToken,
+    make_aggregator_client,
+)
 from parsing.config import Settings, get_settings
 from parsing.fetch import make_client
 from parsing.health import HealthBook
@@ -33,6 +40,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     once.add_argument(
         "--ignore-seen", action="store_true", help="collect entries already seen as well"
     )
+    once.add_argument(
+        "--to-aggregator",
+        action="store_true",
+        help="send to the aggregator, as the worker does; files otherwise",
+    )
     commands.add_parser("health", help="state of every source; exit code 1 if any has a problem")
     args = parser.parse_args(argv)
 
@@ -40,7 +52,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     configure_logging(settings)
     if args.command == "health":
         return asyncio.run(_health(settings))
-    return asyncio.run(_run_once(settings, args.source, args.limit, args.ignore_seen))
+    return asyncio.run(
+        _run_once(settings, args.source, args.limit, args.ignore_seen, args.to_aggregator)
+    )
 
 
 async def _health(settings: Settings) -> int:
@@ -91,7 +105,11 @@ def _ago(when: datetime | None, now: datetime) -> str:
 
 
 async def _run_once(
-    settings: Settings, keys: list[str] | None, limit: int | None, ignore_seen: bool
+    settings: Settings,
+    keys: list[str] | None,
+    limit: int | None,
+    ignore_seen: bool,
+    to_aggregator: bool = False,
 ) -> int:
     sources = load_sources(settings.sources_file)
     unknown = sorted(set(keys or []) - sources.keys())
@@ -102,9 +120,18 @@ async def _run_once(
     )
 
     redis = Redis.from_url(str(settings.redis_url))
-    async with make_client(settings) as client:
+    async with make_client(settings) as client, make_aggregator_client(settings) as aggregator_http:
         try:
-            deps = build_deps(settings, client, redis)
+            sink = None
+            if to_aggregator:
+                aggregator = AggregatorClient(
+                    aggregator_http, ServiceToken(aggregator_http, settings)
+                )
+                await CatalogPublisher(aggregator, settings).publish(
+                    sources.values(), HealthBook(redis, settings), datetime.now(UTC)
+                )
+                sink = AggregatorSink(aggregator)
+            deps = build_deps(settings, client, redis, sink)
             reports = [
                 await run_source(profile, deps, limit=limit, ignore_seen=ignore_seen)
                 for profile in profiles

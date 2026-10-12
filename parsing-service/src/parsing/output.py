@@ -1,6 +1,5 @@
-"""Where results go. Part 1: local files for checking sources (architecture/aggregator.md 4.9).
-
-The aggregator becomes another Sink in part 2.
+"""Where results go: the aggregator (parsing.aggregator), or local files for checking sources
+(architecture/aggregator.md 4.9).
 """
 
 import asyncio
@@ -16,7 +15,8 @@ from parsing.urls import url_digest
 
 
 class Sink(Protocol):
-    async def item(self, item: Item, html: bytes | None) -> None: ...
+    # update: the item was sent before and this brings what changed, a retry's text
+    async def item(self, item: Item, html: bytes | None, *, update: bool = False) -> None: ...
 
     async def change(self, change: ItemChange) -> None: ...
 
@@ -31,7 +31,8 @@ class FileSink:
         # Jobs of one worker append to the same files
         self._lock = threading.Lock()
 
-    async def item(self, item: Item, html: bytes | None) -> None:
+    async def item(self, item: Item, html: bytes | None, *, update: bool = False) -> None:
+        # A second line for the same URL is the update
         await asyncio.to_thread(self._write_item, item, html)
 
     async def change(self, change: ItemChange) -> None:
