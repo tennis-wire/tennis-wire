@@ -182,6 +182,7 @@ Local principals:
 | `moderation-bot` | client secret `dev-moderation-bot-secret` | `moderator-bot` |
 | `user-service` | client secret `dev-user-service-secret` | `service`, plus `realm-management`: `manage-users`, `view-realm` |
 | `discussion-service` | client secret `dev-discussion-service-secret` | `service` |
+| `parsing-service` | client secret `dev-parsing-service-secret` | `parser`: aggregator-service `/internal/**` only |
 
 `moderator` exists because `dev` is not a moderator in the shape production
 has: `admin` is composite and hands it `author` and `user` as well, so a check
