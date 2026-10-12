@@ -630,16 +630,25 @@ it, and `GET /api/transcribe/jobs` lists the caller's own.
 cd parsing-service
 cp .env.example .env
 uv sync
-uv run python -m parsing run-once                       # every enabled source, once
+uv run python -m parsing run-once                       # every enabled source, once, to files
 uv run python -m parsing run-once --source bounces --limit 10 --ignore-seen
-uv run arq parsing.worker.WorkerSettings                # on schedule
+uv run python -m parsing run-once --to-aggregator       # as the worker does
+uv run arq parsing.worker.WorkerSettings                # on schedule, to the aggregator
 ```
 
 It collects news from the sources in `sources.yaml`
-([architecture/aggregator.md](../architecture/aggregator.md)). Until the
-aggregator exists it writes to `OUTPUT_DIR` (`out/`): `items-<date>.jsonl`,
-`changes.jsonl`, `runs.jsonl`, and the pages the text came from under `html/`.
-Nothing is deployed; it runs locally to check sources.
+([architecture/aggregator.md](../architecture/aggregator.md)). The worker sends
+them to aggregator-service (`AGGREGATOR_URL`, `http://localhost:8095`) under the
+collector's own token, which it gets from Keycloak (`KEYCLOAK_ISSUER_URI`,
+`CLIENT_ID` `parsing-service`, `CLIENT_SECRET`), so both have to be up. On every
+tick it also sends the aggregator its list of sources and, when a source's
+health changes, a snapshot. If the aggregator does not answer, runs fail and
+nothing is marked seen: the next run takes it all again. `SINK=files` makes the
+worker write to files instead.
+
+`run-once` writes to `OUTPUT_DIR` (`out/`) unless told `--to-aggregator`:
+`items-<date>.jsonl`, `changes.jsonl`, `runs.jsonl`, and the pages the text came
+from under `html/`. That is how a source is checked without the aggregator.
 
 State — feed validators, articles seen, the schedule, pauses after a block —
 lives in Redis database 1, and the worker's jobs in the queue `arq:parsing`. The
