@@ -17,8 +17,6 @@ CREATE TABLE source
     language   TEXT        NOT NULL,
     site_url   TEXT        NOT NULL,
     retired    BOOLEAN     NOT NULL DEFAULT FALSE,
-    -- Set by the newsroom (part 3): out of the feed, while the collector goes on
-    hidden     BOOLEAN     NOT NULL DEFAULT FALSE,
     -- The collector's latest health snapshot (aggregator.md 4.11), kept as it came
     health     JSONB,
     health_at  TIMESTAMPTZ,
@@ -58,8 +56,9 @@ CREATE TABLE item
 );
 
 -- changeset andrei:3
--- comment: The expiry job walks items by arrival
-CREATE INDEX idx_item_created_at ON item (created_at);
+-- comment: The newsroom's feed pages by arrival, newest first, the id breaking ties; the expiry job
+-- comment: walks the same order from the old end
+CREATE INDEX idx_item_created_at ON item (created_at, id);
 
 -- changeset andrei:4 splitStatements:false
 -- comment: Keep updated_at honest in the database rather than trusting every write path
@@ -81,3 +80,10 @@ CREATE TRIGGER trigger_item_updated_at
     BEFORE UPDATE ON item
     FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
+
+-- changeset andrei:5
+-- comment: The feed's search is a substring of the title or the lead, in any language: trigram
+-- comment: indexes serve LIKE '%...%'. pg_trgm is a trusted extension, the database owner may create it
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX idx_item_title_trgm ON item USING gin (lower(title) gin_trgm_ops);
+CREATE INDEX idx_item_lead_trgm ON item USING gin (lower(lead) gin_trgm_ops);

@@ -45,9 +45,17 @@ class SecurityConfigTest {
     }
 
     @Test
+    void theFeedIsTheNewsrooms() throws Exception {
+        mvc.perform(get("/api/aggregator/items")).andExpect(status().isUnauthorized());
+        for (var role : new String[] {"user", "moderator", "parser", "service"}) {
+            mvc.perform(get("/api/aggregator/items").with(tokenWith(role))).andExpect(status().isForbidden());
+        }
+        mvc.perform(get("/api/aggregator/items").with(tokenWith("author"))).andExpect(status().isOk());
+    }
+
+    @Test
     void everythingElseIsClosed() throws Exception {
-        // The newsroom's API comes with part 3; until then no path but /internal/** is open
-        mvc.perform(get("/api/aggregator/items").with(tokenWith("author"))).andExpect(status().isForbidden());
-        mvc.perform(get("/api/aggregator/items").with(collector())).andExpect(status().isForbidden());
+        mvc.perform(get("/actuator/health").with(tokenWith("author"))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/other").with(collector())).andExpect(status().isForbidden());
     }
 }
