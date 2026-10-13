@@ -40,10 +40,6 @@ public class Source {
     @Column(name = "retired", nullable = false)
     private boolean retired;
 
-    // The newsroom's (part 3): out of the feed, while the collector goes on
-    @Column(name = "hidden", nullable = false)
-    private boolean hidden;
-
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "health")
     private HealthSnapshot health;

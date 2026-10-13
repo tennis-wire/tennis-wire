@@ -29,7 +29,10 @@ public class SecurityConfig {
                         // user-service and discussion-service too (auth.md 2, 6)
                         .requestMatchers("/internal/**")
                         .hasRole(Roles.PARSER)
-                        // Fail closed: the newsroom's /api/aggregator/** comes with part 3
+                        // The newsroom: every author reads and clears the feed (aggregator.md 5.2).
+                        // chief-editor is a composite over author.
+                        .requestMatchers("/api/aggregator/**")
+                        .hasRole(Roles.AUTHOR)
                         .anyRequest()
                         .denyAll())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
