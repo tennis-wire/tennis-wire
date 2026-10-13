@@ -35,7 +35,7 @@ async def test_seen(redis: FakeAsyncRedis, settings: Settings) -> None:
     assert await state.seen("s", "https://example.com/b") == record
     assert await state.seen("other", "https://example.com/a") is None
     ttl = await redis.ttl(next(iter(await redis.keys("parsing:seen:s:*"))))
-    assert timedelta(days=29) < timedelta(seconds=ttl) <= settings.seen_ttl
+    assert settings.seen_ttl - timedelta(minutes=1) < timedelta(seconds=ttl) <= settings.seen_ttl
 
 
 async def test_claim_due_once_per_interval(redis: FakeAsyncRedis, settings: Settings) -> None:

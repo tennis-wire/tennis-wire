@@ -53,9 +53,10 @@ class Settings(BaseSettings):
     # Pages of one host go one at a time, this far apart
     host_delay: timedelta = timedelta(seconds=1)
 
-    # Longer than an item lives in the aggregator (30 days): an article that stays in a feed past
-    # its term, a pinned season calendar, must not come back as new (architecture/aggregator.md 5.1)
-    seen_ttl: timedelta = timedelta(days=90)
+    # Only within a source's max_age does an entry need remembering: a fresh article is in every
+    # poll of its feed, and memory keeps its page from being fetched again. Twice the default
+    # max_age; what is older is turned away by its date (architecture/aggregator.md 4.6)
+    seen_ttl: timedelta = timedelta(days=1)
     robots_ttl: timedelta = timedelta(hours=24)
     pause_min: timedelta = timedelta(minutes=1)
     pause_max: timedelta = timedelta(hours=1)

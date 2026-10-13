@@ -650,6 +650,12 @@ worker write to files instead.
 `items-<date>.jsonl`, `changes.jsonl`, `runs.jsonl`, and the pages the text came
 from under `html/`. That is how a source is checked without the aggregator.
 
+An entry older than its source's `max_age` (12 hours unless the profile says
+otherwise) is not news and is not taken; the feed dates it, or the page when the
+feed has none. Seen addresses are remembered for a day, only so that a fresh
+article in every poll is not fetched again. `--ignore-seen` takes entries of any
+age, for checking a source on its last articles.
+
 State — feed validators, articles seen, the schedule, pauses after a block —
 lives in Redis database 1, and the worker's jobs in the queue `arq:parsing`. The
 transcription worker uses database 0 and arq's default queue, so neither takes

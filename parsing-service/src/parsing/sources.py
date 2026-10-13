@@ -7,6 +7,7 @@ import re
 from datetime import timedelta
 from pathlib import Path
 from typing import Literal, Self
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
@@ -46,6 +47,20 @@ class ListingRules(BaseModel):
     title: str | None = None
     # An attribute of the link that holds the lead
     lead_attr: str | None = None
+    # When the list itself dates its entries: a day header ("7 oktyabrya", "Segodnya") that the
+    # entries after it belong to, a time inside the entry ("22:03"), and the zone both are in
+    day: str | None = None
+    time: str | None = None
+    timezone: str = "UTC"
+
+    @field_validator("timezone")
+    @classmethod
+    def _known_zone(cls, value: str) -> str:
+        try:
+            ZoneInfo(value)
+        except (ZoneInfoNotFoundError, ValueError) as error:
+            raise ValueError(f"unknown time zone {value}") from error
+        return value
 
 
 class SourceProfile(BaseModel):
@@ -61,6 +76,9 @@ class SourceProfile(BaseModel):
     include: tuple[re.Pattern[str], ...] = ()
     exclude: tuple[re.Pattern[str], ...] = ()
     interval: timedelta
+    # Older than this, an entry is not news: it is not taken, whatever the memory says. Dated by the
+    # feed, or by the page when the feed has no date (architecture/aggregator.md 4.5)
+    max_age: timedelta = timedelta(hours=12)
     # Longer than this without a new item, and the source counts as gone quiet
     quiet_after: timedelta = timedelta(days=1)
     respect_robots: bool = True
