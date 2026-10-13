@@ -124,6 +124,10 @@ sources:
       link: 'a.short-text'
       title: 'a.short-text strong'
       lead_attr: title
+      # Days as headers, "7 oktyabrya", the time in each entry: Moscow time
+      day: 'div.short-news > b'
+      time: 'span.time'
+      timezone: Europe/Moscow
     extract:
       # Without it the extraction also takes the title, the comment counter and the
       # "recommended" block, and on a page with a long comment thread loses the text entirely

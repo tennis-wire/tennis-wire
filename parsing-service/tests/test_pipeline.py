@@ -1,5 +1,7 @@
 import gzip
 import json
+from datetime import UTC, datetime, timedelta
+from email.utils import format_datetime
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +17,9 @@ from parsing.urls import url_digest
 from tests.conftest import ProfileFactory
 
 FEED = "https://news.example.com/feed"
+# Fresh, so within a source's max_age whatever clock the test runs on; a clock some tests move
+# forward stays well inside it
+PUBLISHED = (datetime.now(UTC) - timedelta(hours=1)).replace(microsecond=0)
 A = "https://news.example.com/tennis/a"
 B = "https://news.example.com/tennis/b"
 BODY = (
@@ -36,7 +41,7 @@ def no_robots_txt(respx_mock: respx.MockRouter) -> None:
 def rss(*items: tuple[str, str]) -> bytes:
     entries = "".join(
         f"<item><title>{title}</title><link>{link}?utm_source=rss</link><guid>{link}</guid>"
-        f"<pubDate>Tue, 06 Oct 2026 12:40:06 +0000</pubDate>"
+        f"<pubDate>{format_datetime(PUBLISHED, usegmt=True)}</pubDate>"
         f"<description>&lt;p&gt;Lead of {title}&lt;/p&gt;</description></item>"
         for title, link in items
     )
@@ -82,7 +87,7 @@ async def test_first_run_collects_the_entries(
     assert first["text"].startswith("The final went the distance")
     assert first["extraction"] == ExtractionStatus.OK
     assert first["language"] == "en"
-    assert first["published_at"] == "2026-10-06T12:40:06Z"
+    assert first["published_at"] == PUBLISHED.isoformat().replace("+00:00", "Z")
     saved = settings.output_dir / "html" / "example" / f"{url_digest(A)}.html.gz"
     assert gzip.decompress(saved.read_bytes()) == page()
     assert [run["status"] for run in written(settings, "runs.jsonl")] == ["ok"]
@@ -306,6 +311,55 @@ async def test_limit_and_ignore_seen(
     assert (await run_source(profile, deps, limit=1)).new == 1
     assert (await run_source(profile, deps, limit=1)).new == 0
     assert (await run_source(profile, deps, limit=1, ignore_seen=True)).new == 1
+
+
+async def test_an_old_entry_is_not_news(
+    profile: SourceProfile, deps: Deps, settings: Settings, respx_mock: respx.MockRouter
+) -> None:
+    old = (datetime.now(UTC) - timedelta(hours=13)).replace(microsecond=0)
+    feed = (
+        '<?xml version="1.0"?><rss version="2.0"><channel>'
+        f"<item><title>Old</title><link>{A}</link>"
+        f"<pubDate>{format_datetime(old, usegmt=True)}</pubDate></item>"
+        "</channel></rss>"
+    ).encode()
+    respx_mock.get(FEED).respond(200, content=feed)
+    page_route = respx_mock.get(A).respond(200, content=page())
+
+    report = await run_source(profile, deps)
+    # A check of a source takes its last articles at any age
+    check = await run_source(profile, deps, ignore_seen=True)
+
+    assert report.new == 0
+    assert check.new == 1
+    assert page_route.call_count == 1
+
+
+async def test_an_old_article_dated_by_its_page_is_remembered_not_sent(
+    make_profile: ProfileFactory, deps: Deps, settings: Settings, respx_mock: respx.MockRouter
+) -> None:
+    listing = b'<html><body><a href="/tennis/blogs/1.html">A pinned calendar</a></body></html>'
+    url = "https://news.example.com/tennis/blogs/1.html"
+    respx_mock.get("https://news.example.com/tennis/").respond(200, content=listing)
+    dated = page().replace(
+        b"<body>",
+        b'<body><time data-test="published-date" datetime="2025-12-30T22:28:00+03:00">x</time>',
+    )
+    page_route = respx_mock.get(url).respond(200, content=dated)
+    profile = make_profile(
+        kind="html",
+        url="https://news.example.com/tennis/",
+        listing={"link": 'a[href*="/tennis/blogs/"]'},
+        extract={"published": 'time[data-test="published-date"]'},
+    )
+
+    first = await run_source(profile, deps)
+    second = await run_source(profile, deps)
+
+    assert (first.new, second.new) == (0, 0)
+    assert written(settings, "items-*.jsonl") == []
+    # Fetched once: its date is remembered for as long as the memory lasts
+    assert page_route.call_count == 1
 
 
 async def test_a_failing_feed_is_reported(

@@ -1,7 +1,9 @@
+from datetime import UTC, date, datetime
+
 import pytest
 from pydantic import ValidationError
 
-from parsing.adapters import FeedError
+from parsing.adapters import FeedError, html_listing
 from parsing.adapters.html_listing import parse_html_listing
 from tests.conftest import ProfileFactory
 
@@ -61,6 +63,55 @@ def test_items_with_title_and_lead(make_profile: ProfileFactory) -> None:
     ]
     # The time comes from the article page
     assert entries[0].published_at is None
+
+
+def test_dates_from_day_headers_and_times(
+    make_profile: ProfileFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(html_listing, "_today", lambda zone: date(2026, 10, 8))
+    page = """<html><body><div class="short-news">
+      <b>Сегодня</b>
+      <p><span class="time">01:30</span><a class="short-text" href="/tennis/3-c.html">C</a></p>
+      <b>7 октября</b>
+      <p><span class="time">22:03</span><a class="short-text" href="/tennis/1-a.html">A</a></p>
+      <p><a class="short-text" href="/tennis/2-b.html">B, no time</a></p>
+    </div></body></html>"""
+    profile = news_profile(
+        make_profile,
+        item="div.short-news p",
+        link="a.short-text",
+        day="div.short-news > b",
+        time="span.time",
+        timezone="Europe/Moscow",
+    )
+
+    entries = parse_html_listing(page.encode(), profile)
+
+    assert [(entry.title, entry.published_at) for entry in entries] == [
+        ("C", datetime(2026, 10, 7, 22, 30, tzinfo=UTC)),
+        ("A", datetime(2026, 10, 7, 19, 3, tzinfo=UTC)),
+        ("B, no time", None),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("7 октября ", date(2026, 10, 7)),
+        ("Вчера", date(2026, 10, 7)),
+        ("28 декабря", date(2025, 12, 28)),
+        ("1 января 2027", date(2027, 1, 1)),
+        ("31 февраля", None),
+        ("на днях", None),
+    ],
+)
+def test_day_headers(text: str, expected: date | None) -> None:
+    assert html_listing._day(text, date(2026, 10, 8)) == expected
+
+
+def test_an_unknown_zone_is_refused(make_profile: ProfileFactory) -> None:
+    with pytest.raises(ValidationError):
+        news_profile(make_profile, link="a", timezone="Mars/Olympus")
 
 
 def test_links_alone_take_the_longest_text(make_profile: ProfileFactory) -> None:

@@ -173,6 +173,9 @@ async def _run_feed(
         if not host_allowed(url, profile.hosts):
             log.warning("foreign_link", url=url)
             continue
+        # Not news any more: dated by the feed. A check of a source takes its last ones at any age
+        if not ignore_seen and _too_old(entry.published_at, profile):
+            continue
         taken += 1
         if not ignore_seen:
             seen = await deps.state.seen(profile.key, url)
@@ -182,6 +185,12 @@ async def _run_feed(
                 continue
 
         item, html, retry = await _collect(profile, entry, url, deps, log)
+        if not ignore_seen and entry.published_at is None and _too_old(item.published_at, profile):
+            # Dated by its page only, and old: remembered, so the page is not fetched every poll
+            await deps.state.mark_seen(
+                profile.key, {url, item.url}, SeenRecord(entry.title, item.published_at)
+            )
+            continue
         await deps.sink.item(item, html)
         await deps.state.mark_seen(
             profile.key, {url, item.url}, SeenRecord(entry.title, entry.published_at)
@@ -351,6 +360,10 @@ def _article_url(declared: str | None, fetched: str, profile: SourceProfile) -> 
         if host_allowed(canonical, profile.hosts) and urlsplit(canonical).path not in ("", "/"):
             return canonical
     return canonical_url(fetched)
+
+
+def _too_old(published: datetime | None, profile: SourceProfile) -> bool:
+    return published is not None and published < _now() - profile.max_age
 
 
 def _failed(item: Item, error: str) -> Item:
