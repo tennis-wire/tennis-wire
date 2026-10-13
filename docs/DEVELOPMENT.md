@@ -552,19 +552,30 @@ the admin API sits above the realm. And discussion-service over
 through the gateway, to take away what a reader who has left wrote.
 
 aggregator-service keeps the newsroom's working feed: the catalog of sources and
-the news the collector sends (design §5.1). Today it has `/internal/**` alone,
-for the collector's token (`parsing-service`, role `parser`): the source list
+the news the collector sends (design §5.1). `/internal/**` is for the collector's
+token (`parsing-service`, role `parser`): the source list
 (`PUT /internal/sources`), health snapshots (`PUT /internal/sources/{key}/health`)
 and news in batches of up to 100 (`POST /internal/items`), each item answered on
 its own — created, updated, ignored (an update of a deleted item) or rejected.
-The gateway does not route it; the newsroom's API comes with part 3. An item is
-deleted whole 30 days after it arrived, by a job once an hour
-(`aggregator.expiry.*`). To try it with `curl`, a collector token:
+The gateway never routes it. An item is deleted whole 30 days after it arrived,
+by a job once an hour (`aggregator.expiry.*`). To try it with `curl`, a collector
+token:
 
 ```bash
 curl -s -d grant_type=client_credentials -d client_id=parsing-service \
   -d client_secret=dev-parsing-service-secret \
   http://localhost:8180/realms/tennis-wire/protocol/openid-connect/token
+```
+
+The newsroom's side is `/api/aggregator/**`, for `author` (design §5.2): the
+feed newest arrival first, by cursor (`GET /items?source=&language=&search=&cursor=`),
+an item whole (`GET /items/{id}`, `GET /items/by-url?url=`), deletion
+(`DELETE /items/{id}`) and the sources with their health (`GET /sources`). A
+`dev-cli` token on the service port tries it:
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" \
+  'http://localhost:8095/api/aggregator/items?limit=5&search=sinner'
 ```
 
 Avatars live in the `avatars` bucket, which user-service writes over the S3 API
