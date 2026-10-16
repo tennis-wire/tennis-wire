@@ -8,6 +8,7 @@ import static com.tenniswire.aggregator_service.Collector.sourceList;
 import static com.tenniswire.aggregator_service.Collector.sources;
 import static com.tenniswire.aggregator_service.Collector.tokenWith;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -21,9 +22,13 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -31,6 +36,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
+@ExtendWith(OutputCaptureExtension.class)
 class EditorialIT {
 
     @Autowired
@@ -149,6 +155,19 @@ class EditorialIT {
 
         assertThat(itemRepository.findById(id)).isEmpty();
         mvc.perform(asAuthor(get("/api/aggregator/items/{id}", id))).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void theDeleterIsLoggedBySubNotByEmail(CapturedOutput output) throws Exception {
+        arrive("cleared-by");
+        var id = itemRepository.findByUrl(url("cleared-by")).orElseThrow().id();
+        var staff = jwt().jwt(
+                        token -> token.subject("staff-sub").claim("preferred_username", "author@tennis-wire.local"))
+                .authorities(new SimpleGrantedAuthority("ROLE_author"));
+
+        mvc.perform(delete("/api/aggregator/items/{id}", id).with(staff)).andExpect(status().isNoContent());
+
+        assertThat(output).contains("deleted by staff-sub").doesNotContain("author@tennis-wire.local");
     }
 
     @Test

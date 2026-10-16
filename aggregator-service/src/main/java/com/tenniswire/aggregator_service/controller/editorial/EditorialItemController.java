@@ -55,8 +55,8 @@ public class EditorialItemController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable UUID id, JwtAuthenticationToken token) {
-        var name = token.getToken().getClaimAsString("preferred_username");
-        service.delete(id, name == null ? token.getName() : name + " (" + token.getName() + ")");
+        // sub, not preferred_username: that one is an email, and staff reach the log by sub (auth.md 4)
+        service.delete(id, token.getName());
         return ResponseEntity.noContent().build();
     }
 }
