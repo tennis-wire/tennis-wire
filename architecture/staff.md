@@ -400,7 +400,7 @@
 - `security/keycloak/fgap` — забор, IT (читателя гасит, на сотрудника отказ, выдача `admin` — отказ), флаг фичи в образе;
 - `chore/staff-audit` — логгер `staff.audit` в `content-`, `discussion-`, `user-service`. В минимуме до найма он был, сюда перенесён сознательно: до стока строке некуда падать, а сотрудники появляются не раньше деплоя. Если кто-то появится раньше — ветка уходит в рубеж найма;
 - `chore/keycloak/events-to-logs`;
-- сток логов с retention 90 дней, Telegram-канал;
+- сток логов с retention 90 дней, Telegram-канал. У `parsing-` и `transcription-service` arq пишет свои строки через stdlib `logging` текстом (`%(asctime)s: %(message)s`), среди JSON от structlog. До стока stdlib `logging` пропустить через structlog (`ProcessorFormatter`), чтобы в стоке был только JSON;
 - prod-realm из репозитория, роли БД, PITR-бэкапы, версионирование бакета, лимиты провайдеров, break-glass, удаление бутстрап-админа.
 
 **По случаю:**
