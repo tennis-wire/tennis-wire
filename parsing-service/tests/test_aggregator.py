@@ -335,6 +335,31 @@ async def test_nothing_is_marked_seen_that_did_not_arrive(
     assert await deps.state.seen("example", A) is not None
 
 
+async def test_an_aggregator_away_is_a_warning_not_a_crash(
+    agg_settings: Settings,
+    client: httpx.AsyncClient,
+    redis: FakeAsyncRedis,
+    aggregator: AggregatorClient,
+    make_profile: ProfileFactory,
+    token_route: respx.Route,
+    respx_mock: respx.MockRouter,
+) -> None:
+    respx_mock.get("https://news.example.com/robots.txt").respond(404)
+    respx_mock.get(FEED).respond(200, content=rss(("A", A)))
+    respx_mock.get(A).respond(200, content=page())
+    respx_mock.post(f"{AGGREGATOR}/internal/items").respond(503)
+    deps = build_deps(agg_settings, client, redis, AggregatorSink(aggregator))
+
+    with capture_logs() as logs:
+        report = await run_source(make_profile(url=FEED), deps)
+
+    levels = {log["event"]: log["log_level"] for log in logs}
+    assert report.status == RunStatus.FAILED
+    assert report.error == "AggregatorError: items answered 503"
+    assert levels["aggregator_unavailable"] == "warning"
+    assert "run_failed" not in levels
+
+
 async def test_a_retry_updates_the_item_under_the_address_it_was_sent_with(
     agg_settings: Settings,
     client: httpx.AsyncClient,

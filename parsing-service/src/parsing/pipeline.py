@@ -9,6 +9,7 @@ import structlog
 from redis.asyncio import Redis
 
 from parsing.adapters import ADAPTERS, FeedEntry
+from parsing.aggregator import AggregatorError
 from parsing.config import Settings
 from parsing.extract import ExtractionError, extract_article
 from parsing.fetch import (
@@ -98,6 +99,11 @@ async def run_source(
         report.status = RunStatus.ROBOTS
         report.error = f"robots.txt disallows {error}"
         log.warning("robots_disallowed", url=str(error))
+    except AggregatorError as error:
+        # An outage, not a bug: the next run takes everything again (aggregator.md 5.1)
+        report.status = RunStatus.FAILED
+        report.error = f"{type(error).__name__}: {error}"
+        log.warning("aggregator_unavailable", error=str(error))
     except Exception as error:
         # A failed run is reported and the worker goes on with the other sources
         report.status = RunStatus.FAILED
