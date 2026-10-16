@@ -63,10 +63,10 @@ public class EditorialItemService {
 
     // Gone whole, for everyone; an item already gone is no error: two people may clear the same one
     @Transactional
-    public void delete(UUID id, String who) {
+    public void delete(UUID id, String sub) {
         items.findById(id).ifPresent(item -> {
             items.delete(item);
-            log.info("Item {} ({}) deleted by {}", item.id(), item.url(), who);
+            log.info("Item {} ({}) deleted by {}", item.id(), item.url(), sub);
         });
     }
 
