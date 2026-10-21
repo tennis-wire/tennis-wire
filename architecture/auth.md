@@ -171,7 +171,7 @@ Realm-роли (client-роли не используем — проще мап�
 | `/actuator/gateway` | `admin` | Экспонируется только профилем `local`; роль требуется и там. Профиль управляет экспозицией, security — доступом |
 | `/api/public/**` | анонимно | |
 | `/api/editorial/**`, `/api/ai/**`, `/api/translate/**`, `/api/transcribe/**` | `author` | сервис сужает: чужое опубликованное, снятие с публикации, сброс чужой правки, правка и удаление тегов — только `chief-editor`; черновик — только владельцу ([editorial.md](editorial.md) §2) |
-| `/api/aggregator/**` | `author` | planned; правила в gateway пока нет, путь закрыт |
+| `/api/aggregator/**` | `author` | лента агрегатора: читать и удалять новости может любой автор ([aggregator.md](aggregator.md) §5.2). Сборщику (`parser`) путь закрыт: его вход — `/internal/**` агрегатора, мимо gateway |
 | `/api/discussion/comments/**` GET | анонимно | токен, если есть, всё равно валидируется — по нему применяются блокировки зрителя |
 | `/api/discussion/**` (прочее) | `user` | запись комментариев и жалоб, игнор-лист; сервис пускает только `comments/**` и `blocks/**` |
 | `/api/discussion/moderation/**` | `moderator`; `POST /moderation/reports` — `moderator-bot` | бот только жалуется, прочая модерация закрыта ему уже в gateway. Сервис повторяет: `/moderation/restrictions/**`, `GET`/`PATCH /moderation/reports/**` и `DELETE /moderation/comments/{id}` — только `moderator`, `POST /moderation/reports` — только `moderator-bot` |
@@ -183,7 +183,7 @@ Realm-роли (client-роли не используем — проще мап�
 
 **`groups` в токене — только для отказа, никогда для допуска.** Допуск дают роли из таблицы выше (§1, п. 3). Сайт по группам решает только, что показать (§4).
 
-**Staff-маршруты — только с токеном `editorial-ui`.** Gateway сверяет `azp` на `/api/editorial/**`, `/api/ai/**`, `/api/translate/**`, `/api/transcribe/**`, записи опросов, `/api/discussion/moderation/**`, модерации аватаров и `DELETE /api/users/{id}`; `POST /api/discussion/moderation/reports` принимает только токен `moderation-bot`. Допуск по-прежнему даёт роль, `azp` лишь отказывает (403) токену, выданному другому клиенту: сайту, приложению, `dev-cli`. Сервисы `azp` не проверяют, поэтому `curl` с токеном `dev-cli` на staff-путь идёт на порт сервиса напрямую ([DEVELOPMENT.md](../docs/DEVELOPMENT.md)).
+**Staff-маршруты — только с токеном `editorial-ui`.** Gateway сверяет `azp` на `/api/editorial/**`, `/api/ai/**`, `/api/translate/**`, `/api/transcribe/**`, `/api/aggregator/**`, записи опросов, `/api/discussion/moderation/**`, модерации аватаров и `DELETE /api/users/{id}`; `POST /api/discussion/moderation/reports` принимает только токен `moderation-bot`. Допуск по-прежнему даёт роль, `azp` лишь отказывает (403) токену, выданному другому клиенту: сайту, приложению, `dev-cli`. Сервисы `azp` не проверяют, поэтому `curl` с токеном `dev-cli` на staff-путь идёт на порт сервиса напрямую ([DEVELOPMENT.md](../docs/DEVELOPMENT.md)).
 
 CORS терминируется в gateway (сделано).
 

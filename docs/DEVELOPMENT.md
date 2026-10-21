@@ -489,7 +489,7 @@ intended behaviour, not a misconfiguration.
 | user-service | 8092 | requires PostgreSQL |
 | transcription-service | 8001 | requires Redis + MinIO |
 | parsing-service | — | a worker, no port; requires Redis |
-| aggregator-service | 8095 | requires PostgreSQL; not routed through the gateway yet |
+| aggregator-service | 8095 | requires PostgreSQL; the gateway routes `/api/aggregator/**` only |
 | editorial-ui (Vite) | 5173 | |
 | public-web (Next.js) | 3000 | |
 | mobile (Expo dev server) | 8081 | |
@@ -570,8 +570,9 @@ curl -s -d grant_type=client_credentials -d client_id=parsing-service \
 The newsroom's side is `/api/aggregator/**`, for `author` (design §5.2): the
 feed newest arrival first, by cursor (`GET /items?source=&language=&search=&cursor=`),
 an item whole (`GET /items/{id}`, `GET /items/by-url?url=`), deletion
-(`DELETE /items/{id}`) and the sources with their health (`GET /sources`). A
-`dev-cli` token on the service port tries it:
+(`DELETE /items/{id}`) and the sources with their health (`GET /sources`). The
+gateway takes only an `editorial-ui` token there, so a `dev-cli` token goes to
+the service port:
 
 ```bash
 curl -s -H "Authorization: Bearer $TOKEN" \
