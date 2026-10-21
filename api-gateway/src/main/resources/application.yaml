@@ -61,6 +61,15 @@ spring:
               predicates:
                 - Path=/api/public/**
 
+            # ===== Aggregator Service =====
+
+            # The newsroom's feed, /api/aggregator/** only. /internal/** is the collector's and is
+            # deliberately absent, as for the services below: it is reached over cluster DNS.
+            - id: aggregator-editorial
+              uri: http://localhost:8095
+              predicates:
+                - Path=/api/aggregator/**
+
             # ===== Discussion Service =====
 
             # /api/discussion/** only. /internal/** is deliberately absent and must stay that way,
@@ -174,11 +183,6 @@ spring:
             #   uri: http://localhost:8094
             #   predicates:
             #     - Path=/api/search/**
-
-            # - id: aggregator-service
-            #   uri: http://localhost:8095
-            #   predicates:
-            #     - Path=/api/aggregator/**
 
 # Short windows only. The per-account ceilings (40 comments an hour, 8 reports an hour and the
 # rest of the rules' anti-spam limits) are not expressible as one token bucket and need what the

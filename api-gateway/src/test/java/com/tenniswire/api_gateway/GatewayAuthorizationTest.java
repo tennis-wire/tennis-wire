@@ -253,6 +253,8 @@ class GatewayAuthorizationTest {
                 arguments(HttpMethod.POST, "/api/ai/chat", Roles.AUTHOR),
                 arguments(HttpMethod.POST, "/api/translate", Roles.AUTHOR),
                 arguments(HttpMethod.POST, "/api/transcribe/jobs", Roles.AUTHOR),
+                arguments(HttpMethod.GET, "/api/aggregator/items", Roles.AUTHOR),
+                arguments(HttpMethod.DELETE, "/api/aggregator/items/" + UUID.randomUUID(), Roles.AUTHOR),
                 arguments(HttpMethod.POST, "/api/discussion/polls", Roles.AUTHOR),
                 arguments(HttpMethod.PATCH, poll, Roles.AUTHOR),
                 arguments(HttpMethod.PUT, poll + "/closing", Roles.AUTHOR),
@@ -327,6 +329,30 @@ class GatewayAuthorizationTest {
     @Test
     void ownProfileStillRejectsAnonymous() {
         client.get().uri("/api/users/me").exchange().expectStatus().isUnauthorized();
+    }
+
+    // Reading and clearing the feed is an author's work, a moderator's is comments
+    @Test
+    void theFeedIsNotAModeratorsOrAReadersOrTheCollectors() {
+        for (var role : List.of(Roles.USER, Roles.MODERATOR, Roles.PARSER)) {
+            client.mutateWith(through(EDITOR, role))
+                    .get()
+                    .uri("/api/aggregator/items")
+                    .exchange()
+                    .expectStatus()
+                    .isForbidden();
+        }
+    }
+
+    // The collector's door is aggregator-service /internal/**, on its own port: never through here
+    @Test
+    void theCollectorsDoorIsNotHere() {
+        client.mutateWith(mockJwt().authorities(new SimpleGrantedAuthority("ROLE_" + Roles.PARSER)))
+                .put()
+                .uri("/internal/sources")
+                .exchange()
+                .expectStatus()
+                .isForbidden();
     }
 
     @Test
