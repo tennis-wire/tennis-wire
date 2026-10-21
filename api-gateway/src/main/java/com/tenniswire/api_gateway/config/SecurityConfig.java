@@ -28,7 +28,7 @@ import reactor.core.publisher.Mono;
 public class SecurityConfig {
 
     private static final String[] EDITORIAL_PATHS = {
-        "/api/editorial/**", "/api/ai/**", "/api/translate/**", "/api/transcribe/**"
+        "/api/editorial/**", "/api/ai/**", "/api/translate/**", "/api/transcribe/**", "/api/aggregator/**"
     };
 
     // Clients as auth.md names them: the editor people sign in to, and the bot's own

@@ -241,7 +241,7 @@ pytest, respx, fakeredis. Логика — на самодельных лент�
 **Доступ.**
 
 - У сборщика своя узкая роль и клиент `parsing-service` (client_credentials). `/internal/**` агрегатора пускает только эту роль. Не `service`: та открывает `/internal/**` `user-service` и `discussion-service`, включая стирание следа читателя, а аудитория у всех токенов realm одна — отличить сборщик можно только ролью. Имя роли и клиент — в auth.md.
-- `/internal/**` через gateway не ходит (auth.md §6). Редакционное API `/api/aggregator/**` — часть 3.
+- `/internal/**` через gateway не ходит (auth.md §6). Редакционное API `/api/aggregator/**` — §5.2.
 
 **Устройство.** По образцу `user-service`: Spring Boot, PostgreSQL, Liquibase, Testcontainers. Порт 8095 — уже зарезервирован в `api-gateway`. База `tennis_aggregator` — в инициализации Postgres в compose.
 

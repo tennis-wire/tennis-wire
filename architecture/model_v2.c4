@@ -189,7 +189,7 @@ model {
 
       service aggregatorApi 'Aggregator API' {
         #planned
-        description '/internal/**: каталог источников, снимки здоровья, приём новостей (новая или обновление) от сборщика. /api/aggregator/** для вкладки «Источники» — часть 3'
+        description '/internal/**: каталог источников, снимки здоровья, приём новостей (новая или обновление) от сборщика. /api/aggregator/** для вкладки «Источники» через gateway: лента, новость, удаление, источники со здоровьем — §5.2'
       }
 
       service deduplicator 'Deduplicator' {

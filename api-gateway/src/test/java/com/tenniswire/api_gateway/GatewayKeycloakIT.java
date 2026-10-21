@@ -58,6 +58,7 @@ class GatewayKeycloakIT {
     private static final String REALM = "tennis-wire";
     private static final String CLI = "dev-cli";
     private static final String EDITORIAL = "/api/editorial/articles";
+    private static final String FEED = "/api/aggregator/items";
     private static final String USERS_ME = "/api/users/me";
     private static final String SOMEONES_ACCOUNT = "/api/users/8f1d9c4e-3a2b-4c5d-9e6f-0a1b2c3d4e5f";
     private static final String REPORTS = "/api/discussion/moderation/reports";
@@ -98,6 +99,7 @@ class GatewayKeycloakIT {
         // needs the port.
         DOWNSTREAM.start();
         DOWNSTREAM.stubFor(get(urlPathEqualTo(EDITORIAL)).willReturn(aResponse().withStatus(200)));
+        DOWNSTREAM.stubFor(get(urlPathEqualTo(FEED)).willReturn(aResponse().withStatus(200)));
         DOWNSTREAM.stubFor(delete(urlPathMatching("/api/users/[^/]+"))
                 .willReturn(aResponse().withStatus(202)));
         DOWNSTREAM.stubFor(post(urlPathEqualTo(REPORTS)).willReturn(aResponse().withStatus(201)));
@@ -332,12 +334,27 @@ class GatewayKeycloakIT {
         // /internal/** of user-service and discussion-service as well
         assertThat(roles(access)).contains("parser").doesNotContain("service", "user", "author", "moderator");
         assertThat(access.path("aud").toString()).contains("tennis-wire-api");
+        for (var path : List.of(EDITORIAL, FEED)) {
+            client.get()
+                    .uri(path)
+                    .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                    .exchange()
+                    .expectStatus()
+                    .isForbidden();
+        }
+    }
+
+    @Test
+    void anAuthorReachesTheFeed() {
         client.get()
-                .uri(EDITORIAL)
-                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .uri(FEED)
+                .header(HttpHeaders.AUTHORIZATION, bearer(editorToken("author", "author")))
                 .exchange()
                 .expectStatus()
-                .isForbidden();
+                .isOk();
+
+        DOWNSTREAM.verify(
+                getRequestedFor(urlPathEqualTo(FEED)).withHeader(HttpHeaders.AUTHORIZATION, matching("Bearer .+")));
     }
 
     @Test
