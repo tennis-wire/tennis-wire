@@ -100,6 +100,13 @@ discussion:
       - clown
       - vomit
 
+  author-totals:
+    # How often a reader's page catches up with the reactions on his comments: the fold that adds
+    # them to his total runs this often. ISO-8601, as for text-expiry below.
+    interval: PT1M
+    # Changes per transaction
+    batch-size: 1000
+
   report:
     # Open set on purpose: anything outside it is a 400, and adding
     # a code is a config change rather than a migration.

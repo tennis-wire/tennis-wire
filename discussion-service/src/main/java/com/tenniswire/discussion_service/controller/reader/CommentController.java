@@ -13,6 +13,7 @@ import com.tenniswire.discussion_service.dto.reader.EditedCommentResponse;
 import com.tenniswire.discussion_service.security.CurrentUser;
 import com.tenniswire.discussion_service.service.CommentService;
 import com.tenniswire.discussion_service.service.CommentSort;
+import com.tenniswire.discussion_service.service.ReactionService;
 import com.tenniswire.discussion_service.service.ReportService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -46,6 +47,7 @@ public class CommentController {
 
     private final CommentService commentService;
     private final ReportService reportService;
+    private final ReactionService reactionService;
     private final CurrentUser currentUser;
     private final CommentResponses responses;
     private final ViewerResponses viewers;
@@ -53,11 +55,13 @@ public class CommentController {
     public CommentController(
             CommentService commentService,
             ReportService reportService,
+            ReactionService reactionService,
             CurrentUser currentUser,
             CommentResponses responses,
             ViewerResponses viewers) {
         this.commentService = commentService;
         this.reportService = reportService;
+        this.reactionService = reactionService;
         this.currentUser = currentUser;
         this.responses = responses;
         this.viewers = viewers;
@@ -98,11 +102,13 @@ public class CommentController {
         return new CommentPageResponse(responses.of(page.items(), viewerId), page.nextCursor(), null);
     }
 
-    // The number under the name on a profile. Not viewer-shaped, unlike the listing above, except
-    // that a restricted author's count is for himself only, as his listing is.
+    // The numbers under the name on a profile. Not viewer-shaped, unlike the listing above, except
+    // that a restricted author's are for himself only, as his listing is: the count goes first and
+    // refuses everyone else before the totals are read.
     @GetMapping("/count")
     public CommentCountResponse countByAuthor(@RequestParam UUID authorId, @AuthenticationPrincipal Jwt jwt) {
-        return new CommentCountResponse(commentService.countByAuthor(authorId, currentUser.idOrNull(jwt)));
+        var count = commentService.countByAuthor(authorId, currentUser.idOrNull(jwt));
+        return CommentCountResponse.of(count, reactionService.totalsOf(authorId));
     }
 
     @PostMapping

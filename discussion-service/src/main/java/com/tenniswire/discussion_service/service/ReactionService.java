@@ -36,7 +36,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * One vote and one emoji per person per comment, independent of each other, each replaceable and
  * removable. Who reacted is never read back out: the rows exist to enforce the one-per-person rule
- * and to let a reaction be taken back, and the numbers people see are the counts on the comment.
+ * and to let a reaction be taken back. The numbers people see are the counts on the comment and,
+ * for an author, the total of every change to them.
  */
 @Service
 @Transactional
@@ -107,11 +108,16 @@ public class ReactionService {
         return mine;
     }
 
+    @Transactional(readOnly = true)
+    public AuthorReactions totalsOf(UUID authorId) {
+        return totals.of(authorId);
+    }
+
     /**
      * Everything one person put anywhere, taken back. Used when his account goes and when a
      * permanent ban is issued with the reactions cleared. Counts on comments that are still shown
-     * come down; what a removal already swept into an author's total stays there, because the
-     * comment it was collected on no longer exists to take it off.
+     * come down, and their authors' totals with them; what he put on a comment since taken down
+     * stays in its author's total, because the rows went with that comment.
      */
     public int clearAllBy(UUID userId) {
         var mine = reactions.findByUser(userId);
@@ -127,14 +133,15 @@ public class ReactionService {
         return mine.size();
     }
 
-    /** Every reaction on one comment, with its counts, as a removal leaves them. */
+    // Every reaction on one comment, with its counts, as a removal leaves them. The author's total is
+    // not touched: it took each of them as it came, and a removed comment's reactions stay his.
     void wipe(Comment comment) {
-        totals.absorb(comment);
+        zero(comment);
         reactions.deleteOn(comment.id());
     }
 
     void wipeAll(List<Comment> taken) {
-        taken.forEach(totals::absorb);
+        taken.forEach(ReactionService::zero);
         reactions.deleteOnAll(taken.stream().map(Comment::id).toList());
     }
 
@@ -221,7 +228,8 @@ public class ReactionService {
         }
     }
 
-    private static void shift(Comment comment, CommentReaction reaction, int delta) {
+    private void shift(Comment comment, CommentReaction reaction, int delta) {
+        totals.record(comment.authorId(), reaction, delta);
         if (SLOT_VOTE.equals(reaction.slot())) {
             if (LIKE.equals(reaction.value())) {
                 comment.likeCount(Math.max(comment.likeCount() + delta, 0));
@@ -240,5 +248,9 @@ public class ReactionService {
             counts.put(reaction.value(), next);
         }
         comment.emojiCounts(counts);
+    }
+
+    private static void zero(Comment comment) {
+        comment.likeCount(0).dislikeCount(0).emojiCounts(new HashMap<>());
     }
 }

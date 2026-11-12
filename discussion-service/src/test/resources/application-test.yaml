@@ -10,6 +10,10 @@ discussion:
     # the wipe lock at the moment a test runs its own.
     enabled: false
 
+  # The tests that read a total fold the changes themselves, as TextExpiryIT runs its own pass
+  author-totals:
+    enabled: false
+
   # The pace and the newcomer are PostingRulesIT's, which sets its own. Everywhere else one author
   # writes comment after comment, and as a newcomer, which every test author is, could post no link.
   # The duplicate rule stays on.
