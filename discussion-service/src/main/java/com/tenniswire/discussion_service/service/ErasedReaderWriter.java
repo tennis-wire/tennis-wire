@@ -2,7 +2,6 @@ package com.tenniswire.discussion_service.service;
 
 import com.tenniswire.discussion_service.entity.Comment;
 import com.tenniswire.discussion_service.entity.ReportResolution;
-import com.tenniswire.discussion_service.repository.AuthorReactionTotalRepository;
 import com.tenniswire.discussion_service.repository.BlockRepository;
 import com.tenniswire.discussion_service.repository.CommentRepository;
 import com.tenniswire.discussion_service.repository.ReportRepository;
@@ -25,7 +24,7 @@ class ErasedReaderWriter {
     private final UserRestrictionRepository restrictions;
     private final ReactionService reactions;
     private final PollService pollVotes;
-    private final AuthorReactionTotalRepository totals;
+    private final AuthorTotals totals;
 
     ErasedReaderWriter(
             CommentRepository comments,
@@ -36,7 +35,7 @@ class ErasedReaderWriter {
             UserRestrictionRepository restrictions,
             ReactionService reactions,
             PollService pollVotes,
-            AuthorReactionTotalRepository totals) {
+            AuthorTotals totals) {
         this.comments = comments;
         this.collapse = collapse;
         this.treeLock = treeLock;
@@ -75,11 +74,11 @@ class ErasedReaderWriter {
     void eraseTheRest(UUID readerId, Instant now) {
         blocks.deleteInvolving(readerId);
         restrictions.deleteEndedFor(readerId, now);
-        // What he put on other people's comments comes off their counts; what he collected on his
-        // own goes with him. A count a removal already swept into someone's total stays: the
-        // comment it was collected on is not there to take it off.
+        // What he put on other people's comments comes off their counts and totals; what he
+        // collected on his own goes with him. What he put on a comment since taken down stays in
+        // its author's total: the rows went with that comment.
         reactions.clearAllBy(readerId);
         pollVotes.clearAllBy(readerId);
-        totals.deleteFor(List.of(readerId));
+        totals.forget(readerId);
     }
 }

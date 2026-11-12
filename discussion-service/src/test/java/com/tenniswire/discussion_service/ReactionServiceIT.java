@@ -8,7 +8,6 @@ import com.tenniswire.discussion_service.exception.CommentDeletedException;
 import com.tenniswire.discussion_service.exception.CommentingRestrictedException;
 import com.tenniswire.discussion_service.exception.ForbiddenException;
 import com.tenniswire.discussion_service.exception.UnknownReactionException;
-import com.tenniswire.discussion_service.repository.AuthorReactionTotalRepository;
 import com.tenniswire.discussion_service.repository.CommentReactionRepository;
 import com.tenniswire.discussion_service.repository.CommentRepository;
 import com.tenniswire.discussion_service.service.BlockService;
@@ -46,9 +45,6 @@ class ReactionServiceIT {
 
     @Autowired
     private CommentReactionRepository rows;
-
-    @Autowired
-    private AuthorReactionTotalRepository totals;
 
     private final UUID subjectId = UUID.randomUUID();
     private final UUID alice = UUID.randomUUID();
@@ -187,8 +183,9 @@ class ReactionServiceIT {
         assertThat(votes(hers)).isEqualTo(new int[] {1, 0});
     }
 
+    // What it collected stays in the author's total: AuthorTotalsIT
     @Test
-    void aRemovalSweepsTheCountsIntoTheAuthorsTotal() {
+    void aRemovalTakesTheRowsAndTheCountsOffTheComment() {
         var hers = comment("hers");
         reactions.setVote(bob, hers, "like");
         reactions.setVote(carol, hers, "dislike");
@@ -197,28 +194,9 @@ class ReactionServiceIT {
 
         commentService.deleteOwn(alice, hers);
 
-        var total = totals.findById(alice).orElseThrow();
-        assertThat(total.likeCount()).isEqualTo(1);
-        assertThat(total.dislikeCount()).isEqualTo(1);
-        assertThat(total.emojiCounts()).isEqualTo(Map.of("vomit", 1L));
-        // zeroed on the comment, so that a second pass over the same row adds nothing
         assertThat(votes(hers)).isEqualTo(new int[] {0, 0});
+        assertThat(emoji(hers)).isEmpty();
         assertThat(rows.findByCommentIdIn(List.of(hers))).isEmpty();
-    }
-
-    @Test
-    void whatOneAuthorCollectsOnTwoCommentsAddsUp() {
-        var one = comment("one");
-        var two = comment("two");
-        reactions.setVote(bob, one, "like");
-        reactions.setVote(bob, two, "like");
-        commentService.reply(bob, one, "keeps the node");
-        commentService.reply(bob, two, "keeps the node");
-
-        commentService.deleteOwn(alice, one);
-        commentService.deleteOwn(alice, two);
-
-        assertThat(totals.findById(alice).orElseThrow().likeCount()).isEqualTo(2);
     }
 
     @Test

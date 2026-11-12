@@ -318,10 +318,10 @@ CREATE INDEX idx_comment_top_score ON comment (subject_type, subject_id, score, 
     WHERE in_reply_to_id IS NULL;
 
 -- changeset andrei:20
--- comment: What an author collected on comments that no longer exist. Filled when a comment stops
--- comment: being shown, from its own counts, which are zeroed in the same step so that a second
--- comment: removal adds nothing. His live comments are summed separately, so his standing is this
--- comment: row plus that sum, and neither counts anything twice.
+-- comment: What an author collected on all his comments, those still shown and those taken down
+-- comment: alike: a reaction on a removed comment was real and stays his. Not written on each
+-- comment: reaction, or every reaction on any of his comments would queue behind this one row. A
+-- comment: reaction appends to author_reaction_change instead, and a fold adds the changes up here.
 CREATE TABLE author_reaction_total (
     author_id UUID PRIMARY KEY,
     like_count BIGINT NOT NULL DEFAULT 0,
@@ -330,6 +330,23 @@ CREATE TABLE author_reaction_total (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_author_total_not_negative CHECK (like_count >= 0 AND dislike_count >= 0)
 );
+
+-- comment: Reactions not yet folded into author_reaction_total: +1 when one is set, -1 when it is
+-- comment: taken back. A queue rather than a history: the fold deletes what it has added, so the
+-- comment: table holds what came in since the last fold. Insert-only for its writers, so they never
+-- comment: wait on each other here. Vacuumed by a count of dead rows: a share of a table this small
+-- comment: is a handful of rows. No index on author_id: only an erasure looks an author up here.
+CREATE TABLE author_reaction_change (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    author_id UUID NOT NULL,
+    slot TEXT NOT NULL,
+    value TEXT NOT NULL,
+    delta INT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_reaction_change_slot CHECK (slot IN ('vote', 'emoji')),
+    CONSTRAINT chk_reaction_change_vote CHECK (slot <> 'vote' OR value IN ('like', 'dislike')),
+    CONSTRAINT chk_reaction_change_delta CHECK (delta IN (-1, 1))
+) WITH (autovacuum_vacuum_scale_factor = 0, autovacuum_vacuum_threshold = 1000);
 
 -- changeset andrei:21
 -- comment: One author's comments, read backward for newest first. Partial, and the listing asks for

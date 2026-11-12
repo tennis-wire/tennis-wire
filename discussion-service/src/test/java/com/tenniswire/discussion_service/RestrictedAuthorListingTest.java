@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.tenniswire.discussion_service.client.AuthorProfileClient;
+import com.tenniswire.discussion_service.entity.AuthorReactionTotal;
+import com.tenniswire.discussion_service.repository.AuthorReactionTotalRepository;
 import com.tenniswire.discussion_service.security.UserIdResolver;
 import com.tenniswire.discussion_service.service.CommentService;
 import com.tenniswire.discussion_service.service.RestrictionService;
@@ -44,6 +46,9 @@ class RestrictedAuthorListingTest {
     @Autowired
     private RestrictionService restrictionService;
 
+    @Autowired
+    private AuthorReactionTotalRepository totals;
+
     private final UUID alice = UUID.randomUUID();
 
     private MockMvc mvc;
@@ -55,6 +60,7 @@ class RestrictedAuthorListingTest {
                 .build();
         commentService.create(alice, "publication", UUID.randomUUID(), "one");
         restrictionService.restrictCommenting(alice, UUID.randomUUID(), null, "indefinite");
+        totals.save(new AuthorReactionTotal().authorId(alice).likeCount(4));
     }
 
     @Test
@@ -77,6 +83,7 @@ class RestrictedAuthorListingTest {
                 .andExpect(jsonPath("$.items.length()").value(1));
         mvc.perform(get(COMMENTS + "/count").param("authorId", alice.toString()).with(asAlice))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.count").value(1));
+                .andExpect(jsonPath("$.count").value(1))
+                .andExpect(jsonPath("$.likeCount").value(4));
     }
 }

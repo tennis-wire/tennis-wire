@@ -11,7 +11,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.tenniswire.discussion_service.client.AuthorProfile;
 import com.tenniswire.discussion_service.client.AuthorProfileClient;
+import com.tenniswire.discussion_service.entity.AuthorReactionTotal;
 import com.tenniswire.discussion_service.exception.UserServiceUnavailableException;
+import com.tenniswire.discussion_service.repository.AuthorReactionTotalRepository;
 import com.tenniswire.discussion_service.security.UserIdResolver;
 import com.tenniswire.discussion_service.service.CommentService;
 import com.tenniswire.discussion_service.service.RestrictionService;
@@ -50,6 +52,9 @@ class AuthorCardTest {
     @Autowired
     private RestrictionService restrictionService;
 
+    @Autowired
+    private AuthorReactionTotalRepository totals;
+
     private final UUID subjectId = UUID.randomUUID();
     private final UUID alice = UUID.randomUUID();
 
@@ -78,7 +83,26 @@ class AuthorCardTest {
                 .andExpect(jsonPath("$.id").value(alice.toString()))
                 .andExpect(jsonPath("$.displayName").value("alice"))
                 .andExpect(jsonPath("$.avatarUrl").isEmpty())
-                .andExpect(jsonPath("$.commentCount").value(2));
+                .andExpect(jsonPath("$.commentCount").value(2))
+                .andExpect(jsonPath("$.likeCount").value(0))
+                .andExpect(jsonPath("$.dislikeCount").value(0))
+                .andExpect(jsonPath("$.emojiCounts").isEmpty());
+    }
+
+    // Written straight to the table: folding the reactions into it is AuthorTotalsIT's
+    @Test
+    void theCardCarriesWhatHisCommentsCollected() throws Exception {
+        totals.save(new AuthorReactionTotal()
+                .authorId(alice)
+                .likeCount(7)
+                .dislikeCount(2)
+                .emojiCounts(Map.of("laugh", 3L)));
+
+        mvc.perform(get(AUTHORS + alice))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.likeCount").value(7))
+                .andExpect(jsonPath("$.dislikeCount").value(2))
+                .andExpect(jsonPath("$.emojiCounts.laugh").value(3));
     }
 
     @Test

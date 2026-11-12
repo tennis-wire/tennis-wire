@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.tenniswire.discussion_service.entity.Report;
 import com.tenniswire.discussion_service.entity.ReportResolution;
-import com.tenniswire.discussion_service.repository.AuthorReactionTotalRepository;
 import com.tenniswire.discussion_service.repository.CommentReactionRepository;
 import com.tenniswire.discussion_service.repository.CommentRepository;
 import com.tenniswire.discussion_service.repository.ReportRepository;
@@ -49,9 +48,6 @@ class BanSweepIT {
 
     @Autowired
     private CommentReactionRepository reactions;
-
-    @Autowired
-    private AuthorReactionTotalRepository totals;
 
     private final UUID subjectId = UUID.randomUUID();
     private final UUID spammer = UUID.randomUUID();
@@ -123,15 +119,16 @@ class BanSweepIT {
         });
     }
 
+    // What they collected stays in his total: AuthorTotalsIT
     @Test
-    void whatTheyCollectedGoesToHisTotal() {
+    void whatTheyCollectedComesOffThem() {
         var liked = comment(spammer, "liked");
         reactionService.setVote(reader, liked, "like");
 
         restrictionService.restrictCommenting(spammer, moderator, null, "spam", false, true);
 
         assertThat(reactions.findByCommentIdIn(List.of(liked))).isEmpty();
-        assertThat(totals.findById(spammer).orElseThrow().likeCount()).isEqualTo(1);
+        assertThat(comments.findById(liked).orElseThrow().likeCount()).isZero();
     }
 
     @Test

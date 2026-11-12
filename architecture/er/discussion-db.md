@@ -80,6 +80,15 @@ erDiagram
         jsonb emoji_counts
         timestamptz updated_at
     }
+
+    author_reaction_change {
+        bigint id PK "identity"
+        uuid author_id
+        text slot "vote | emoji"
+        text value "like | dislike, or an emoji key"
+        int delta "+1 or -1"
+        timestamptz created_at
+    }
 ```
 
 `comment` is an adjacency list: `in_reply_to_id` is the source of truth,
@@ -87,5 +96,7 @@ erDiagram
 comment has no parent and is its own root. User ids (`author_id`, `user_id`,
 `blocker_id`, `blocked_id`, `issued_by`, `hidden_by`, `resolved_by`) and
 `subject_id` point outside this database and carry no FK. `report` and
-`comment_reaction` cascade on delete from `comment`; `author_reaction_total`
-keeps what an author collected on comments no longer shown.
+`comment_reaction` cascade on delete from `comment`. `author_reaction_total`
+is everything an author collected, on comments shown and taken down alike;
+`author_reaction_change` is the queue of reactions not yet folded into it,
+emptied by the fold.
