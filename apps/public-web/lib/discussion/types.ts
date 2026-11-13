@@ -56,15 +56,22 @@ export type Restriction = { until: string | null }
 export type Viewer = { restriction: Restriction | null }
 
 export type CommentPage = { items: Comment[]; nextCursor: string | null; viewer?: Viewer }
-// How many comments an author has standing, whoever is asking
-export type CommentCount = { count: number }
+// What an author's comments have collected, standing and taken down alike. Lags the reactions by up
+// to a minute; emojiCounts has only the keys with a count.
+export type ReactionTotals = {
+    likeCount: number
+    dislikeCount: number
+    emojiCounts: Record<string, number>
+}
+// How many comments an author has standing, whoever is asking, and what they collected
+export type CommentCount = { count: number } & ReactionTotals
 // What a reader's page shows about him; there is none for someone under a restriction
 export type AuthorCard = {
     id: string
     displayName: string
     avatarUrl: string | null
     commentCount: number
-}
+} & ReactionTotals
 export type Branch = { root: Comment }
 export type Ancestry = { chain: Comment[]; viewer?: Viewer }
 

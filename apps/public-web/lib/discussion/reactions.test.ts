@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { heldBy, shifted } from './reactions'
+import { emojiTallied, heldBy, shifted } from './reactions'
 import type { Comment } from './types'
 
 function comment(over: Partial<Comment> = {}): Comment {
@@ -92,5 +92,26 @@ describe('shifted', () => {
         expect(back.likeCount).toBe(before.likeCount)
         expect(back.dislikeCount).toBe(before.dislikeCount)
         expect(back.viewerVote).toBe('like')
+    })
+})
+
+describe('emojiTallied', () => {
+    it('keeps the order of the row and only what somebody put', () => {
+        const tallied = emojiTallied({
+            likeCount: 0,
+            dislikeCount: 0,
+            emojiCounts: { vomit: 2, laugh: 5 },
+        })
+
+        expect(tallied.map(({ key, count }) => [key, count])).toEqual([
+            ['laugh', 5],
+            ['vomit', 2],
+        ])
+    })
+
+    it('leaves out a key this site has no glyph for', () => {
+        expect(emojiTallied({ likeCount: 0, dislikeCount: 0, emojiCounts: { rocket: 1 } })).toEqual(
+            []
+        )
     })
 })

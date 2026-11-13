@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import Avatar from '@/components/Avatar'
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
 import AuthorComments from '@/components/discussion/AuthorComments'
+import ReactionTally from '@/components/discussion/ReactionTally'
 import { strings } from '@/components/discussion/strings'
 import { linkButton, muted } from '@/components/discussion/styles'
 import { NetworkError } from '@/lib/discussion/api'
@@ -105,6 +106,7 @@ export default function ReaderPage({ id }: { id: string }) {
                         {strings.readerSince(formatDay(reader.createdAt))} ·{' '}
                         {strings.commentTally(reader.commentCount)}
                     </p>
+                    <ReactionTally totals={reader} style={{ marginTop: 6 }} />
                 </div>
                 <ReaderIgnore readerId={reader.id} onMode={setMode} />
             </header>

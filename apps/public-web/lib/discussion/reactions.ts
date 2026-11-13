@@ -1,4 +1,4 @@
-import type { Comment, ReactionSlot } from './types'
+import type { Comment, ReactionSlot, ReactionTotals } from './types'
 
 // Mirrors discussion.reaction.emoji in the service, in the order the row is drawn. A key the service
 // stops sending keeps its place here harmlessly; a key it starts sending needs a line here to show.
@@ -7,6 +7,14 @@ export const EMOJI = [
     { key: 'clown', glyph: '🤡', label: 'Клоунада' },
     { key: 'vomit', glyph: '🤮', label: 'Мерзость' },
 ] as const
+
+// The emoji an author has any of, in the order the row under a comment draws them
+export function emojiTallied(totals: ReactionTotals) {
+    return EMOJI.flatMap((emoji) => {
+        const count = totals.emojiCounts[emoji.key] ?? 0
+        return count > 0 ? [{ ...emoji, count }] : []
+    })
+}
 
 export function heldBy(comment: Comment, slot: ReactionSlot): string | null {
     return (slot === 'vote' ? comment.viewerVote : comment.viewerEmoji) ?? null

@@ -12,7 +12,15 @@ function json(status: number, body: unknown) {
     })
 }
 
-const card = { id: 'r1', displayName: 'petya', avatarUrl: null, commentCount: 3 }
+const card = {
+    id: 'r1',
+    displayName: 'petya',
+    avatarUrl: null,
+    commentCount: 3,
+    likeCount: 7,
+    dislikeCount: 1,
+    emojiCounts: { laugh: 2 },
+}
 
 function answer(cardAnswer: Response, profileAnswer: Response) {
     fetchMock.mockImplementation(async (url: string) =>

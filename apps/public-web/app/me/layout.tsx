@@ -6,7 +6,9 @@ import { useEffect, useState } from 'react'
 
 import Avatar from '@/components/Avatar'
 import { useReaderSession } from '@/components/auth/ReaderSessionProvider'
+import ReactionTally from '@/components/discussion/ReactionTally'
 import { countByAuthor } from '@/lib/discussion/endpoints'
+import type { CommentCount } from '@/lib/discussion/types'
 import { formatMonthYear } from '@/lib/format'
 
 // One row of tabs. Appearance is kept by the browser rather than the account, so the cabinet
@@ -63,16 +65,17 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
     const photo = session?.authenticated ? session.avatarLargeUrl : null
     const authorId = session?.authenticated ? session.userId : null
 
-    // The one number about the reader, over every tab rather than on one of them
-    const [count, setCount] = useState<number | null>(null)
+    // The numbers about the reader, over every tab rather than on one of them: how much he wrote and
+    // what it collected, from one call
+    const [numbers, setNumbers] = useState<CommentCount | null>(null)
     useEffect(() => {
         if (!authorId) return
         let live = true
         countByAuthor(authorId)
             .then((answer) => {
-                if (live) setCount(answer.count)
+                if (live) setNumbers(answer)
             })
-            // a count that did not come is simply not shown
+            // numbers that did not come are simply not shown
             .catch(() => undefined)
         return () => {
             live = false
@@ -101,8 +104,11 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
                                 : 'ваш аккаунт и настройки'
                             : 'настройки этого браузера'}
                     </div>
+                    {signedIn && numbers !== null && (
+                        <ReactionTally totals={numbers} style={{ marginTop: 6 }} />
+                    )}
                 </div>
-                {signedIn && count !== null && (
+                {signedIn && numbers !== null && (
                     <Link
                         href="/me/comments"
                         style={{
@@ -111,9 +117,9 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
                             color: 'var(--tw-text)',
                         }}
                     >
-                        <div style={{ fontSize: 22, fontWeight: 700 }}>{count}</div>
+                        <div style={{ fontSize: 22, fontWeight: 700 }}>{numbers.count}</div>
                         <div style={{ fontSize: 13, color: 'var(--tw-text-secondary)' }}>
-                            {commentsWord(count)}
+                            {commentsWord(numbers.count)}
                         </div>
                     </Link>
                 )}
