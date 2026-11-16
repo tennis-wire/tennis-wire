@@ -17,7 +17,7 @@ aws-s3 = { module = "software.amazon.awssdk:s3" }
 aws-url-connection-client = { module = "software.amazon.awssdk:url-connection-client" }
 awssdk-s3 = { module = "software.amazon.awssdk:s3", version.ref = "awssdk" }
 anthropic-java = { module = "com.anthropic:anthropic-java", version = "2.71.0" }
-deepl-java = { module = "com.deepl.api:deepl-java", version = "1.17.0" }
+deepl-java = { module = "com.deepl.api:deepl-java", version = "1.18.0" }
 springdoc-openapi-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version = "3.2.0" }
 spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", version.ref = "spotbugs" }
 spring-cloud-bom = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "spring-cloud" }
