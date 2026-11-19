@@ -375,3 +375,35 @@ a:hover {
     border-bottom: 1px solid var(--tw-border);
     overflow-x: auto;
 }
+
+/* A draw: up to three rounds side by side, one on a phone, where the links between them go too
+   (components/tennis/KnockoutBracket). The column gap is the one the links are drawn across. */
+.tw-draw-cols {
+    display: grid;
+    grid-template-columns: repeat(var(--tw-draw-cols), minmax(0, 1fr));
+    column-gap: 24px;
+}
+
+.tw-draw-col {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.tw-draw-groups {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px;
+}
+
+@media (max-width: 760px) {
+    .tw-draw-cols,
+    .tw-draw-groups {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tw-draw-col + .tw-draw-col,
+    .tw-draw-link {
+        display: none;
+    }
+}
