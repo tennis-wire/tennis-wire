@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Search from '@/components/Search'
+import Wordmark from '@/components/Wordmark'
 import ReaderMenu from '@/components/auth/ReaderMenu'
 import LiveTicker from '@/components/home/LiveTicker'
 import { popoverPanel, usePopover } from '@/components/ui/popover'
@@ -61,16 +62,11 @@ export default function Header() {
             <div className="tw-header-row">
                 <Link
                     href="/"
-                    className="tw-display tw-logo"
-                    style={{
-                        fontSize: 25,
-                        fontWeight: 700,
-                        letterSpacing: '-0.01em',
-                        color: 'var(--tw-primary)',
-                        flexShrink: 0,
-                    }}
+                    className="tw-logo"
+                    style={{ color: 'var(--tw-text)', flexShrink: 0 }}
+                    aria-label="Tennis Wire"
                 >
-                    Tennis Wire
+                    <Wordmark height={40} />
                 </Link>
 
                 <nav className="tw-nav">
