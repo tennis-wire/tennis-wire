@@ -111,4 +111,8 @@ addopts = [
 filterwarnings = [
     "error",
     "ignore::DeprecationWarning",
+    # trafilatura tries urllib3's SOCKS support at import and goes on without it; urllib3 says so
+    # with this warning. courlan used to silence every urllib3 warning, and since 1.5.0 it does
+    # not. We fetch with httpx, so it tells us nothing.
+    "ignore:SOCKS support in urllib3:urllib3.exceptions.DependencyWarning",
 ]
