@@ -149,13 +149,12 @@ class HiddenBranchTest {
     // "carol/branch" -> /api/discussion/comments/{carol's comment}/branch
     private String url(String way) {
         var slash = way.indexOf('/');
-        var comment =
-                switch (way.substring(0, slash)) {
-                    case "bob" -> byBob;
-                    case "carol" -> byCarol;
-                    case "dave" -> byDave;
-                    default -> throw new IllegalArgumentException(way);
-                };
+        var comment = switch (way.substring(0, slash)) {
+            case "bob" -> byBob;
+            case "carol" -> byCarol;
+            case "dave" -> byDave;
+            default -> throw new IllegalArgumentException(way);
+        };
         return COMMENTS + "/" + comment.id() + way.substring(slash);
     }
 
